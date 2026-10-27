@@ -1,0 +1,34 @@
+@import "tailwindcss";
+
+/* Colores de la guía de identidad visual (Logo/Guía de identidad visual...png).
+   "sand" y "line" son neutros cálidos derivados del blanco cálido. */
+@theme {
+  --color-brand-orange: #e88b4a;
+  --color-brand-green: #39834a;
+  --color-brand-ink: #202020;
+  --color-brand-cream: #faf8f3;
+  --color-brand-sand: #f1eee7;
+  --color-brand-line: #e4dfd3;
+  --font-sans: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+body {
+  background: var(--color-brand-cream);
+  color: var(--color-brand-ink);
+}
+
+::selection {
+  background: color-mix(in srgb, var(--color-brand-orange) 40%, white);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-brand-ink);
+  outline-offset: 2px;
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
