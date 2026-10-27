@@ -11,6 +11,9 @@
   --color-brand-line: #e4dfd3;
   /* Texto secundario: 6,6:1 sobre crema, 7,0:1 sobre blanco. Usar este token, no opacidades sueltas. */
   --color-brand-muted: #5a5956;
+  /* Panel de administración (demo): error y texto verde legible sobre fondos tintados. */
+  --color-brand-danger: #b3382c;
+  --color-brand-green-ink: #2a6338;
   --font-sans: var(--font-geist-sans), system-ui, sans-serif;
 }
 

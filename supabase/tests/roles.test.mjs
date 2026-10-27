@@ -3,7 +3,7 @@
 import { before, describe, it } from "node:test";
 import assert from "node:assert/strict";
 import {
-  ID, P1, P2, V1, V2, CAT1, CAT2,
+  ID, P1, P2, V1, CAT1, CAT2,
   newDb, applyMigrations, seedAuthUsersAndStaff, seedCatalog, asAnon, asUser, asAdmin,
 } from "./helpers.mjs";
 
