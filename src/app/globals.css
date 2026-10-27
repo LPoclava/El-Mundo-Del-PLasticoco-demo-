@@ -41,3 +41,9 @@ body {
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
+/* Línea de guía del escáner de códigos de barras (se desactiva con "reducir movimiento"). */
+@keyframes scan-line {
+  0%, 100% { top: 10%; }
+  50% { top: 88%; }
+}

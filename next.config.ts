@@ -20,6 +20,9 @@ function supabaseImagePatterns(): NonNullable<NextConfig["images"]>["remotePatte
 
 const nextConfig: NextConfig = {
   /* config options here */
+  // Solo desarrollo: permite abrir el servidor desde el celular en la misma red Wi-Fi.
+  // Si el router cambia la IP de la PC, actualizarla acá.
+  allowedDevOrigins: ["192.168.1.232"],
   cacheComponents: true,
   partialPrefetching: true,
   images: { remotePatterns: supabaseImagePatterns() },

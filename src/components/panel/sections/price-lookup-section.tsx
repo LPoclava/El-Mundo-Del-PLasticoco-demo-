@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { SAMPLE_CODES } from "@/lib/panel-demo/data";
 import { formatPrice, normalize } from "@/lib/panel-demo/format";
 import { parsePrice, validateBarcode } from "@/lib/panel-demo/store";
 import type { DemoProduct } from "@/lib/panel-demo/types";
+import { BarcodeScanner } from "../barcode-scanner";
 import { useDemo } from "../demo-provider";
+import { Ean13Svg } from "../ean13-svg";
 import { Icon } from "../icons";
 import {
   Badge, Button, CARD_CLASS, INPUT_CLASS, Notice, PageHeader, ProductThumb, SelectInput, TextInput,
@@ -24,8 +26,11 @@ export function PriceLookupSection() {
   const [codeError, setCodeError] = useState<string | null>(null);
   const [result, setResult] = useState<Result>({ kind: "idle" });
   const [recent, setRecent] = useState<string[]>([]);
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const resultRef = useRef<HTMLDivElement>(null);
+  const manualRef = useRef<HTMLInputElement>(null);
 
-  function search(raw: string) {
+  function search(raw: string, fromCamera = false) {
     const value = raw.trim();
     const bad = validateBarcode(value);
     setCodeError(bad);
@@ -34,11 +39,22 @@ export function PriceLookupSection() {
     const product = state.products.find((p) => p.barcode === value);
     setResult(product ? { kind: "found", productId: product.id } : { kind: "unknown", code: value });
     setRecent((r) => [value, ...r.filter((x) => x !== value)].slice(0, 5));
+    // En el celular el resultado queda debajo de la cámara: se lo acerca a la vista.
+    if (fromCamera) {
+      requestAnimationFrame(() =>
+        resultRef.current?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "nearest" }),
+      );
+    }
   }
 
   function onSubmit(e: FormEvent) {
     e.preventDefault();
     search(code);
+  }
+
+  function goManual() {
+    setScannerOpen(false);
+    requestAnimationFrame(() => manualRef.current?.focus());
   }
 
   const product = result.kind === "found" ? state.products.find((p) => p.id === result.productId) : undefined;
@@ -47,40 +63,26 @@ export function PriceLookupSection() {
     <div className="space-y-6">
       <PageHeader
         title="Consulta de precios"
-        subtitle="Escaneá o escribí el código de barras para ver el precio, corregirlo o dar de alta un producto nuevo."
+        subtitle="Escaneá el código de barras con la cámara para ver el precio, corregirlo o dar de alta un producto nuevo."
       />
 
-      <section className={`${CARD_CLASS} p-5`} aria-label="Buscar por código de barras">
-        <form onSubmit={onSubmit} noValidate className="flex flex-col gap-3 sm:flex-row sm:items-start">
-          <div className="flex-1">
-            <TextInput
-              label="Código de barras" inputMode="numeric" autoComplete="off" autoFocus
-              placeholder="Ej.: 7790001000001" value={code} error={codeError}
-              onChange={(e) => { setCode(e.target.value); setCodeError(null); }}
-            />
-          </div>
-          <Button type="submit" variant="primary" icon="search" className="sm:mt-[1.625rem]">Buscar</Button>
-        </form>
-
-        <div className="mt-4">
-          <p className="text-sm font-medium">Simulación: probar con un código de ejemplo</p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {SAMPLE_CODES.found.map((c) => (
-              <Button key={c} size="sm" onClick={() => { setCode(c); search(c); }} className="tabular-nums">{c}</Button>
-            ))}
-            <Button size="sm" onClick={() => { setCode(SAMPLE_CODES.unknown); search(SAMPLE_CODES.unknown); }} className="tabular-nums">
-              {SAMPLE_CODES.unknown} <span className="text-brand-muted">(desconocido)</span>
+      <section className={`${CARD_CLASS} p-4 sm:p-5`} aria-label="Escanear código de barras">
+        {scannerOpen ? (
+          <BarcodeScanner onDetect={(c) => search(c, true)} onClose={() => setScannerOpen(false)} onManual={goManual} />
+        ) : (
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-brand-muted sm:max-w-md">
+              Usa la cámara de este dispositivo. El video se procesa en el navegador: no se graba ni se envía a ningún lado.
+            </p>
+            <Button variant="primary" icon="barcode" className="h-14 w-full text-base sm:h-12 sm:w-auto" aria-expanded={scannerOpen} onClick={() => setScannerOpen(true)}>
+              Escanear código de barras
             </Button>
           </div>
-          <p className="mt-3 text-xs text-brand-muted">
-            El escaneo con cámara o lector se conectará después. Por ahora se escribe el código o se usan estos ejemplos.
-          </p>
-        </div>
+        )}
       </section>
 
-      <div aria-live="polite">
+      <div ref={resultRef} aria-live="polite" className="scroll-mt-20">
         {result.kind === "found" && product && <FoundProduct key={product.id} product={product} />}
-        {result.kind === "found" && !product && null}
         {result.kind === "unknown" && (
           <UnknownCode
             key={result.code}
@@ -91,16 +93,52 @@ export function PriceLookupSection() {
         )}
       </div>
 
-      {recent.length > 0 && (
-        <section aria-labelledby="ultimas-titulo">
-          <h2 id="ultimas-titulo" className="text-sm font-medium">Últimas consultas</h2>
-          <ul className="mt-2 flex flex-wrap gap-2">
-            {recent.map((c) => (
-              <li key={c}><Button size="sm" variant="ghost" onClick={() => { setCode(c); search(c); }} className="border border-brand-line tabular-nums">{c}</Button></li>
-            ))}
-          </ul>
-        </section>
-      )}
+      <section className="rounded-xl border border-brand-line bg-white/60 p-4" aria-label="Ingreso manual">
+        <form onSubmit={onSubmit} noValidate className="flex flex-col gap-3 sm:flex-row sm:items-start">
+          <div className="flex-1">
+            <label htmlFor="manual-code" className="mb-1.5 block text-sm font-medium">¿Sin cámara? Ingresá el código a mano</label>
+            <input
+              id="manual-code" ref={manualRef} inputMode="numeric" autoComplete="off" placeholder="Código de 8 a 14 dígitos"
+              value={code} aria-invalid={Boolean(codeError)} aria-describedby={codeError ? "manual-code-error" : undefined}
+              onChange={(e) => { setCode(e.target.value); setCodeError(null); }}
+              className={INPUT_CLASS}
+            />
+            {codeError && <p id="manual-code-error" className="mt-1.5 text-sm text-brand-danger">{codeError}</p>}
+          </div>
+          <Button type="submit" icon="search" className="sm:mt-[1.625rem]">Buscar</Button>
+        </form>
+
+        {recent.length > 0 && (
+          <div className="mt-3">
+            <p className="text-xs text-brand-muted">Últimas consultas</p>
+            <ul className="mt-1.5 flex flex-wrap gap-2">
+              {recent.map((c) => (
+                <li key={c}><Button size="sm" variant="ghost" onClick={() => { setCode(c); search(c); }} className="border border-brand-line tabular-nums">{c}</Button></li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </section>
+
+      <details className="rounded-xl border border-brand-line bg-white/60 p-4">
+        <summary className="cursor-pointer text-sm font-medium">Probar la cámara sin un producto real</summary>
+        <p className="mt-2 text-sm text-brand-muted">
+          Apuntá la cámara del celular a estos códigos en la pantalla de la computadora. Son de ejemplo y no corresponden a productos reales.
+          Con el último podés probar el alta de un producto nuevo.
+        </p>
+        <ul className="mt-3 grid gap-3 sm:grid-cols-2">
+          {[...SAMPLE_CODES.found, SAMPLE_CODES.unknown].map((c) => {
+            const known = state.products.find((p) => p.barcode === c);
+            return (
+              <li key={c} className="rounded-lg border border-brand-line bg-white p-3">
+                <Ean13Svg code={c} className="h-auto w-full max-w-xs" />
+                <p className="mt-1 text-xs text-brand-muted">{known ? known.name : "Código no registrado"}</p>
+                <Button size="sm" variant="ghost" className="mt-1 border border-brand-line" onClick={() => { setCode(c); search(c); }}>Consultar sin cámara</Button>
+              </li>
+            );
+          })}
+        </ul>
+      </details>
     </div>
   );
 }
@@ -190,7 +228,7 @@ function FoundProduct({ product }: { product: DemoProduct }) {
 
 function UnknownCode({ code, onCreated, onLinked }: { code: string; onCreated: (id: string) => void; onLinked: (id: string) => void }) {
   const { state, actions } = useDemo();
-  const [mode, setMode] = useState<"create" | "link">("create");
+  const [mode, setMode] = useState<"none" | "create" | "link">("none");
   const [name, setName] = useState("");
   const [brand, setBrand] = useState("");
   const [categoryId, setCategoryId] = useState(state.categories[0]?.id ?? "");
@@ -234,13 +272,13 @@ function UnknownCode({ code, onCreated, onLinked }: { code: string; onCreated: (
         Ningún producto tiene este código. Podés darlo de alta o vincularlo a uno que todavía no tenga código.
       </p>
 
-      <div className="mt-4 inline-flex rounded-lg border border-brand-line p-0.5" role="group" aria-label="Qué hacer con el código">
-        {([["create", "Dar de alta"], ["link", "Vincular a existente"]] as const).map(([value, label]) => (
-          <button key={value} type="button" aria-pressed={mode === value} onClick={() => setMode(value)}
-            className={`h-10 rounded-md px-4 text-sm font-medium ${mode === value ? "bg-brand-ink text-white" : "hover:bg-brand-sand"}`}>
-            {label}
-          </button>
-        ))}
+      <div className="mt-4 grid gap-2 sm:flex" role="group" aria-label="Qué hacer con el código">
+        <Button variant={mode === "create" ? "secondary" : "primary"} icon="plus" className="h-12 sm:h-11" aria-expanded={mode === "create"} onClick={() => setMode(mode === "create" ? "none" : "create")}>
+          Dar de alta este producto
+        </Button>
+        <Button icon="link" className="h-12 sm:h-11" aria-expanded={mode === "link"} onClick={() => setMode(mode === "link" ? "none" : "link")}>
+          Vincular a uno existente
+        </Button>
       </div>
 
       {mode === "create" ? (
@@ -260,7 +298,7 @@ function UnknownCode({ code, onCreated, onLinked }: { code: string; onCreated: (
             El producto se crea <strong className="font-medium text-brand-ink">sin publicar</strong> y sin fotos. Un gerente lo revisa y lo publica.
           </p>
         </form>
-      ) : (
+      ) : mode === "link" ? (
         <div className="mt-4">
           <label htmlFor="filtro-existente" className="mb-1.5 block text-sm font-medium">Buscar producto sin código</label>
           <input id="filtro-existente" value={filter} onChange={(e) => setFilter(e.target.value)} className={INPUT_CLASS} placeholder="Nombre o marca" />
@@ -279,7 +317,7 @@ function UnknownCode({ code, onCreated, onLinked }: { code: string; onCreated: (
             </ul>
           )}
         </div>
-      )}
+      ) : null}
     </section>
   );
 }

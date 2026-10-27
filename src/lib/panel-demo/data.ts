@@ -3,6 +3,7 @@
  * del negocio, y nunca se leen ni se escriben en Supabase. Se reemplazan por consultas reales
  * cuando se conecte el panel definitivo.
  */
+import { ean13 } from "@/lib/barcode/ean";
 import type { Role } from "./roles";
 import type { AuditEntry, DemoCategory, DemoProduct, DemoState, DemoUser } from "./types";
 
@@ -44,6 +45,12 @@ const PRODUCT_ROWS: P[] = [
   ["Bandeja rectangular", "Festiva", "cat-fiesta", 4150, false, true],
 ];
 
+/**
+ * Códigos EAN-13 válidos con prefijo 200 (rango que GS1 reserva para uso interno): se pueden
+ * escanear de verdad desde otra pantalla y nunca coinciden con un producto real.
+ */
+export const demoCode = (n: number) => ean13(`200000100${String(n).padStart(3, "0")}`);
+
 export const DEMO_PRODUCTS: DemoProduct[] = PRODUCT_ROWS.map(
   ([name, brand, categoryId, price, published, archived = false, noCode = false], i) => ({
     id: `prod-${i + 1}`,
@@ -51,8 +58,7 @@ export const DEMO_PRODUCTS: DemoProduct[] = PRODUCT_ROWS.map(
     brand,
     categoryId,
     price,
-    // Códigos de ejemplo: no son EAN válidos ni corresponden a productos reales.
-    barcode: noCode ? null : `779000100${String(i + 1).padStart(4, "0")}`,
+    barcode: noCode ? null : demoCode(i + 1),
     published,
     archived,
   }),
@@ -60,8 +66,8 @@ export const DEMO_PRODUCTS: DemoProduct[] = PRODUCT_ROWS.map(
 
 /** Códigos que la pantalla de consulta ofrece para simular un escaneo. */
 export const SAMPLE_CODES = {
-  found: ["7790001000001", "7790001000005", "7790001000009"],
-  unknown: "7790009990001",
+  found: [demoCode(1), demoCode(5), demoCode(9)],
+  unknown: ean13("200000199901"),
 } as const;
 
 export const DEMO_USERS: DemoUser[] = [
@@ -85,7 +91,7 @@ const U = Object.fromEntries(DEMO_USERS.map((u) => [u.id, u]));
 
 const AUDIT_ROWS: A[] = [
   ["2026-10-27T11:42:00-03:00", "usr-empleado", "price", "Balde 10 litros con asa", "$ 4.590", "$ 4.890"],
-  ["2026-10-27T10:15:00-03:00", "usr-empleado-2", "link", "Vaso térmico 450 ml", "Sin código", "7790001000005"],
+  ["2026-10-27T10:15:00-03:00", "usr-empleado-2", "link", "Vaso térmico 450 ml", "Sin código", demoCode(5)],
   ["2026-10-26T17:05:00-03:00", "usr-gerente", "publish", "Regadera 5 litros", "Sin publicar", "Publicado"],
   ["2026-10-26T16:20:00-03:00", "usr-empleado", "create", "Plato para maceta 25 cm", undefined, "Creado sin publicar"],
   ["2026-10-26T12:00:00-03:00", "usr-gerente", "category", "Descartables", "Fiesta", "Descartables"],
@@ -97,7 +103,7 @@ const AUDIT_ROWS: A[] = [
   ["2026-10-22T13:40:00-03:00", "usr-gerente", "unpublish", "Set pala y escobillón", "Publicado", "Sin publicar"],
   ["2026-10-21T09:15:00-03:00", "usr-empleado-2", "create", "Organizador apilable chico", undefined, "Creado sin publicar"],
   ["2026-10-20T16:50:00-03:00", "usr-ceo", "user", "Joaquín Pérez", "Sin acceso", "Empleado"],
-  ["2026-10-19T12:30:00-03:00", "usr-empleado", "link", "Botella deportiva 750 ml", "7790001000008", "7790001000018"],
+  ["2026-10-19T12:30:00-03:00", "usr-empleado", "link", "Botella deportiva 750 ml", demoCode(8), ean13("200000100808")],
   ["2026-10-18T10:00:00-03:00", "usr-gerente", "price", "Tacho de basura 50 L con tapa", "$ 11.900", "$ 12.900"],
 ];
 
