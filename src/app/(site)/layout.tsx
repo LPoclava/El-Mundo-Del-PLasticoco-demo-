@@ -1,8 +1,7 @@
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
-import { isSupabaseConfigured } from "@/lib/supabase/public";
 
-/** Marco del catálogo público (cabecera, pie, aviso de prueba). El panel tiene el suyo en /panel. */
+/** Marco del catálogo público (cabecera y pie). El panel tiene el suyo en /panel. */
 export default function SiteLayout({ children }: LayoutProps<"/">) {
   return (
     <>
@@ -12,11 +11,6 @@ export default function SiteLayout({ children }: LayoutProps<"/">) {
       >
         Saltar al contenido
       </a>
-      {!isSupabaseConfigured && (
-        <p className="bg-brand-sand px-4 py-1.5 text-center text-xs text-brand-muted">
-          Vista de prueba · los productos y precios son de ejemplo
-        </p>
-      )}
       <SiteHeader />
       <div className="flex-1">{children}</div>
       <SiteFooter />

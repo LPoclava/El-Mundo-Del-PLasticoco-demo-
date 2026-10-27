@@ -100,11 +100,11 @@ insert into public.staff (user_id) values ('<uuid del usuario>');
 
 ## 9. Diferencias entre el código actual y estas decisiones
 
-El catálogo de ejemplo todavía no refleja todo lo confirmado:
+Nota: los datos de ejemplo del catálogo se eliminaron; sin Supabase configurado el catálogo queda vacío. Pendiente respecto de lo confirmado:
 
 - La búsqueda cubre nombre y marca; falta la descripción.
 - El listado sigue el orden de carga; falta el orden alfabético.
-- Las categorías de la pantalla vienen de una lista fija de ejemplo; deben salir de las categorías con productos publicados.
+- Las categorías de la pantalla salen de la vista `public_categories` (solo categorías con productos publicados).
 
 Son ajustes pequeños que se hacen junto con la conexión a Supabase.
 
@@ -151,4 +151,4 @@ Son ajustes pequeños que se hacen junto con la conexión a Supabase.
 | Archivos huérfanos en Storage | Borrar un producto no borra sus archivos; lo hará el panel. |
 | Mismos permisos para todo el personal | Cualquiera puede borrar o editar todo, sin registro de cambios. |
 | Código de barras por producto | El escaneo no distingue variantes. |
-| Código de la aplicación | Todavía usa datos de ejemplo; búsqueda por descripción, orden alfabético y categorías con productos publicados se alinean al conectar Supabase. |
+| Código de la aplicación | Ya lee la vista pública de Supabase; búsqueda por descripción, orden alfabético y categorías con productos publicados se alinean al conectar Supabase. |

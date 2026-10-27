@@ -1,14 +1,12 @@
 import { cacheLife } from "next/cache";
 import type { CatalogProduct, Category } from "@/types/product";
 import { getSupabase, isSupabaseConfigured, productImageUrl } from "@/lib/supabase/public";
-import { toCatalogProduct } from "./publication-rules";
-import { SAMPLE_CATEGORIES, SAMPLE_PRODUCTS } from "./sample-data";
 
 /**
  * Único punto de acceso a datos del catálogo.
  * - Con Supabase configurado: lee las vistas públicas public_catalog y public_categories,
  *   que ya aplican la regla de publicación en la base. Filtra, ordena y pagina en la consulta.
- * - Sin configurar: usa datos de ejemplo.
+ * - Sin configurar: el catálogo queda vacío (no hay datos de ejemplo).
  */
 export const PAGE_SIZE = 12;
 
@@ -58,7 +56,7 @@ function escapeLike(text: string): string {
 const CATALOG_CACHE = { stale: 30, revalidate: 60, expire: 120 };
 
 export async function getCategories(): Promise<Category[]> {
-  if (!isSupabaseConfigured) return SAMPLE_CATEGORIES;
+  if (!isSupabaseConfigured) return [];
   return fetchCategories();
 }
 
@@ -75,7 +73,7 @@ async function fetchCategories(): Promise<Category[]> {
 }
 
 export async function getCatalogPage(query: CatalogQuery): Promise<CatalogPage> {
-  return isSupabaseConfigured ? fromSupabase(query) : fromSamples(query);
+  return isSupabaseConfigured ? fromSupabase(query) : { items: [], total: 0, page: 1, pageCount: 1 };
 }
 
 async function fromSupabase(query: CatalogQuery): Promise<CatalogPage> {
@@ -119,23 +117,4 @@ async function fromSupabase(query: CatalogQuery): Promise<CatalogPage> {
   }));
 
   return { items, total, page, pageCount };
-}
-
-async function fromSamples(query: CatalogQuery): Promise<CatalogPage> {
-  const term = query.q ? normalize(query.q) : "";
-
-  const matches = SAMPLE_PRODUCTS.map(toCatalogProduct)
-    .filter((p): p is CatalogProduct => p !== null)
-    .filter(
-      (p) =>
-        (!query.category || p.categorySlug === query.category) &&
-        (!term || normalize(`${p.name} ${p.brand ?? ""}`).includes(term)),
-    );
-
-  const total = matches.length;
-  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const page = Math.min(Math.max(1, query.page ?? 1), pageCount);
-  const start = (page - 1) * PAGE_SIZE;
-
-  return { items: matches.slice(start, start + PAGE_SIZE), total, page, pageCount };
 }
