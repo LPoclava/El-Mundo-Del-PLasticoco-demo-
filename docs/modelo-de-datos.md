@@ -2,6 +2,8 @@
 
 Estado: **modelo aprobado; migraciones escritas, sin aplicar en ninguna base**. Los archivos están en `supabase/migrations`. Su sintaxis se validó con un parser de PostgreSQL, pero **no se ejecutaron**: hay que probarlas en un proyecto de prueba de Supabase antes de aplicarlas en el real.
 
+> **Autorización:** las secciones de este documento que mencionan `public.staff` e `is_staff()` describen el modelo original. Está en preparación su reemplazo por tres roles (`empleado`, `gerente`, `ceo`), perfiles y auditoría: ver [autorizacion-roles.md](autorizacion-roles.md). Nada de eso está aplicado en Supabase.
+
 ## 1. Decisiones confirmadas
 
 | Tema | Decisión |
