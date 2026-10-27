@@ -14,8 +14,8 @@ export const CONTACT: {
   instagramUrl: string | null;
   facebookUrl: string | null;
 } = {
-  whatsapp: null,
-  phone: null,
+  whatsapp: "5492902404916",
+  phone: "542902404916",
   instagramUrl: null,
-  facebookUrl: null,
+  facebookUrl: "https://www.facebook.com/plasticosnavarrete",
 };

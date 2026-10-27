@@ -2,13 +2,14 @@ import { getContactChannels, type ContactChannel } from "@/lib/contact";
 import { ContactIcon } from "./contact-icon";
 
 const buttonBase =
-  "flex h-12 items-center justify-center gap-2.5 rounded-lg border px-4 text-sm font-medium";
+  "flex h-12 w-12 items-center justify-center gap-2.5 rounded-lg border text-sm font-medium md:w-full md:px-4";
 
 function ChannelButton({ channel }: { channel: ContactChannel }) {
   const content = (
     <>
-      <ContactIcon id={channel.id} className="size-5 shrink-0 text-brand-green" />
-      <span className="truncate">{channel.label}</span>
+      <ContactIcon id={channel.id} className="size-6 shrink-0 text-brand-green md:size-5" />
+      {/* En celular solo se ve el ícono; el nombre queda disponible para lectores de pantalla. */}
+      <span className="sr-only md:not-sr-only md:truncate">{channel.label}</span>
     </>
   );
 
@@ -57,7 +58,7 @@ export function ContactSection() {
             Contactanos a través de nuestras redes o por teléfono.
           </p>
         </div>
-        <ul className="grid grid-cols-2 gap-3 md:flex md:shrink-0">
+        <ul className="flex gap-3 md:shrink-0">
           {channels.map((channel) => (
             <li key={channel.id} className="md:w-40">
               <ChannelButton channel={channel} />
