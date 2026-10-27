@@ -11,7 +11,7 @@ import {
 
 export default function Home({ searchParams }: PageProps<"/">) {
   return (
-    <main className="mx-auto max-w-7xl px-4 pt-6">
+    <main id="contenido" className="mx-auto max-w-7xl px-4 pt-6">
       <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
         Catálogo de productos
       </h1>

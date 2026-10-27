@@ -17,7 +17,7 @@ export function SearchForm({ q, category }: Props) {
       <label htmlFor="q" className="sr-only">
         Buscar productos
       </label>
-      <span className="grid w-11 shrink-0 place-items-center text-brand-ink/50" aria-hidden="true">
+      <span className="grid w-11 shrink-0 place-items-center text-brand-muted" aria-hidden="true">
         <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
           <circle cx="11" cy="11" r="6.5" />
           <path d="m16 16 4.5 4.5" />
@@ -31,11 +31,11 @@ export function SearchForm({ q, category }: Props) {
         placeholder="Buscar un producto"
         autoComplete="off"
         enterKeyHint="search"
-        className="h-12 min-w-0 flex-1 bg-transparent pr-2 text-base outline-none placeholder:text-brand-ink/55"
+        className="h-[3.25rem] min-w-0 flex-1 bg-transparent pr-2 text-base outline-none placeholder:text-brand-muted"
       />
       <button
         type="submit"
-        className="m-1 h-10 rounded-md bg-brand-ink px-4 text-sm font-medium text-white hover:bg-brand-ink/85"
+        className="m-1 h-11 rounded-md bg-brand-ink px-4 text-sm font-medium text-white hover:bg-brand-ink/85"
       >
         Buscar
       </button>

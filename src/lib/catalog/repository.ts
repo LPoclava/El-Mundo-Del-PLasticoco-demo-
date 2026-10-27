@@ -1,3 +1,4 @@
+import { cacheLife } from "next/cache";
 import type { CatalogProduct, Category } from "@/types/product";
 import { getSupabase, isSupabaseConfigured, productImageUrl } from "@/lib/supabase/public";
 import { toCatalogProduct } from "./publication-rules";
@@ -49,8 +50,21 @@ function escapeLike(text: string): string {
   return text.replace(/[\\%_]/g, "\\$&");
 }
 
+/**
+ * Caché compartida entre visitantes: un cambio de precio o de producto se ve en menos de
+ * 2 minutos (fresco 60 s; pasado ese tiempo se renueva; a los 120 s sin visitas se descarta).
+ * Evita consultar Supabase en cada visita cuando el catálogo se comparte por WhatsApp.
+ */
+const CATALOG_CACHE = { stale: 30, revalidate: 60, expire: 120 };
+
 export async function getCategories(): Promise<Category[]> {
   if (!isSupabaseConfigured) return SAMPLE_CATEGORIES;
+  return fetchCategories();
+}
+
+async function fetchCategories(): Promise<Category[]> {
+  "use cache";
+  cacheLife(CATALOG_CACHE);
 
   const { data, error } = await getSupabase()
     .from("public_categories")
@@ -65,6 +79,9 @@ export async function getCatalogPage(query: CatalogQuery): Promise<CatalogPage> 
 }
 
 async function fromSupabase(query: CatalogQuery): Promise<CatalogPage> {
+  "use cache";
+  cacheLife(CATALOG_CACHE);
+
   const supabase = getSupabase();
   const term = query.q ? normalize(query.q).trim() : "";
 

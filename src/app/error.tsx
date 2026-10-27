@@ -5,7 +5,7 @@ export default function Error({ reset }: { error: Error; reset: () => void }) {
     <main className="mx-auto max-w-2xl px-4 py-12">
       <div className="rounded-lg border border-brand-line bg-white px-6 py-12 text-center">
         <h1 className="text-lg font-semibold">No pudimos cargar el catálogo</h1>
-        <p className="mt-1 text-brand-ink/65">Revisá tu conexión e intentá de nuevo.</p>
+        <p className="mt-1 text-brand-muted">Revisá tu conexión e intentá de nuevo.</p>
         <button
           type="button"
           onClick={reset}

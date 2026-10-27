@@ -18,8 +18,8 @@ export async function CatalogControls({ searchParams }: { searchParams: Promise<
 
 export function CatalogControlsSkeleton() {
   return (
-    <div aria-busy="true" aria-label="Cargando buscador" className="animate-pulse space-y-4">
-      <div className="h-12 max-w-xl rounded-lg bg-brand-sand" />
+    <div aria-busy="true" aria-label="Cargando buscador" className="space-y-4 motion-safe:animate-pulse">
+      <div className="h-[3.5rem] max-w-xl rounded-lg bg-brand-sand" />
       <div className="h-11 border-b border-brand-line" />
     </div>
   );

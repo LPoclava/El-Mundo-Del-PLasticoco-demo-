@@ -22,7 +22,7 @@ export function Pagination({ page, pageCount, query }: Props) {
       ) : (
         <span aria-hidden className={`${base} invisible`}>← Anterior</span>
       )}
-      <span className="text-sm text-brand-ink/65">
+      <span className="text-sm text-brand-muted">
         Página {page} de {pageCount}
       </span>
       {page < pageCount ? (

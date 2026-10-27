@@ -13,7 +13,7 @@ function tabClass(isActive: boolean) {
     "relative flex h-11 shrink-0 snap-start items-center whitespace-nowrap px-3 text-sm",
     isActive
       ? "font-semibold text-brand-ink after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:bg-brand-orange"
-      : "text-brand-ink/65 hover:text-brand-ink",
+      : "text-brand-muted hover:text-brand-ink",
   ].join(" ");
 }
 

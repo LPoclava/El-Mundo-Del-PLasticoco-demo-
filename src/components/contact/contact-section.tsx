@@ -53,7 +53,7 @@ export function ContactSection() {
             ¿Tenés alguna consulta?
           </h2>
           <span aria-hidden className="mt-2 block h-0.5 w-8 bg-brand-orange" />
-          <p className="mt-3 text-brand-ink/70">
+          <p className="mt-3 text-brand-muted">
             Contactanos a través de nuestras redes o por teléfono.
           </p>
         </div>
@@ -66,7 +66,7 @@ export function ContactSection() {
         </ul>
       </div>
       {isDev && channels.some((c) => !c.href) && (
-        <p className="mt-4 text-xs text-brand-ink/55">
+        <p className="mt-4 text-xs text-brand-muted">
           Solo en desarrollo: los canales con borde punteado están pendientes de configurar en
           src/config/contact.ts y no se muestran al público.
         </p>
