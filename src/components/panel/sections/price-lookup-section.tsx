@@ -26,7 +26,6 @@ export function PriceLookupSection() {
   const [codeError, setCodeError] = useState<string | null>(null);
   const [result, setResult] = useState<Result>({ kind: "idle" });
   const [recent, setRecent] = useState<string[]>([]);
-  const [scannerOpen, setScannerOpen] = useState(false);
   const resultRef = useRef<HTMLDivElement>(null);
   const manualRef = useRef<HTMLInputElement>(null);
 
@@ -53,7 +52,6 @@ export function PriceLookupSection() {
   }
 
   function goManual() {
-    setScannerOpen(false);
     requestAnimationFrame(() => manualRef.current?.focus());
   }
 
@@ -67,18 +65,7 @@ export function PriceLookupSection() {
       />
 
       <section className={`${CARD_CLASS} p-4 sm:p-5`} aria-label="Escanear código de barras">
-        {scannerOpen ? (
-          <BarcodeScanner onDetect={(c) => search(c, true)} onClose={() => setScannerOpen(false)} onManual={goManual} />
-        ) : (
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-brand-muted sm:max-w-md">
-              Usa la cámara de este dispositivo. El video se procesa en el navegador: no se graba ni se envía a ningún lado.
-            </p>
-            <Button variant="primary" icon="barcode" className="h-14 w-full text-base sm:h-12 sm:w-auto" aria-expanded={scannerOpen} onClick={() => setScannerOpen(true)}>
-              Escanear código de barras
-            </Button>
-          </div>
-        )}
+        <BarcodeScanner onDetect={(c) => search(c, true)} onManual={goManual} />
       </section>
 
       <div ref={resultRef} aria-live="polite" className="scroll-mt-20">

@@ -56,29 +56,57 @@ Los datos se pierden al recargar la página.
 pantalla) hay códigos EAN-13 de ejemplo. Abrilos en la computadora y apuntá el celular a la pantalla.
 Tres corresponden a productos de la demo y el cuarto es desconocido, para probar el alta.
 
+## Permisos de cámara en Google Chrome
+
+- La cámara **no se enciende al cargar la página**. Se pide recién al tocar «Escanear código de barras»
+  (o «Reintentar» / cambiar de cámara): `getUserMedia` se llama dentro de ese toque.
+- Pide la cámara trasera (`facingMode: { ideal: "environment" }`); en una computadora usa la webcam.
+- Al cerrar el lector, o al salir de la pantalla, se detienen **todas** las pistas del `MediaStream`:
+  la luz de la cámara se apaga.
+- Si Chrome ya tenía el permiso concedido, abre directo, sin volver a preguntar.
+- Si cerrás el aviso sin elegir, Chrome puede volver a preguntar al tocar «Reintentar». Si elegiste
+  «Bloquear», ya no pregunta: hay que habilitarla a mano (Chrome → ícono a la izquierda de la
+  dirección → Permisos → Cámara → Permitir). Si sigue bloqueada, Ajustes de Android → Aplicaciones →
+  Chrome → Permisos → Cámara.
+
 ## Mensajes de error
+
+Cada error tiene su propio mensaje: **no todo es «permiso denegado»**.
 
 | Situación | Qué se muestra |
 |---|---|
-| Permiso denegado | «Sin permiso para usar la cámara», con cómo habilitarlo y «Reintentar» |
-| Sin cámara | «No hay cámara disponible» y opción de ingresar a mano |
-| Cámara en uso por otra app | «No se pudo acceder a la cámara» y «Reintentar» |
+| Permiso bloqueado (`NotAllowedError`, Chrome en «denied») | «Chrome tiene bloqueada la cámara para este sitio», con los pasos para habilitarla y «Reintentar» |
+| Aviso cerrado sin elegir (`NotAllowedError`, Chrome en «prompt») | «No se otorgó el permiso de la cámara»: tocá «Reintentar» y elegí «Permitir» |
+| Sin cámara (`NotFoundError`) | «No hay cámara disponible» y opción de ingresar a mano |
+| Cámara en uso o con falla (`NotReadableError`) | «No se pudo usar la cámara»: cerrá la otra aplicación y «Reintentar» |
 | Sin HTTPS | «La cámara necesita una conexión segura (HTTPS)», con la dirección actual |
+| La cámara se detuvo (Chrome la cerró al cambiar de app) | «La cámara se detuvo» y «Reintentar» |
+| No cargó el lector de códigos | «No se pudo iniciar el lector de códigos» y «Reintentar» |
 | 12 segundos sin leer nada | Consejos: acercar o alejar, mejorar la luz, linterna si el teléfono la tiene |
 | Lectura dudosa o no es un código de producto | Aviso en la propia vista previa, y sigue escaneando |
 
 ## Qué se probó y qué no
 
-Probado en la computadora, con un **flujo de video sintético** (un lienzo que dibuja un EAN-13), no con
-una cámara real:
+Probado en una computadora (navegador integrado de la herramienta, no Chrome de un celular):
 
-- Permiso denegado, sin cámara y cámara ocupada: los tres mensajes y sus botones.
-- Lectura de un código conocido y de uno desconocido; el alta con el código ya completado.
-- Una sola lectura por escaneo: tras leer, el video queda en pausa y no hay lecturas nuevas.
-- Reanudar con el mismo código a la vista: no se repite en el acto (pausa de 2 s desde reanudar).
-- Al cerrar la cámara, las pistas de video terminan (la luz de la cámara se apaga).
+- La cámara **no se pide al cargar** la página (0 llamadas a `getUserMedia` antes del toque).
+- `getUserMedia` se llama dentro del mismo toque, con `facingMode: { ideal: "environment" }`. El toque de
+  la prueba fue simulado por código, así que no se pudo comprobar la «activación del usuario» real.
+- Permiso **realmente denegado** (el navegador integrado bloquea la cámara y la Permissions API devolvió
+  «denied»): aparece el mensaje de bloqueo con los pasos.
+- Los demás errores (sin cámara, cámara ocupada, sin HTTPS, lector sin cargar) con `node --test scripts/camera-errors.test.mjs`.
+- Con un **video sintético** (un lienzo que dibuja un EAN-13, no una cámara): lectura de un código, una sola
+  lectura por escaneo, reanudar sin repetir en el acto, cerrar (las pistas pasan a «ended» y `srcObject` queda
+  vacío) y volver a abrir.
 - Decodificación de EAN-13 limpios, reducidos, desenfocados y girados (`node --test scripts/barcode-decode.test.mjs`).
 
-**No probado:** una cámara real, la calidad de lectura con productos físicos, el cambio de cámara
-frontal y trasera, la linterna, el sonido y la vibración, ni los navegadores de iPhone. Eso solo se
-verifica en un teléfono.
+**No probado:** Chrome en un celular, el primer aviso de permiso real, el permiso «ya concedido», cámara real,
+lectura de un producto físico, cambio de cámara frontal y trasera, linterna, sonido, vibración, ni iPhone.
+Eso solo se verifica en un teléfono. Lista de comprobación para hacerlo:
+
+1. Abrí la demo con HTTPS en Chrome del celular: debe verse el botón y **ninguna cámara encendida**.
+2. Tocá «Escanear código de barras»: Chrome muestra su aviso. Elegí **«Permitir»** y verificá que se vea la cámara trasera.
+3. Leé un código real. Debe pitar, pausar y mostrar el resultado.
+4. Tocá «Cerrar cámara»: la luz de la cámara y el ícono de grabación en la barra de Chrome deben apagarse.
+5. Volvé a abrir: no debe preguntar de nuevo (permiso ya concedido).
+6. Cerrá el sitio y repetí eligiendo **«Bloquear»** (o bloqueá la cámara desde Permisos del sitio): debe aparecer el mensaje con los pasos.
