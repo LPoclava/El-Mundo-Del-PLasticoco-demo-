@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from "react"
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { PromoCarousel } from "@/components/catalog/promo-carousel";
 import {
-  createBanner, deleteBanner, friendlyError, listBanners, listMainCategories, reorderBanners,
+  createBanner, deleteBanner, listBanners, listMainCategories, reorderBanners,
   setBannerActive, setCategoryImage, updateBanner, type AdminBanner, type AdminCategory, type BannerInput,
 } from "@/lib/banners/admin";
 import { prepareImage, type PreparedImage } from "@/lib/banners/image";
@@ -13,9 +13,12 @@ import {
   BANNER_LIMITS, BANNER_RECOMMENDED_SIZE, CATEGORY_RECOMMENDED_SIZE, STATUS_LABEL, bannerStatus, fromLocalInput,
   toLocalInput, validateBannerForm, type BannerFormErrors, type BannerStatus,
 } from "@/lib/banners/rules";
-import { getBrowserSupabase, isBrowserSupabaseConfigured } from "@/lib/supabase/browser";
+import { isBrowserSupabaseConfigured } from "@/lib/supabase/browser";
+import { friendlyError } from "@/lib/supabase/errors";
 import { productImageUrl } from "@/lib/supabase/public";
 import { Icon } from "../icons";
+import { SupabaseGate } from "../supabase-gate";
+import { useToasts } from "../use-toasts";
 import {
   Badge, Button, CARD_CLASS, Dialog, EmptyState, Field, INPUT_CLASS, Notice, PageHeader, TextInput,
   Toaster, type Toast,
@@ -34,7 +37,7 @@ export function BannersSection() {
         subtitle="Las imágenes del carrusel «Promociones y combos» del catálogo. Cargalas, ordenalas y programá cuándo se muestran."
       />
       {isBrowserSupabaseConfigured ? (
-        <AuthGate>{(db) => <Manager db={db} />}</AuthGate>
+        <SupabaseGate action="administrar banners">{(db) => <Manager db={db} />}</SupabaseGate>
       ) : (
         <Notice tone="warn" title="Supabase no está configurado">
           Faltan las variables NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_ANON_KEY (ver .env.local.example). Sin ellas
@@ -45,121 +48,11 @@ export function BannersSection() {
   );
 }
 
-// ---------------------------------------------------------------- sesión y permisos
-
-type Gate =
-  | { state: "loading" }
-  | { state: "signedOut" }
-  | { state: "forbidden"; email: string }
-  | { state: "ready"; name: string };
-
-function AuthGate({ children }: { children: (db: SupabaseClient) => React.ReactNode }) {
-  const db = getBrowserSupabase();
-  const [gate, setGate] = useState<Gate>({ state: "loading" });
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function evaluate() {
-      const { data } = await db.auth.getSession();
-      const user = data.session?.user;
-      if (!user) {
-        if (!cancelled) setGate({ state: "signedOut" });
-        return;
-      }
-      // El rol se lee de public.profiles (nunca del token ni de user_metadata, que el usuario puede editar).
-      const profile = await db.from("profiles").select("role,active,display_name").eq("user_id", user.id).maybeSingle();
-      if (cancelled) return;
-      const allowed = !profile.error && profile.data?.active && ["gerente", "ceo"].includes(profile.data.role);
-      setGate(allowed ? { state: "ready", name: profile.data?.display_name ?? user.email ?? "" } : { state: "forbidden", email: user.email ?? "" });
-    }
-
-    void evaluate();
-    const { data: sub } = db.auth.onAuthStateChange(() => {
-      // Se difiere: dentro del callback no se deben hacer más llamadas a Supabase.
-      setTimeout(() => void evaluate(), 0);
-    });
-    return () => {
-      cancelled = true;
-      sub.subscription.unsubscribe();
-    };
-  }, [db]);
-
-  if (gate.state === "loading") {
-    return <p role="status" className="text-sm text-brand-muted">Verificando tu sesión…</p>;
-  }
-  if (gate.state === "signedOut") return <SignIn db={db} />;
-  if (gate.state === "forbidden") {
-    return (
-      <div className="space-y-3">
-        <Notice tone="warn" title="Tu cuenta no puede administrar banners">
-          {gate.email ? `${gate.email} no` : "Esta cuenta no"} tiene un perfil activo de gerente o CEO. Pedile a un responsable que
-          revise tu rol.
-        </Notice>
-        <Button onClick={() => void db.auth.signOut()}>Cerrar sesión</Button>
-      </div>
-    );
-  }
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-brand-muted">
-        <p>Sesión iniciada como <strong className="font-medium text-brand-ink">{gate.name}</strong></p>
-        <Button size="sm" variant="ghost" icon="logout" onClick={() => void db.auth.signOut()}>Cerrar sesión</Button>
-      </div>
-      {children(db)}
-    </div>
-  );
-}
-
-function SignIn({ db }: { db: SupabaseClient }) {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-
-  async function submit(e: FormEvent) {
-    e.preventDefault();
-    if (!email.trim() || !password) {
-      setError("Ingresá tu correo y tu contraseña.");
-      return;
-    }
-    setBusy(true);
-    setError(null);
-    const { error: failure } = await db.auth.signInWithPassword({ email: email.trim(), password });
-    setBusy(false);
-    if (failure) setError(/network|fetch/i.test(failure.message) ? friendlyError(failure) : "El correo o la contraseña no son correctos.");
-  }
-
-  return (
-    <section className={`${CARD_CLASS} max-w-md p-5`} aria-label="Iniciar sesión">
-      <Notice title="Cuenta real, no la de demostración">
-        Esta sección guarda datos de verdad. Ingresá con tu cuenta de Supabase (la que tiene rol de gerente o CEO).
-      </Notice>
-      <form onSubmit={submit} noValidate className="mt-4 space-y-4">
-        <TextInput label="Correo" type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} />
-        <TextInput label="Contraseña" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} error={error} />
-        <Button type="submit" variant="primary" disabled={busy} className="w-full">{busy ? "Ingresando…" : "Ingresar"}</Button>
-      </form>
-    </section>
-  );
-}
-
 // ---------------------------------------------------------------- administrador
 
 const clean = (v: string) => v.trim() || null;
 
 type Draft = { mode: "new" } | { mode: "edit"; banner: AdminBanner } | null;
-
-function useToasts() {
-  const [toasts, setToasts] = useState<Toast[]>([]);
-  const counter = useRef(0);
-  const push = useCallback((message: string, tone: Toast["tone"] = "ok") => {
-    const id = ++counter.current;
-    setToasts((t) => [...t, { id, message, tone }]);
-    window.setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), tone === "error" ? 7000 : 4000);
-  }, []);
-  return { toasts, push };
-}
 
 function Manager({ db }: { db: SupabaseClient }) {
   const [banners, setBanners] = useState<AdminBanner[] | null>(null);

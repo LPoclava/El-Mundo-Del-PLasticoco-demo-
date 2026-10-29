@@ -102,6 +102,24 @@ export function validateCategoryImageSize(width: number, height: number): string
   return null;
 }
 
+/** Foto de producto: se muestra cuadrada en el catálogo (object-cover), por eso se pide casi cuadrada. */
+export const PRODUCT_RECOMMENDED_SIZE = "1000 × 1000 px";
+export const PRODUCT_MIN_WIDTH = 500;
+export const PRODUCT_MAX_OUTPUT_WIDTH = 1600;
+export const PRODUCT_MAX_IMAGES = 5;
+
+export function validateProductImageSize(width: number, height: number): string | null {
+  if (!(width > 0 && height > 0)) return "No se pudo leer el tamaño de la imagen.";
+  if (width < PRODUCT_MIN_WIDTH || height < PRODUCT_MIN_WIDTH * 0.6) {
+    return `La imagen es muy chica (${width} × ${height} px). Usá al menos ${PRODUCT_MIN_WIDTH} px de ancho; lo ideal es ${PRODUCT_RECOMMENDED_SIZE}.`;
+  }
+  const ratio = width / height;
+  if (ratio < 0.7 || ratio > 1.5) {
+    return `La proporción no sirve para una foto de producto (${width} × ${height}). Usá una imagen casi cuadrada, de unos ${PRODUCT_RECOMMENDED_SIZE}, para que el catálogo no la recorte.`;
+  }
+  return null;
+}
+
 export type BannerFormValues = {
   title: string;
   body: string;
