@@ -1,139 +1,149 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { formatPrice, normalize } from "@/lib/panel-demo/format";
-import type { DemoProduct } from "@/lib/panel-demo/types";
-import { useDemo } from "../demo-provider";
-import { Icon } from "../icons";
+import Image from "next/image";
+import { useCallback, useEffect, useState } from "react";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { formatPrice } from "@/lib/catalog/url";
 import {
-  Badge, Button, CARD_CLASS, ConfirmDialog, EmptyState, INPUT_CLASS, Notice, PageHeader, ProductThumb,
+  ADMIN_PAGE_SIZE, listCategories, listProducts, setArchived, setPublished, type CategoryOption, type ListFilters,
+  type ProductListItem, type StatusFilter,
+} from "@/lib/products/admin";
+import { hiddenReasons, publishBlockers } from "@/lib/products/rules";
+import { isBrowserSupabaseConfigured } from "@/lib/supabase/browser";
+import { productImageUrl } from "@/lib/supabase/public";
+import { Icon } from "../icons";
+import { SupabaseGate } from "../supabase-gate";
+import { useToasts } from "../use-toasts";
+import {
+  Badge, Button, CARD_CLASS, Dialog, EmptyState, INPUT_CLASS, Notice, PageHeader, ProductThumb, Toaster,
 } from "../ui";
 import { ProductFormSheet } from "./product-form";
-
-const PAGE_SIZE = 8;
-
-type StatusFilter = "todos" | "publicados" | "sin-publicar" | "archivados";
-type SortKey = "name" | "price-asc" | "price-desc" | "category";
 
 const STATUS_OPTIONS: [StatusFilter, string][] = [
   ["todos", "Todos los estados"], ["publicados", "Publicados"], ["sin-publicar", "Sin publicar"], ["archivados", "Archivados"],
 ];
-const SORT_OPTIONS: [SortKey, string][] = [
-  ["name", "Nombre (A-Z)"], ["price-asc", "Precio: menor a mayor"], ["price-desc", "Precio: mayor a menor"], ["category", "Categoría"],
-];
 
-type Pending = { product: DemoProduct; kind: "unpublish" | "archive" } | null;
+/**
+ * Productos REALES (Supabase), con la sesión de quien administra. Qué puede hacer cada persona lo
+ * decide la base: RLS exige rol gerente o superior. Los botones deshabilitados son comodidad.
+ */
+export function ProductsSection() {
+  return (
+    <div className="space-y-6">
+      <PageHeader title="Productos" subtitle="Creá, editá, publicá y archivá productos. Archivar no los elimina." />
+      {isBrowserSupabaseConfigured ? (
+        <SupabaseGate action="administrar productos">{(db) => <Manager db={db} />}</SupabaseGate>
+      ) : (
+        <Notice tone="warn" title="Supabase no está configurado">
+          Faltan las variables NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_ANON_KEY (ver .env.local.example).
+        </Notice>
+      )}
+    </div>
+  );
+}
 
-function StatusBadges({ p }: { p: DemoProduct }) {
+type Result = { key: string; items: ProductListItem[]; total: number } | { key: string; error: string };
+type Pending = { product: ProductListItem; kind: "unpublish" | "archive" } | null;
+
+function StatusBadges({ p }: { p: ProductListItem }) {
   return (
     <span className="flex flex-wrap gap-1">
-      {p.published ? <Badge tone="ok">Publicado</Badge> : <Badge tone="warn">Sin publicar</Badge>}
-      {p.archived && <Badge tone="muted">Archivado</Badge>}
+      {p.publishEnabled ? <Badge tone="ok">Publicado</Badge> : <Badge tone="warn">Sin publicar</Badge>}
+      {p.archivedAt && <Badge tone="muted">Archivado</Badge>}
     </span>
   );
 }
 
-export function ProductsSection() {
-  const { state, actions, notify } = useDemo();
+function Manager({ db }: { db: SupabaseClient }) {
+  const { toasts, push } = useToasts();
+  const [categories, setCategories] = useState<CategoryOption[]>([]);
+  const [qInput, setQInput] = useState("");
   const [q, setQ] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [status, setStatus] = useState<StatusFilter>("todos");
-  const [sort, setSort] = useState<SortKey>("name");
   const [page, setPage] = useState(1);
-  const [editing, setEditing] = useState<DemoProduct | null>(null);
-  const [sheetOpen, setSheetOpen] = useState(false);
+  const [reload, setReload] = useState(0);
+  const [result, setResult] = useState<Result | null>(null);
+  const [editor, setEditor] = useState<{ id: string | null } | null>(null);
   const [pending, setPending] = useState<Pending>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
 
-  const categoryName = (id: string) => state.categories.find((c) => c.id === id)?.name ?? "Sin categoría";
+  const key = `${q}|${categoryId}|${status}|${page}|${reload}`;
+  const refresh = useCallback(() => setReload((n) => n + 1), []);
 
-  const rows = useMemo(() => {
-    const term = normalize(q.trim());
-    const list = state.products.filter((p) => {
-      if (categoryId && p.categoryId !== categoryId) return false;
-      if (status === "publicados" && !(p.published && !p.archived)) return false;
-      if (status === "sin-publicar" && !(!p.published && !p.archived)) return false;
-      if (status === "archivados" && !p.archived) return false;
-      if (term && !normalize(`${p.name} ${p.brand} ${p.barcode ?? ""}`).includes(term)) return false;
-      return true;
-    });
-    const cat = (id: string) => state.categories.find((c) => c.id === id)?.name ?? "";
-    return [...list].sort((a, b) => {
-      if (sort === "price-asc") return a.price - b.price;
-      if (sort === "price-desc") return b.price - a.price;
-      if (sort === "category") return cat(a.categoryId).localeCompare(cat(b.categoryId), "es") || a.name.localeCompare(b.name, "es");
-      return a.name.localeCompare(b.name, "es");
-    });
-  }, [state.products, state.categories, q, categoryId, status, sort]);
+  useEffect(() => {
+    let cancelled = false;
+    listCategories(db)
+      .then((list) => !cancelled && setCategories(list))
+      .catch((e: unknown) => !cancelled && push(e instanceof Error ? e.message : "No se pudieron leer las categorías.", "error"));
+    return () => {
+      cancelled = true;
+    };
+  }, [db, push]);
 
-  const pageCount = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
-  const current = Math.min(page, pageCount);
-  const visible = rows.slice((current - 1) * PAGE_SIZE, current * PAGE_SIZE);
+  // La búsqueda se envía al servidor un instante después de dejar de escribir.
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setQ(qInput);
+      setPage(1);
+    }, 350);
+    return () => window.clearTimeout(timer);
+  }, [qInput]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const filters: ListFilters = { q, categoryId, status, page };
+    listProducts(db, filters)
+      .then((r) => !cancelled && setResult({ key, items: r.items, total: r.total }))
+      .catch((e: unknown) => !cancelled && setResult({ key, error: e instanceof Error ? e.message : "No se pudo leer el listado." }));
+    return () => {
+      cancelled = true;
+    };
+  }, [db, key, q, categoryId, status, page]);
+
+  const loading = result?.key !== key;
+  const items = result && "items" in result ? result.items : [];
+  const total = result && "items" in result ? result.total : 0;
+  const pageCount = Math.max(1, Math.ceil(total / ADMIN_PAGE_SIZE));
   const hasFilters = Boolean(q || categoryId || status !== "todos");
+  const categoryLabel = (id: string) => categories.find((c) => c.id === id)?.label ?? "Sin categoría";
 
-  function openEditor(p: DemoProduct | null) {
-    setEditing(p);
-    setSheetOpen(true);
-  }
-
-  function confirm() {
-    if (!pending) return;
-    if (pending.kind === "unpublish") {
-      actions.setPublished(pending.product.id, false);
-      notify(`«${pending.product.name}» ya no se muestra en el catálogo (simulación).`);
-    } else {
-      actions.setArchived(pending.product.id, true);
-      notify(`«${pending.product.name}» archivado (simulación).`);
+  async function act(product: ProductListItem, run: () => Promise<void>, ok: string) {
+    setBusyId(product.id);
+    try {
+      await run();
+      push(ok);
+      refresh();
+    } catch (e) {
+      push(e instanceof Error ? e.message : "No se pudo completar la acción.", "error");
+    } finally {
+      setBusyId(null);
     }
-    setPending(null);
   }
-
-  // compact: solo íconos (tabla de escritorio); el nombre queda en title y aria-label.
-  const actionsFor = (p: DemoProduct, compact: boolean) => {
-    const btn = (label: string, icon: "edit" | "eye" | "eyeOff" | "archive", onClick: () => void) => (
-      <Button size="sm" icon={icon} onClick={onClick} aria-label={`${label} ${p.name}`} title={label} className={compact ? "w-9 px-0" : ""}>
-        {compact ? null : label}
-      </Button>
-    );
-    return (
-      <div className={`flex flex-wrap gap-1.5 ${compact ? "justify-end" : ""}`}>
-        {btn("Editar", "edit", () => openEditor(p))}
-        {!p.archived &&
-          (p.published
-            ? btn("Despublicar", "eyeOff", () => setPending({ product: p, kind: "unpublish" }))
-            : btn("Publicar", "eye", () => { actions.setPublished(p.id, true); notify(`«${p.name}» publicado (simulación).`); }))}
-        {p.archived
-          ? btn("Desarchivar", "archive", () => { actions.setArchived(p.id, false); notify(`«${p.name}» desarchivado (simulación).`); })
-          : btn("Archivar", "archive", () => setPending({ product: p, kind: "archive" }))}
-      </div>
-    );
-  };
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Productos"
-        subtitle="Creá, editá, publicá y archivá productos. Archivar no los elimina."
-        actions={<Button variant="primary" icon="plus" onClick={() => openEditor(null)}>Crear producto</Button>}
-      />
-
-      <Notice tone="demo">
-        Pantalla de demostración: los productos que crees acá viven solo en este navegador. La carga de fotos se conectará con el almacenamiento real.
-      </Notice>
+    <>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-brand-muted" aria-live="polite">
+          {loading ? "Cargando…" : total === 1 ? "1 producto" : `${total} productos`}
+        </p>
+        <Button variant="primary" icon="plus" onClick={() => setEditor({ id: null })}>Crear producto</Button>
+      </div>
 
       <section className={`${CARD_CLASS} p-4`} aria-label="Filtros">
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))]">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-[minmax(0,2fr)_repeat(2,minmax(0,1fr))]">
           <div className="col-span-2 md:col-span-1">
             <label htmlFor="prod-q" className="mb-1.5 block text-sm font-medium">Buscar</label>
             <div className="relative">
               <Icon name="search" className="pointer-events-none absolute left-3 top-3.5 size-4 text-brand-muted" />
-              <input id="prod-q" type="search" value={q} onChange={(e) => { setQ(e.target.value); setPage(1); }} placeholder="Nombre, marca o código" className={`${INPUT_CLASS} pl-9`} />
+              <input id="prod-q" type="search" value={qInput} onChange={(e) => setQInput(e.target.value)} placeholder="Nombre, marca, descripción o código" className={`${INPUT_CLASS} pl-9`} />
             </div>
           </div>
           <div>
             <label htmlFor="prod-cat" className="mb-1.5 block text-sm font-medium">Categoría</label>
             <select id="prod-cat" value={categoryId} onChange={(e) => { setCategoryId(e.target.value); setPage(1); }} className={INPUT_CLASS}>
               <option value="">Todas</option>
-              {state.categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              {categories.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
             </select>
           </div>
           <div>
@@ -142,115 +152,135 @@ export function ProductsSection() {
               {STATUS_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
             </select>
           </div>
-          <div className="col-span-2 md:col-span-1">
-            <label htmlFor="prod-sort" className="mb-1.5 block text-sm font-medium">Ordenar por</label>
-            <select id="prod-sort" value={sort} onChange={(e) => setSort(e.target.value as SortKey)} className={INPUT_CLASS}>
-              {SORT_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-            </select>
-          </div>
         </div>
+        {hasFilters && (
+          <button type="button" className="mt-3 text-sm font-medium underline underline-offset-4" onClick={() => { setQInput(""); setQ(""); setCategoryId(""); setStatus("todos"); setPage(1); }}>
+            Quitar filtros
+          </button>
+        )}
       </section>
 
-      <p className="text-sm text-brand-muted" aria-live="polite">
-        {rows.length === 1 ? "1 producto" : `${rows.length} productos`}
-        {hasFilters && (
-          <>
-            {" · "}
-            <button type="button" className="font-medium text-brand-ink underline underline-offset-4" onClick={() => { setQ(""); setCategoryId(""); setStatus("todos"); setPage(1); }}>Quitar filtros</button>
-          </>
-        )}
-      </p>
-
-      {visible.length === 0 ? (
-        state.products.length === 0 ? (
-          <EmptyState title="Todavía no hay productos" action={<Button variant="primary" icon="plus" onClick={() => openEditor(null)}>Crear el primer producto</Button>}>
-            Los productos que crees acá aparecerán en este listado.
-          </EmptyState>
+      {result && "error" in result && !loading ? (
+        <div className="space-y-3">
+          <Notice tone="warn" title="No se pudo cargar el listado">{result.error}</Notice>
+          <Button onClick={refresh}>Reintentar</Button>
+        </div>
+      ) : loading && !result ? (
+        <p role="status" className="text-sm text-brand-muted">Cargando productos…</p>
+      ) : items.length === 0 && !loading ? (
+        hasFilters ? (
+          <EmptyState title="No hay productos con esos filtros">Probá con otra palabra o con otro estado.</EmptyState>
         ) : (
-          <EmptyState title="No hay productos con esos filtros" action={<Button onClick={() => { setQ(""); setCategoryId(""); setStatus("todos"); }}>Quitar filtros</Button>}>
-            Probá con otra palabra o con otro estado.
+          <EmptyState title="Todavía no hay productos" action={<Button variant="primary" icon="plus" onClick={() => setEditor({ id: null })}>Crear el primer producto</Button>}>
+            Los productos que crees acá se guardan en la base y, con foto principal y precio, aparecen en el catálogo.
           </EmptyState>
         )
       ) : (
-        <>
-          <div className={`${CARD_CLASS} hidden overflow-x-auto md:block`}>
-            <table className="w-full text-sm">
-              <caption className="sr-only">Listado de productos de demostración</caption>
-              <thead>
-                <tr className="border-b border-brand-line text-left text-xs text-brand-muted">
-                  <th scope="col" className="px-4 py-3 font-medium">Producto</th>
-                  <th scope="col" className="px-3 py-3 font-medium">Categoría</th>
-                  <th scope="col" className="px-3 py-3 text-right font-medium">Precio</th>
-                  <th scope="col" className="px-3 py-3 font-medium">Código</th>
-                  <th scope="col" className="px-3 py-3 font-medium">Estado</th>
-                  <th scope="col" className="px-4 py-3 text-right font-medium">Acciones</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-brand-line">
-                {visible.map((p) => (
-                  <tr key={p.id} className={p.archived ? "bg-brand-cream/60" : ""}>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <ProductThumb seed={p.categoryId} className="size-11" />
-                        <div className="min-w-0">
-                          <p className="font-medium">{p.name}</p>
-                          <p className="text-xs text-brand-muted">{p.brand || "Sin marca"}</p>
-                        </div>
+        <section className={CARD_CLASS} aria-label="Listado de productos" aria-busy={loading}>
+          <ul className={`divide-y divide-brand-line ${loading ? "opacity-60" : ""}`}>
+            {items.map((p) => {
+              const prices = p.prices;
+              const valid = prices.filter((x): x is number => x !== null && x > 0);
+              const blockers = publishBlockers({ hasPrimaryImage: p.primaryPath !== null, prices });
+              const reasons = hiddenReasons({ publishEnabled: p.publishEnabled, archivedAt: p.archivedAt, hasPrimaryImage: p.primaryPath !== null, prices });
+              const busy = busyId === p.id;
+              return (
+                <li key={p.id} className={`px-4 py-4 ${p.archivedAt ? "bg-brand-cream/60" : ""}`}>
+                  <div className="flex items-start gap-3">
+                    {p.primaryPath ? (
+                      <span className="relative size-14 shrink-0 overflow-hidden rounded-lg bg-brand-sand">
+                        <Image src={productImageUrl(p.primaryPath)} alt="" fill sizes="56px" className="object-cover" />
+                      </span>
+                    ) : (
+                      <ProductThumb seed={p.id} className="size-14" />
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="min-w-0 break-words font-medium">{p.name}</p>
+                        <StatusBadges p={p} />
                       </div>
-                    </td>
-                    <td className="px-3 py-3">{categoryName(p.categoryId)}</td>
-                    <td className="px-3 py-3 text-right font-medium tabular-nums">{formatPrice(p.price)}</td>
-                    <td className="px-3 py-3 tabular-nums text-brand-muted">{p.barcode ?? "Sin código"}</td>
-                    <td className="px-3 py-3"><StatusBadges p={p} /></td>
-                    <td className="px-4 py-3">{actionsFor(p, true)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <ul className="space-y-3 md:hidden">
-            {visible.map((p) => (
-              <li key={p.id} className={`${CARD_CLASS} p-4 ${p.archived ? "bg-brand-cream/60" : ""}`}>
-                <div className="flex items-start gap-3">
-                  <ProductThumb seed={p.categoryId} className="size-12" />
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium">{p.name}</p>
-                    <p className="text-xs text-brand-muted">{p.brand || "Sin marca"} · {categoryName(p.categoryId)}</p>
-                    <p className="mt-1 text-xs tabular-nums text-brand-muted">{p.barcode ?? "Sin código"}</p>
+                      <p className="text-xs text-brand-muted">{p.brand || "Sin marca"} · {categoryLabel(p.categoryId)} · {p.barcode ?? "Sin código"}</p>
+                      <p className="mt-0.5 text-xs text-brand-muted">
+                        {reasons.length === 0 ? "Se muestra en el catálogo." : `No se muestra en el catálogo: ${reasons.join(" · ").toLowerCase()}.`}
+                      </p>
+                    </div>
+                    <p className="shrink-0 text-right font-semibold tabular-nums">
+                      {valid.length === 0 ? <span className="text-xs font-normal text-brand-muted">Sin precio</span> : (
+                        <>
+                          {new Set(valid).size > 1 && <span className="mr-1 text-xs font-normal text-brand-muted">Desde</span>}
+                          {formatPrice(Math.min(...valid))}
+                        </>
+                      )}
+                    </p>
                   </div>
-                  <p className="font-semibold tabular-nums">{formatPrice(p.price)}</p>
-                </div>
-                <div className="mt-3"><StatusBadges p={p} /></div>
-                <div className="mt-3">{actionsFor(p, false)}</div>
-              </li>
-            ))}
+                  <div className="mt-3 flex flex-wrap gap-2 sm:pl-[4.25rem]">
+                    <Button size="sm" icon="edit" disabled={busy} onClick={() => setEditor({ id: p.id })} aria-label={`Editar ${p.name}`}>Editar</Button>
+                    {!p.archivedAt && (p.publishEnabled ? (
+                      <Button size="sm" icon="eyeOff" disabled={busy} onClick={() => setPending({ product: p, kind: "unpublish" })} aria-label={`Despublicar ${p.name}`}>Despublicar</Button>
+                    ) : (
+                      <Button size="sm" icon="eye" disabled={busy || blockers.length > 0} title={blockers.join(" ")} onClick={() => void act(p, () => setPublished(db, p.id, true), `«${p.name}» publicado.`)} aria-label={`Publicar ${p.name}`}>Publicar</Button>
+                    ))}
+                    {p.archivedAt ? (
+                      <Button size="sm" icon="archive" disabled={busy} onClick={() => void act(p, () => setArchived(db, p.id, false), `«${p.name}» desarchivado.`)} aria-label={`Desarchivar ${p.name}`}>Desarchivar</Button>
+                    ) : (
+                      <Button size="sm" icon="archive" disabled={busy} onClick={() => setPending({ product: p, kind: "archive" })} aria-label={`Archivar ${p.name}`}>Archivar</Button>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
           </ul>
-
-          {pageCount > 1 && (
-            <nav aria-label="Paginación" className="flex items-center justify-between gap-3">
-              <Button size="sm" icon="chevronLeft" disabled={current === 1} onClick={() => setPage(current - 1)}>Anterior</Button>
-              <p className="text-sm text-brand-muted tabular-nums">Página {current} de {pageCount}</p>
-              <Button size="sm" disabled={current === pageCount} onClick={() => setPage(current + 1)}>Siguiente <Icon name="chevronRight" className="size-4" /></Button>
-            </nav>
-          )}
-        </>
+        </section>
       )}
 
-      <ProductFormSheet product={editing} open={sheetOpen} onClose={() => setSheetOpen(false)} />
+      {pageCount > 1 && (
+        <nav aria-label="Paginación" className="flex items-center justify-between gap-3">
+          <Button size="sm" icon="chevronLeft" disabled={page === 1 || loading} onClick={() => setPage(page - 1)}>Anterior</Button>
+          <p className="text-sm text-brand-muted tabular-nums">Página {page} de {pageCount}</p>
+          <Button size="sm" disabled={page >= pageCount || loading} onClick={() => setPage(page + 1)}>Siguiente <Icon name="chevronRight" className="size-4" /></Button>
+        </nav>
+      )}
 
-      <ConfirmDialog
-        open={pending !== null}
-        onClose={() => setPending(null)}
-        onConfirm={confirm}
-        danger
-        title={pending?.kind === "archive" ? "¿Archivar este producto?" : "¿Despublicar este producto?"}
-        confirmLabel={pending?.kind === "archive" ? "Archivar" : "Despublicar"}
-      >
-        {pending?.kind === "archive"
-          ? <>«{pending.product.name}» deja de mostrarse en el catálogo y se conserva con todos sus datos. Se puede desarchivar después.</>
-          : <>«{pending?.product.name}» deja de mostrarse en el catálogo, pero no se archiva ni se borra.</>}
-      </ConfirmDialog>
-    </div>
+      <ProductFormSheet
+        db={db}
+        productId={editor?.id ?? null}
+        open={editor !== null}
+        categories={categories}
+        onClose={() => setEditor(null)}
+        onChanged={refresh}
+        notify={push}
+      />
+
+      <Dialog open={pending !== null} onClose={() => setPending(null)} title={pending?.kind === "archive" ? "¿Archivar este producto?" : "¿Despublicar este producto?"}>
+        {pending && (
+          <div className="space-y-4">
+            <p className="text-sm text-brand-muted">
+              {pending.kind === "archive"
+                ? <>«{pending.product.name}» deja de mostrarse en el catálogo y se conserva con todos sus datos y fotos. Se puede desarchivar después.</>
+                : <>«{pending.product.name}» deja de mostrarse en el catálogo, pero no se archiva ni se borra.</>}
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button variant="ghost" onClick={() => setPending(null)}>Cancelar</Button>
+              <Button
+                variant="danger"
+                onClick={() => {
+                  const target = pending;
+                  setPending(null);
+                  void act(
+                    target.product,
+                    () => (target.kind === "archive" ? setArchived(db, target.product.id, true) : setPublished(db, target.product.id, false)),
+                    target.kind === "archive" ? `«${target.product.name}» archivado.` : `«${target.product.name}» despublicado.`,
+                  );
+                }}
+              >
+                {pending.kind === "archive" ? "Archivar" : "Despublicar"}
+              </Button>
+            </div>
+          </div>
+        )}
+      </Dialog>
+
+      <Toaster toasts={toasts} />
+    </>
   );
 }

@@ -1,9 +1,17 @@
 import {
-  BANNER_MAX_OUTPUT_WIDTH, IMAGE_MAX_BYTES, validateCategoryImageSize, validateImageFile, validateImageSize,
+  BANNER_MAX_OUTPUT_WIDTH, IMAGE_MAX_BYTES, PRODUCT_MAX_OUTPUT_WIDTH, validateCategoryImageSize, validateImageFile,
+  validateImageSize, validateProductImageSize,
 } from "./rules";
 
-/** banner = apaisada 16:7; category = tarjeta casi cuadrada. */
-export type ImageKind = "banner" | "category";
+/** banner = apaisada 16:7; category = tarjeta casi cuadrada; product = foto casi cuadrada. */
+export type ImageKind = "banner" | "category" | "product";
+
+const SIZE_CHECK = {
+  banner: validateImageSize,
+  category: validateCategoryImageSize,
+  product: validateProductImageSize,
+} as const;
+const MAX_WIDTH = { banner: BANNER_MAX_OUTPUT_WIDTH, category: BANNER_MAX_OUTPUT_WIDTH, product: PRODUCT_MAX_OUTPUT_WIDTH } as const;
 
 /** Imagen lista para subir: ya validada, reducida si era muy grande y codificada en WebP si el navegador puede. */
 export type PreparedImage = {
@@ -55,10 +63,10 @@ export async function prepareImage(file: File, kind: ImageKind = "banner"): Prom
   }
 
   try {
-    const sizeError = (kind === "banner" ? validateImageSize : validateCategoryImageSize)(decoded.width, decoded.height);
+    const sizeError = SIZE_CHECK[kind](decoded.width, decoded.height);
     if (sizeError) throw new Error(sizeError);
 
-    const scale = Math.min(1, BANNER_MAX_OUTPUT_WIDTH / decoded.width);
+    const scale = Math.min(1, MAX_WIDTH[kind] / decoded.width);
     const width = Math.round(decoded.width * scale);
     const height = Math.round(decoded.height * scale);
     const canvas = document.createElement("canvas");
