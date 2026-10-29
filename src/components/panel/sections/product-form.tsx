@@ -104,6 +104,12 @@ function FormBody({ db, initial, categories, onClose, onChanged, notify }: Omit<
     const list = draftsOf(initial);
     return list.length > 0 ? list : [emptyVariant()];
   });
+  // Un producto de un solo precio muestra solo el campo «Precio»; los tamaños y colores son opcionales.
+  const [multi, setMulti] = useState(() => {
+    const list = draftsOf(initial);
+    return list.length > 1 || (list.length === 1 && Boolean(list[0].size.trim() || list[0].color.trim()));
+  });
+  const onlyVariantIsPlain = variants.length === 1 && !variants[0].size.trim() && !variants[0].color.trim();
   const [images, setImages] = useState<ImageDraft[]>(() => imagesOf(initial));
   const [wantPublished, setWantPublished] = useState(initial?.publishEnabled ?? false);
   const [errors, setErrors] = useState<ProductFormErrors>({ variants: {} });
@@ -243,21 +249,22 @@ function FormBody({ db, initial, categories, onClose, onChanged, notify }: Omit<
           )}
         </Field>
       </div>
-      <Field label="Descripción (opcional)" error={errors.description} hint="Se usa también en el buscador del catálogo.">
-        {({ id, describedBy, invalid }) => (
-          <textarea id={id} aria-describedby={describedBy} aria-invalid={invalid} rows={3} maxLength={PRODUCT_LIMITS.description} value={description}
-            onChange={(e) => { setDescription(e.target.value); clearError("description"); }}
-            className="w-full rounded-lg border border-brand-line bg-white px-3 py-2 text-sm placeholder:text-brand-muted focus-visible:border-brand-ink aria-[invalid=true]:border-brand-danger" />
-        )}
-      </Field>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <TextInput label="Código de barras (opcional)" inputMode="numeric" value={barcode} error={errors.barcode} onChange={(e) => { setBarcode(e.target.value); clearError("barcode"); }} hint="De 8 a 14 dígitos. No puede repetirse." />
-        <TextInput label="SKU interno (opcional)" value={sku} maxLength={PRODUCT_LIMITS.sku} error={errors.sku} onChange={(e) => { setSku(e.target.value); clearError("sku"); }} hint="No puede repetirse." />
-      </div>
-
+      {!multi ? (
+        <fieldset className="space-y-3 rounded-lg border border-brand-line p-4">
+          <legend className="px-1 text-sm font-medium">Precio</legend>
+          <TextInput
+            label="Precio del producto (en pesos)" inputMode="numeric" value={variants[0].price}
+            error={(errors.variants[variants[0].key] ?? {}).price}
+            onChange={(ev) => patchVariant(variants[0].key, { price: ev.target.value })}
+            hint="Pesos enteros, sin centavos. Sin precio el producto no se publica en el catálogo."
+          />
+          {errors.variants[variants[0].key]?.duplicate && <p className="text-sm text-brand-danger">{errors.variants[variants[0].key]?.duplicate}</p>}
+          <Button size="sm" variant="ghost" icon="plus" onClick={() => setMulti(true)}>Tiene tamaños o colores con precios distintos</Button>
+        </fieldset>
+      ) : (
       <fieldset className="space-y-3 rounded-lg border border-brand-line p-4">
-        <legend className="px-1 text-sm font-medium">Variantes y precios</legend>
-        <p className="text-xs text-brand-muted">Pesos enteros, sin centavos. Una variante sin precio no cuenta para publicar. Para un producto sin tamaños ni colores, dejá esos campos vacíos y cargá solo el precio.</p>
+        <legend className="px-1 text-sm font-medium">Precios por tamaño o color</legend>
+        <p className="text-xs text-brand-muted">Pesos enteros, sin centavos. Una variante sin precio no cuenta para publicar. Cada tamaño o color lleva su propio precio.</p>
         {variants.map((v, i) => {
           const e = errors.variants[v.key] ?? {};
           return (
@@ -274,8 +281,25 @@ function FormBody({ db, initial, categories, onClose, onChanged, notify }: Omit<
             </div>
           );
         })}
-        <Button size="sm" icon="plus" onClick={() => setVariants((cur) => [...cur, emptyVariant()])}>Agregar variante</Button>
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" icon="plus" onClick={() => setVariants((cur) => [...cur, emptyVariant()])}>Agregar variante</Button>
+          {onlyVariantIsPlain && <Button size="sm" variant="ghost" onClick={() => setMulti(false)}>Usar un solo precio</Button>}
+        </div>
       </fieldset>
+
+      )}
+
+      <Field label="Descripción (opcional)" error={errors.description} hint="Se usa también en el buscador del catálogo.">
+        {({ id, describedBy, invalid }) => (
+          <textarea id={id} aria-describedby={describedBy} aria-invalid={invalid} rows={3} maxLength={PRODUCT_LIMITS.description} value={description}
+            onChange={(e) => { setDescription(e.target.value); clearError("description"); }}
+            className="w-full rounded-lg border border-brand-line bg-white px-3 py-2 text-sm placeholder:text-brand-muted focus-visible:border-brand-ink aria-[invalid=true]:border-brand-danger" />
+        )}
+      </Field>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <TextInput label="Código de barras (opcional)" inputMode="numeric" value={barcode} error={errors.barcode} onChange={(e) => { setBarcode(e.target.value); clearError("barcode"); }} hint="De 8 a 14 dígitos. No puede repetirse." />
+        <TextInput label="SKU interno (opcional)" value={sku} maxLength={PRODUCT_LIMITS.sku} error={errors.sku} onChange={(e) => { setSku(e.target.value); clearError("sku"); }} hint="No puede repetirse." />
+      </div>
 
       <fieldset className="space-y-3 rounded-lg border border-brand-line p-4">
         <legend className="px-1 text-sm font-medium">Fotos ({images.length} de {PRODUCT_MAX_IMAGES})</legend>
