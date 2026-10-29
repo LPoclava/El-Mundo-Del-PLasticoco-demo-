@@ -14,7 +14,7 @@ before(async () => {
   db = await newDb();
   await applyMigrations(db, (f) => f < "20261029"); // lo que ya hay en producción
   await seedAuthUsersAndStaff(db);
-  await applyMigrations(db, (f) => f >= "20261029"); // esta tanda
+  await applyMigrations(db, (f) => f >= "20261029" && f < "20261030"); // esta tanda
   await seedCatalog(db);
   // Equipo de prueba, dado de alta como lo haría el SQL Editor.
   await db.exec(`

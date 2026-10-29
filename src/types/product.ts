@@ -5,6 +5,24 @@
 export type Category = {
   slug: string;
   name: string;
+  /** Slug de la categoría principal si esta es una subcategoría. */
+  parentSlug?: string | null;
+  /** 1 a 4 en las categorías principales destacadas; null en las demás. */
+  featuredPosition?: number | null;
+  /** Foto de la tarjeta de categoría; null = se muestra un ícono. */
+  imageUrl?: string | null;
+};
+
+/** Banner activo del carrusel «Promociones y combos» (vista pública public_promo_banners). */
+export type PromoBanner = {
+  id: string;
+  title: string | null;
+  body: string | null;
+  badge: string | null;
+  ctaLabel: string | null;
+  linkUrl: string | null;
+  imageUrl: string;
+  imageAlt: string | null;
 };
 
 /** Fila de la vista pública public_catalog, lista para mostrar. */

@@ -21,7 +21,7 @@ export function atLeast(role: Role, min: Role): boolean {
 
 export const ROLE_SUMMARY: Record<Role, string> = {
   empleado: "Consulta precios por código, los modifica, vincula códigos y da de alta productos desde el escáner.",
-  gerente: "Todo lo del empleado, más gestión de productos, categorías, imágenes, CRM e informes y auditoría del catálogo.",
+  gerente: "Todo lo del empleado, más gestión de productos, categorías, banners promocionales, CRM e informes y auditoría del catálogo.",
   ceo: "Todo lo del gerente, más usuarios y roles, auditoría completa y configuración general.",
 };
 
@@ -30,13 +30,14 @@ export type SectionId =
   | "precios"
   | "productos"
   | "categorias"
+  | "banners"
   | "crm"
   | "historial"
   | "usuarios"
   | "configuracion";
 
 export type IconName =
-  | "home" | "barcode" | "box" | "tag" | "chart" | "history" | "users" | "settings"
+  | "home" | "barcode" | "box" | "tag" | "image" | "chart" | "history" | "users" | "settings"
   | "search" | "plus" | "edit" | "archive" | "eye" | "eyeOff" | "check" | "x" | "menu"
   | "logout" | "chevronLeft" | "chevronRight" | "chevronDown" | "alert" | "info" | "link"
   | "sort" | "lock" | "refresh" | "user" | "trash";
@@ -54,6 +55,7 @@ export const SECTIONS: readonly Section[] = [
   { id: "precios", href: "/panel/precios", label: "Consulta de precios", icon: "barcode", minRole: "empleado" },
   { id: "productos", href: "/panel/productos", label: "Productos", icon: "box", minRole: "gerente" },
   { id: "categorias", href: "/panel/categorias", label: "Categorías", icon: "tag", minRole: "gerente" },
+  { id: "banners", href: "/panel/banners", label: "Banners promocionales", icon: "image", minRole: "gerente" },
   { id: "crm", href: "/panel/crm", label: "CRM e informes", icon: "chart", minRole: "gerente" },
   { id: "historial", href: "/panel/historial", label: "Historial de cambios", icon: "history", minRole: "empleado" },
   { id: "usuarios", href: "/panel/usuarios", label: "Usuarios y permisos", icon: "users", minRole: "ceo" },

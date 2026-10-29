@@ -17,32 +17,76 @@ function tabClass(isActive: boolean) {
   ].join(" ");
 }
 
-/** Pestañas con subrayado de acento y desplazamiento horizontal; mantienen la búsqueda activa. */
+/** Las principales primero (en su orden), después el resto por nombre. */
+function sortTop(a: Category, b: Category) {
+  const pa = a.featuredPosition ?? Infinity;
+  const pb = b.featuredPosition ?? Infinity;
+  return pa !== pb ? pa - pb : a.name.localeCompare(b.name, "es");
+}
+
+/**
+ * Pestañas con subrayado de acento y desplazamiento horizontal; mantienen la búsqueda activa.
+ * Si la categoría elegida tiene subcategorías, se muestran en una segunda fila.
+ */
 export function CategoryNav({ categories, active, q }: Props) {
+  const top = categories.filter((c) => !c.parentSlug).sort(sortTop);
+  const current = categories.find((c) => c.slug === active);
+  const main = current ? (current.parentSlug ?? current.slug) : undefined;
+  const mainCategory = categories.find((c) => c.slug === main);
+  const children = main ? categories.filter((c) => c.parentSlug === main) : [];
+
   return (
-    <nav id="categorias" aria-label="Categorías" className="scroll-mt-4 border-b border-brand-line">
-      <ul className="no-scrollbar -mx-3 flex snap-x overflow-x-auto">
-        <li>
-          <Link
-            href={catalogHref({ q })}
-            aria-current={!active ? "page" : undefined}
-            className={tabClass(!active)}
-          >
-            Todas
-          </Link>
-        </li>
-        {categories.map((c) => (
-          <li key={c.slug}>
+    <>
+      <nav id="categorias" aria-label="Categorías" className="scroll-mt-4 border-b border-brand-line">
+        <ul className="no-scrollbar -mx-3 flex snap-x overflow-x-auto">
+          <li>
             <Link
-              href={catalogHref({ q, category: c.slug })}
-              aria-current={active === c.slug ? "page" : undefined}
-              className={tabClass(active === c.slug)}
+              href={catalogHref({ q })}
+              aria-current={!active ? "page" : undefined}
+              className={tabClass(!active)}
             >
-              {c.name}
+              Todas
             </Link>
           </li>
-        ))}
-      </ul>
-    </nav>
+          {top.map((c) => (
+            <li key={c.slug}>
+              <Link
+                href={catalogHref({ q, category: c.slug })}
+                aria-current={active === c.slug ? "page" : undefined}
+                className={tabClass(main === c.slug)}
+              >
+                {c.name}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </nav>
+      {mainCategory && children.length > 0 && (
+        <nav aria-label={`Subcategorías de ${mainCategory.name}`} className="-mt-2 border-b border-brand-line">
+          <ul className="no-scrollbar -mx-3 flex snap-x overflow-x-auto">
+            <li>
+              <Link
+                href={catalogHref({ q, category: mainCategory.slug })}
+                aria-current={active === mainCategory.slug ? "page" : undefined}
+                className={tabClass(active === mainCategory.slug)}
+              >
+                Todo {mainCategory.name}
+              </Link>
+            </li>
+            {children.map((c) => (
+              <li key={c.slug}>
+                <Link
+                  href={catalogHref({ q, category: c.slug })}
+                  aria-current={active === c.slug ? "page" : undefined}
+                  className={tabClass(active === c.slug)}
+                >
+                  {c.name}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      )}
+    </>
   );
 }

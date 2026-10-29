@@ -4,6 +4,8 @@ Estado: **modelo aprobado; migraciones escritas, sin aplicar en ninguna base**. 
 
 > **Autorización:** las secciones de este documento que mencionan `public.staff` e `is_staff()` describen el modelo original. Está en preparación su reemplazo por tres roles (`empleado`, `gerente`, `ceo`), perfiles y auditoría: ver [autorizacion-roles.md](autorizacion-roles.md). Nada de eso está aplicado en Supabase.
 
+> **Categorías y banners:** la migración `20261030000001` agrega subcategorías (un nivel), las cuatro categorías principales y los banners promocionales. Las secciones 3 y 4 de este documento ("sin subcategorías") describen el modelo original; el modelo vigente está en [promociones-y-banners.md](promociones-y-banners.md). Sin aplicar en ninguna base.
+
 ## 1. Decisiones confirmadas
 
 | Tema | Decisión |

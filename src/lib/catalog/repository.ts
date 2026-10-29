@@ -1,5 +1,6 @@
 import { cacheLife } from "next/cache";
-import type { CatalogProduct, Category } from "@/types/product";
+import type { CatalogProduct, Category, PromoBanner } from "@/types/product";
+import { isSafeBannerLink } from "@/lib/banners/rules";
 import { getSupabase, isSupabaseConfigured, productImageUrl } from "@/lib/supabase/public";
 
 /**
@@ -33,6 +34,8 @@ type CatalogRow = {
   has_price_range: boolean;
 };
 
+const SLUG = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+
 const CATALOG_COLUMNS = "id,name,brand,category_slug,image_path,price,has_price_range";
 
 /** Minúsculas y sin tildes: igual que la columna search_text de la base. */
@@ -60,16 +63,97 @@ export async function getCategories(): Promise<Category[]> {
   return fetchCategories();
 }
 
+type CategoryRow = {
+  slug: string;
+  name: string;
+  parent_slug?: string | null;
+  featured_position?: number | null;
+  image_path?: string | null;
+};
+
+/**
+ * Columnas agregadas por la migración 20261030000001 (jerarquía de categorías). Mientras esa
+ * migración no esté aplicada en la base, PostgREST responde con un error de columna inexistente
+ * (42703 / PGRST204): el sitio sigue funcionando con el esquema anterior.
+ */
+function isMissingColumn(error: { code?: string; message?: string }): boolean {
+  return error.code === "42703" || error.code === "PGRST204" || /column .* does not exist/i.test(error.message ?? "");
+}
+
 async function fetchCategories(): Promise<Category[]> {
   "use cache";
   cacheLife(CATALOG_CACHE);
 
-  const { data, error } = await getSupabase()
+  const supabase = getSupabase();
+  const full = await supabase
     .from("public_categories")
-    .select("slug,name")
+    .select("slug,name,parent_slug,featured_position,image_path")
     .order("name");
-  if (error) throw new Error(`No se pudieron leer las categorías: ${error.message}`);
-  return (data ?? []) as Category[];
+  let rows: CategoryRow[];
+  if (full.error) {
+    if (!isMissingColumn(full.error)) {
+      throw new Error(`No se pudieron leer las categorías: ${full.error.message}`);
+    }
+    const legacy = await supabase.from("public_categories").select("slug,name").order("name");
+    if (legacy.error) throw new Error(`No se pudieron leer las categorías: ${legacy.error.message}`);
+    rows = (legacy.data ?? []) as CategoryRow[];
+  } else {
+    rows = (full.data ?? []) as CategoryRow[];
+  }
+  return rows.map((r) => ({
+    slug: r.slug,
+    name: r.name,
+    parentSlug: r.parent_slug ?? null,
+    featuredPosition: r.featured_position ?? null,
+    imageUrl: r.image_path ? productImageUrl(r.image_path) : null,
+  }));
+}
+
+type BannerRow = {
+  id: string;
+  title: string | null;
+  body: string | null;
+  badge: string | null;
+  cta_label: string | null;
+  link_url: string | null;
+  image_path: string;
+  image_alt: string | null;
+};
+
+/**
+ * Banners vigentes, en el orden definido en el panel. La vista public_promo_banners ya filtra
+ * por estado y fechas en la base. Si la vista todavía no existe o falla la consulta, el carrusel
+ * se oculta: una promoción no debe romper el catálogo.
+ */
+export async function getPromoBanners(): Promise<PromoBanner[]> {
+  if (!isSupabaseConfigured) return [];
+  return fetchPromoBanners();
+}
+
+async function fetchPromoBanners(): Promise<PromoBanner[]> {
+  "use cache";
+  cacheLife(CATALOG_CACHE);
+
+  const { data, error } = await getSupabase()
+    .from("public_promo_banners")
+    .select("id,title,body,badge,cta_label,link_url,image_path,image_alt")
+    .order("position")
+    .order("id")
+    .limit(10);
+  if (error) {
+    console.error(`No se pudieron leer los banners: ${error.message}`);
+    return [];
+  }
+  return ((data ?? []) as BannerRow[]).map((b) => ({
+    id: b.id,
+    title: b.title,
+    body: b.body,
+    badge: b.badge,
+    ctaLabel: b.cta_label,
+    linkUrl: b.link_url && isSafeBannerLink(b.link_url) ? b.link_url : null,
+    imageUrl: productImageUrl(b.image_path),
+    imageAlt: b.image_alt,
+  }));
 }
 
 export async function getCatalogPage(query: CatalogQuery): Promise<CatalogPage> {
@@ -83,17 +167,32 @@ async function fromSupabase(query: CatalogQuery): Promise<CatalogPage> {
   const supabase = getSupabase();
   const term = query.q ? normalize(query.q).trim() : "";
 
-  const fetchPage = async (page: number) => {
+  // Una categoría principal incluye los productos de sus subcategorías (main_category_slug).
+  // Antes de aplicar la migración esa columna no existe: se filtra solo por la categoría exacta.
+  let hierarchy = true;
+  const fetchPage = async (page: number): Promise<{ rows: CatalogRow[]; total: number }> => {
     let request = supabase
       .from("public_catalog")
       .select(CATALOG_COLUMNS, { count: "exact" })
       .order("name_sort")
       .order("id")
       .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
-    if (query.category) request = request.eq("category_slug", query.category);
+    if (query.category) {
+      // El slug llega de la URL: solo se arma el filtro "o" si tiene la forma de un slug.
+      request =
+        hierarchy && SLUG.test(query.category)
+          ? request.or(`category_slug.eq.${query.category},main_category_slug.eq.${query.category}`)
+          : request.eq("category_slug", query.category);
+    }
     if (term) request = request.ilike("search_text", `%${escapeLike(term)}%`);
     const { data, error, count } = await request;
-    if (error) throw new Error(`No se pudo leer el catálogo: ${error.message}`);
+    if (error) {
+      if (hierarchy && query.category && isMissingColumn(error)) {
+        hierarchy = false;
+        return fetchPage(page);
+      }
+      throw new Error(`No se pudo leer el catálogo: ${error.message}`);
+    }
     return { rows: (data ?? []) as CatalogRow[], total: count ?? 0 };
   };
 

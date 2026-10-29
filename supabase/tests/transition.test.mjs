@@ -32,7 +32,7 @@ describe("combinación de políticas durante la transición", () => {
     await db.exec("drop policy gerente_all on public.products");
 
     // Con las migraciones 5 y 6 (que borran staff_all en la misma transacción) pierde el acceso.
-    await applyMigrations(db, (f) => f >= "20261029000005");
+    await applyMigrations(db, (f) => f >= "20261029000005" && f < "20261030");
     await asUser(db, ID.inactivo, async (q) => {
       assert.equal(Number((await q("select count(*) n from public.products")).rows[0].n), 0);
     });
@@ -43,7 +43,7 @@ describe("combinación de políticas durante la transición", () => {
     await applyMigrations(db, (f) => f < "20261029");
     await seedAuthUsersAndStaff(db);
     await seedCatalog(db);
-    const steps = (await import("./helpers.mjs")).migrationFiles().filter((f) => f >= "20261029");
+    const steps = (await import("./helpers.mjs")).migrationFiles().filter((f) => f >= "20261029" && f < "20261030");
     for (const f of steps) {
       await applyMigrations(db, (x) => x === f);
       await asUser(db, ID.ceo, async (q) => {
@@ -63,7 +63,7 @@ describe("reversión", () => {
     const db = await newDb();
     await applyMigrations(db, (f) => f < "20261029");
     await seedAuthUsersAndStaff(db);
-    await applyMigrations(db, (f) => f >= "20261029");
+    await applyMigrations(db, (f) => f >= "20261029" && f < "20261030");
     await seedCatalog(db);
     await db.query("insert into public.profiles (user_id, display_name, role) values ($1, 'G', 'gerente')", [ID.gerente]);
     return db;
