@@ -110,11 +110,11 @@ export function PriceLookupSection() {
       <details className="rounded-xl border border-brand-line bg-white/60 p-4">
         <summary className="cursor-pointer text-sm font-medium">Probar la cámara sin un producto real</summary>
         <p className="mt-2 text-sm text-brand-muted">
-          Apuntá la cámara del celular a estos códigos en la pantalla de la computadora. Son de ejemplo y no corresponden a productos reales.
-          Con el último podés probar el alta de un producto nuevo.
+          Apuntá la cámara del celular a este código en la pantalla de la computadora. Es de ejemplo y no corresponde a ningún producto.
+          Sirve para probar la cámara y el alta de un producto nuevo.
         </p>
         <ul className="mt-3 grid gap-3 sm:grid-cols-2">
-          {[...SAMPLE_CODES.found, SAMPLE_CODES.unknown].map((c) => {
+          {[SAMPLE_CODES.unknown].map((c) => {
             const known = state.products.find((p) => p.barcode === c);
             return (
               <li key={c} className="rounded-lg border border-brand-line bg-white p-3">

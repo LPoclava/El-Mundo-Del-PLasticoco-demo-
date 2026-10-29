@@ -16,57 +16,14 @@ export const DEMO_CATEGORIES: DemoCategory[] = [
   { id: "cat-fiesta", name: "Descartables" },
 ];
 
-type P = [name: string, brand: string, categoryId: string, price: number, published: boolean, archived?: boolean, noCode?: boolean];
-
-const PRODUCT_ROWS: P[] = [
-  ["Balde 10 litros con asa", "Hogarplast", "cat-baldes", 4890, true],
-  ["Balde 15 litros reforzado", "Hogarplast", "cat-baldes", 6350, true],
-  ["Tacho de basura 50 L con tapa", "Norte", "cat-baldes", 12900, true],
-  ["Palangana redonda 30 cm", "Norte", "cat-baldes", 3250, true],
-  ["Vaso térmico 450 ml", "Aura", "cat-vasos", 3790, true],
-  ["Jarra con tapa 2 litros", "Aura", "cat-vasos", 4650, true],
-  ["Set de 6 vasos de colores", "Aura", "cat-vasos", 5200, false, false, true],
-  ["Botella deportiva 750 ml", "Aura", "cat-vasos", 3980, true],
-  ["Recipiente hermético 1,5 L", "Casaplast", "cat-cocina", 4320, true],
-  ["Set de 5 recipientes herméticos", "Casaplast", "cat-cocina", 11800, true],
-  ["Escurridor de platos", "Casaplast", "cat-cocina", 7450, true],
-  ["Organizador apilable chico", "Casaplast", "cat-cocina", 5890, false, false, true],
-  ["Cesto de ropa calado", "Norte", "cat-limpieza", 8990, true],
-  ["Balde exprimidor con ruedas", "Limpia", "cat-limpieza", 21500, true],
-  ["Cepillo de piso", "Limpia", "cat-limpieza", 2990, true],
-  ["Set pala y escobillón", "Limpia", "cat-limpieza", 6790, false],
-  ["Maceta 20 cm", "Verdelia", "cat-jardin", 2790, true],
-  ["Maceta colgante", "Verdelia", "cat-jardin", 3450, true],
-  ["Regadera 5 litros", "Verdelia", "cat-jardin", 5290, true],
-  ["Plato para maceta 25 cm", "Verdelia", "cat-jardin", 1590, false, false, true],
-  ["Platos descartables x50", "Festiva", "cat-fiesta", 3290, true],
-  ["Vasos descartables x100", "Festiva", "cat-fiesta", 2850, true],
-  ["Cubiertos descartables x50", "Festiva", "cat-fiesta", 2490, false, true],
-  ["Bandeja rectangular", "Festiva", "cat-fiesta", 4150, false, true],
-];
+/** Sin productos de ejemplo: el panel de demostración arranca con el listado vacío. */
+export const DEMO_PRODUCTS: DemoProduct[] = [];
 
 /**
- * Códigos EAN-13 válidos con prefijo 200 (rango que GS1 reserva para uso interno): se pueden
- * escanear de verdad desde otra pantalla y nunca coinciden con un producto real.
+ * Código EAN-13 válido con prefijo 200 (rango que GS1 reserva para uso interno): se puede escanear
+ * de verdad desde otra pantalla y no corresponde a ningún producto. Sirve para probar la cámara.
  */
-export const demoCode = (n: number) => ean13(`200000100${String(n).padStart(3, "0")}`);
-
-export const DEMO_PRODUCTS: DemoProduct[] = PRODUCT_ROWS.map(
-  ([name, brand, categoryId, price, published, archived = false, noCode = false], i) => ({
-    id: `prod-${i + 1}`,
-    name,
-    brand,
-    categoryId,
-    price,
-    barcode: noCode ? null : demoCode(i + 1),
-    published,
-    archived,
-  }),
-);
-
-/** Códigos que la pantalla de consulta ofrece para simular un escaneo. */
 export const SAMPLE_CODES = {
-  found: [demoCode(1), demoCode(5), demoCode(9)],
   unknown: ean13("200000199901"),
 } as const;
 
@@ -90,21 +47,9 @@ type A = [at: string, userId: string, action: AuditEntry["action"], target: stri
 const U = Object.fromEntries(DEMO_USERS.map((u) => [u.id, u]));
 
 const AUDIT_ROWS: A[] = [
-  ["2026-10-27T11:42:00-03:00", "usr-empleado", "price", "Balde 10 litros con asa", "$ 4.590", "$ 4.890"],
-  ["2026-10-27T10:15:00-03:00", "usr-empleado-2", "link", "Vaso térmico 450 ml", "Sin código", demoCode(5)],
-  ["2026-10-26T17:05:00-03:00", "usr-gerente", "publish", "Regadera 5 litros", "Sin publicar", "Publicado"],
-  ["2026-10-26T16:20:00-03:00", "usr-empleado", "create", "Plato para maceta 25 cm", undefined, "Creado sin publicar"],
   ["2026-10-26T12:00:00-03:00", "usr-gerente", "category", "Descartables", "Fiesta", "Descartables"],
-  ["2026-10-25T09:48:00-03:00", "usr-empleado-2", "price", "Jarra con tapa 2 litros", "$ 4.300", "$ 4.650"],
-  ["2026-10-24T15:30:00-03:00", "usr-gerente", "archive", "Cubiertos descartables x50", "Activo", "Archivado"],
   ["2026-10-24T11:10:00-03:00", "usr-ceo", "user", "Sofía Luna", "Activa", "Inactiva"],
-  ["2026-10-23T18:22:00-03:00", "usr-empleado", "price", "Escurridor de platos", "$ 6.900", "$ 7.450"],
-  ["2026-10-23T10:05:00-03:00", "usr-gerente", "edit", "Cesto de ropa calado", undefined, "Campos: nombre, marca"],
-  ["2026-10-22T13:40:00-03:00", "usr-gerente", "unpublish", "Set pala y escobillón", "Publicado", "Sin publicar"],
-  ["2026-10-21T09:15:00-03:00", "usr-empleado-2", "create", "Organizador apilable chico", undefined, "Creado sin publicar"],
   ["2026-10-20T16:50:00-03:00", "usr-ceo", "user", "Joaquín Pérez", "Sin acceso", "Empleado"],
-  ["2026-10-19T12:30:00-03:00", "usr-empleado", "link", "Botella deportiva 750 ml", demoCode(8), ean13("200000100808")],
-  ["2026-10-18T10:00:00-03:00", "usr-gerente", "price", "Tacho de basura 50 L con tapa", "$ 11.900", "$ 12.900"],
 ];
 
 export const DEMO_AUDIT: AuditEntry[] = AUDIT_ROWS.map(([at, userId, action, target, from, to], i) => ({
@@ -151,14 +96,6 @@ export const SALES_SERIES: Record<SalesPeriod, { label: string; labels: string[]
   },
 };
 
-export const TOP_SELLERS: { name: string; units: number; amount: number }[] = [
-  { name: "Vasos descartables x100", units: 212, amount: 604200 },
-  { name: "Balde 10 litros con asa", units: 148, amount: 723720 },
-  { name: "Platos descartables x50", units: 131, amount: 430990 },
-  { name: "Recipiente hermético 1,5 L", units: 96, amount: 414720 },
-  { name: "Botella deportiva 750 ml", units: 88, amount: 350240 },
-];
-
 export const CRM_KPIS: { label: string; value: string; hint: string }[] = [
   { label: "Ventas del mes", value: "$ 5.403.000", hint: "+4,2 % frente al mes anterior" },
   { label: "Operaciones", value: "812", hint: "27 por día en promedio" },
@@ -168,9 +105,9 @@ export const CRM_KPIS: { label: string; value: string; hint: string }[] = [
 
 export const COMMERCIAL_ACTIVITY: { at: string; text: string }[] = [
   { at: "2026-10-27T12:10:00-03:00", text: "Consulta mayorista por descartables para un evento" },
-  { at: "2026-10-27T09:45:00-03:00", text: "Pedido de reposición de baldes (Hogarplast)" },
-  { at: "2026-10-26T18:20:00-03:00", text: "Cliente pidió presupuesto por 20 cestos de ropa" },
-  { at: "2026-10-26T11:05:00-03:00", text: "Reclamo resuelto: cambio de regadera" },
+  { at: "2026-10-27T09:45:00-03:00", text: "Pedido de reposición a un proveedor" },
+  { at: "2026-10-26T18:20:00-03:00", text: "Cliente pidió presupuesto por un pedido grande" },
+  { at: "2026-10-26T11:05:00-03:00", text: "Reclamo resuelto: cambio de un artículo" },
 ];
 
 /** Hoy "ficticio" de la demo, para no depender del reloj durante el prerenderizado. */

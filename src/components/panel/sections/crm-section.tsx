@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import {
-  COMMERCIAL_ACTIVITY, CRM_KPIS, SALES_SERIES, TOP_SELLERS, type SalesPeriod,
+  COMMERCIAL_ACTIVITY, CRM_KPIS, SALES_SERIES, type SalesPeriod,
 } from "@/lib/panel-demo/data";
 import { formatDateTime, formatPrice } from "@/lib/panel-demo/format";
 import { CARD_CLASS, DemoBadge, Notice, PageHeader } from "../ui";
@@ -57,7 +57,6 @@ function SalesChart({ period }: { period: SalesPeriod }) {
 
 export function CrmSection() {
   const [period, setPeriod] = useState<SalesPeriod>("30d");
-  const topMax = Math.max(...TOP_SELLERS.map((t) => t.amount));
   const total = SALES_SERIES[period].values.reduce((a, b) => a + b, 0);
 
   return (
@@ -100,28 +99,7 @@ export function CrmSection() {
         <div className="mt-4"><SalesChart period={period} /></div>
       </section>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <section className={`${CARD_CLASS} p-5`} aria-labelledby="top-titulo">
-          <div className="flex items-center justify-between gap-2">
-            <h2 id="top-titulo" className="text-base font-semibold">Productos más vendidos</h2>
-            <span className="text-xs text-brand-muted">ejemplo</span>
-          </div>
-          <ol className="mt-4 space-y-4">
-            {TOP_SELLERS.map((t, i) => (
-              <li key={t.name}>
-                <div className="flex items-baseline justify-between gap-3 text-sm">
-                  <span className="min-w-0 truncate"><span className="mr-2 tabular-nums text-brand-muted">{i + 1}.</span>{t.name}</span>
-                  <span className="shrink-0 font-medium tabular-nums">{formatPrice(t.amount)}</span>
-                </div>
-                <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-brand-sand">
-                  <div className="h-full rounded-full bg-brand-green" style={{ width: `${(t.amount / topMax) * 100}%` }} />
-                </div>
-                <p className="mt-1 text-xs text-brand-muted tabular-nums">{t.units} unidades</p>
-              </li>
-            ))}
-          </ol>
-        </section>
-
+      <div className="grid gap-6">
         <section className={`${CARD_CLASS} p-5`} aria-labelledby="comercial-titulo">
           <div className="flex items-center justify-between gap-2">
             <h2 id="comercial-titulo" className="text-base font-semibold">Actividad comercial reciente</h2>

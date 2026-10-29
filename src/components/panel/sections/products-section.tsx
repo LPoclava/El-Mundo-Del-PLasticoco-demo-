@@ -117,7 +117,7 @@ export function ProductsSection() {
       />
 
       <Notice tone="demo">
-        Productos ficticios de demostración. Las imágenes son marcadores: la carga de fotos se conectará con el almacenamiento real.
+        Pantalla de demostración: los productos que crees acá viven solo en este navegador. La carga de fotos se conectará con el almacenamiento real.
       </Notice>
 
       <section className={`${CARD_CLASS} p-4`} aria-label="Filtros">
@@ -162,9 +162,15 @@ export function ProductsSection() {
       </p>
 
       {visible.length === 0 ? (
-        <EmptyState title="No hay productos con esos filtros" action={<Button onClick={() => { setQ(""); setCategoryId(""); setStatus("todos"); }}>Quitar filtros</Button>}>
-          Probá con otra palabra o con otro estado.
-        </EmptyState>
+        state.products.length === 0 ? (
+          <EmptyState title="Todavía no hay productos" action={<Button variant="primary" icon="plus" onClick={() => openEditor(null)}>Crear el primer producto</Button>}>
+            Los productos que crees acá aparecerán en este listado.
+          </EmptyState>
+        ) : (
+          <EmptyState title="No hay productos con esos filtros" action={<Button onClick={() => { setQ(""); setCategoryId(""); setStatus("todos"); }}>Quitar filtros</Button>}>
+            Probá con otra palabra o con otro estado.
+          </EmptyState>
+        )
       ) : (
         <>
           <div className={`${CARD_CLASS} hidden overflow-x-auto md:block`}>
