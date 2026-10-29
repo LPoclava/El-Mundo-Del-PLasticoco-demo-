@@ -52,9 +52,15 @@ function cropFrame(video: HTMLVideoElement, box: HTMLElement, canvas: HTMLCanvas
   return true;
 }
 
-export function BarcodeScanner({ onDetect, onManual }: {
+export function BarcodeScanner({ onDetect, onManual, continuous = false, startLabel = "Escanear código de barras" }: {
   onDetect: (code: string) => void;
   onManual: () => void;
+  /**
+   * Modo venta: tras cada lectura la cámara sigue abierta y leyendo (no se pausa). El mismo código
+   * no se vuelve a leer hasta pasados 2 s, para no sumar dos veces el mismo artículo sin querer.
+   */
+  continuous?: boolean;
+  startLabel?: string;
 }) {
   const boxRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -68,6 +74,8 @@ export function BarcodeScanner({ onDetect, onManual }: {
   const sessionRef = useRef(0);
   const lastRef = useRef<{ code: string; at: number } | null>(null);
   const onDetectRef = useRef(onDetect);
+  const continuousRef = useRef(continuous);
+  const flashRef = useRef<number | undefined>(undefined);
 
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState<CameraError | null>(null);
@@ -81,6 +89,7 @@ export function BarcodeScanner({ onDetect, onManual }: {
 
   useEffect(() => {
     onDetectRef.current = onDetect;
+    continuousRef.current = continuous;
   });
 
   // Al salir de la pantalla: se libera la cámara y el audio.
@@ -89,6 +98,7 @@ export function BarcodeScanner({ onDetect, onManual }: {
     return () => {
       sessionRef.current += 1;
       window.clearTimeout(timerRef.current);
+      window.clearTimeout(flashRef.current);
       scanningRef.current = false;
       stopStream(streamRef.current);
       streamRef.current = null;
@@ -163,7 +173,17 @@ export function BarcodeScanner({ onDetect, onManual }: {
           } else {
             const last = lastRef.current;
             const repeated = last && last.code === accepted.code && Date.now() - last.at < REPEAT_COOLDOWN_MS;
-            if (!repeated) {
+            if (!repeated && continuousRef.current) {
+              // Modo venta: la lectura se informa y la cámara sigue abierta para el próximo artículo.
+              lastRef.current = { code: accepted.code, at: Date.now() };
+              beep();
+              navigator.vibrate?.(80);
+              setWarning(null);
+              setFound(accepted.code);
+              window.clearTimeout(flashRef.current);
+              flashRef.current = window.setTimeout(() => setFound(null), 1400);
+              onDetectRef.current(accepted.code);
+            } else if (!repeated) {
               // Una sola lectura: se pausa el video y el análisis hasta que se pida reanudar.
               scanningRef.current = false;
               lastRef.current = { code: accepted.code, at: Date.now() };
@@ -175,6 +195,9 @@ export function BarcodeScanner({ onDetect, onManual }: {
               setStatus("paused");
               onDetectRef.current(accepted.code);
               return;
+            } else if (continuousRef.current && last) {
+              // El mismo código sigue a la vista: se renueva la espera para no sumarlo otra vez mientras se lo sostiene.
+              last.at = Date.now();
             }
           }
         }
@@ -283,6 +306,7 @@ export function BarcodeScanner({ onDetect, onManual }: {
   const statusText =
     status === "requesting" ? "Esperando permiso… elegí «Permitir» en el aviso de Chrome"
     : status === "paused" ? `Código leído: ${found}`
+    : found ? `Leído: ${found}`
     : warning ?? "Apuntá al código y mantenelo dentro del marco";
 
   return (
@@ -293,7 +317,7 @@ export function BarcodeScanner({ onDetect, onManual }: {
             Chrome te va a pedir permiso para usar la cámara. El video se procesa en el navegador: no se graba ni se envía a ningún lado.
           </p>
           <Button variant="primary" icon="barcode" className="h-14 w-full text-base sm:h-12 sm:w-auto" onClick={() => void start("environment")}>
-            Escanear código de barras
+            {startLabel}
           </Button>
         </div>
       )}

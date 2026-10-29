@@ -14,7 +14,7 @@ const WEEK = 7 * 24 * 60 * 60 * 1000;
 type Shortcut = { href: string; icon: IconName; title: string; text: string; min: Role };
 
 const SHORTCUTS: Shortcut[] = [
-  { href: "/panel/precios", icon: "barcode", title: "Consultar un precio", text: "Escaneá o escribí un código de barras.", min: "empleado" },
+  { href: "/panel/precios", icon: "barcode", title: "Vender con el escáner", text: "Escaneá, cobrá y descontá stock.", min: "empleado" },
   { href: "/panel/productos", icon: "box", title: "Gestionar productos", text: "Crear, editar, publicar o archivar.", min: "gerente" },
   { href: "/panel/categorias", icon: "tag", title: "Ordenar categorías", text: "Crear, renombrar o reasignar.", min: "gerente" },
   { href: "/panel/crm", icon: "chart", title: "Ver informes", text: "Resumen comercial de ejemplo.", min: "gerente" },

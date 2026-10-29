@@ -34,6 +34,7 @@ Los datos de contacto (WhatsApp, teléfono, Instagram, Facebook) se completan en
 - `src/lib/supabase/public.ts` — cliente de solo lectura pública.
 - `supabase/migrations/` — esquema de la base. `supabase/rollback/` — reversión (no es una migración).
 - `docs/modelo-de-datos.md` — modelo de datos, seguridad, decisiones y pendientes.
+- `docs/pos-ventas.md` — punto de venta con escáner, stock, medios de pago y ventas atómicas.
 - `docs/promociones-y-banners.md` — categorías principales, carrusel «Promociones y combos» y panel de banners.
 
 ## Reglas importantes

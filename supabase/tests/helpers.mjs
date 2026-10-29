@@ -21,7 +21,7 @@ export const ID = {
   enStaffSinPerfil: "00000000-0000-4000-8000-000000000007",
 };
 
-const SUPABASE_STUB = `
+export const SUPABASE_STUB = `
   create role anon nologin;
   create role authenticated nologin;
   create schema extensions;

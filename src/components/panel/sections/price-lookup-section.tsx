@@ -20,7 +20,7 @@ type Result =
 
 type Panel = "none" | "price" | "link";
 
-export function PriceLookupSection() {
+export function PriceLookupSection({ embedded = false }: { embedded?: boolean }) {
   const { state, notify } = useDemo();
   const [code, setCode] = useState("");
   const [codeError, setCodeError] = useState<string | null>(null);
@@ -59,10 +59,15 @@ export function PriceLookupSection() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Consulta de precios"
-        subtitle="Escaneá el código de barras con la cámara para ver el precio, corregirlo o dar de alta un producto nuevo."
-      />
+      {!embedded && (
+        <PageHeader
+          title="Consulta de precios"
+          subtitle="Escaneá el código de barras con la cámara para ver el precio, corregirlo o dar de alta un producto nuevo."
+        />
+      )}
+      {embedded && (
+        <Notice tone="demo">Maqueta con datos de demostración: acá no se registran ventas ni se descuenta stock.</Notice>
+      )}
 
       <section className={`${CARD_CLASS} p-4 sm:p-5`} aria-label="Escanear código de barras">
         <BarcodeScanner onDetect={(c) => search(c, true)} onManual={goManual} />
