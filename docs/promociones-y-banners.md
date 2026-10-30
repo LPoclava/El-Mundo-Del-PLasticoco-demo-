@@ -1,6 +1,6 @@
 # Categorías principales, promociones y banners
 
-Estado: **código y migración listos, sin aplicar en ninguna base**. La migración `20261030000001_main_categories_and_promo_banners.sql` se probó solo contra PostgreSQL local (PGlite); nunca se ejecutó en Supabase.
+Estado: **migración `20261030000001_main_categories_and_promo_banners.sql` aplicada en la base de producción** (confirmado por el equipo; una consulta de solo lectura a las vistas públicas lo corrobora). Antes de aplicarla se probó con PostgreSQL local (PGlite). Falta verificar con uso real el flujo completo del panel y las políticas de Storage.
 
 ## 1. Qué cambia
 
@@ -41,12 +41,12 @@ Estado: **código y migración listos, sin aplicar en ninguna base**. La migraci
 
 ## 4. Compatibilidad con la base actual
 
-El sitio funciona **antes y después** de aplicar la migración:
+El sitio funcionaba **antes y después** de aplicar la migración (compatibilidad que se conserva por si hay que probar en otra base):
 
 - Sin la migración, el catálogo lee el esquema anterior (sin jerarquía) y el carrusel y las tarjetas no se muestran.
 - Con la migración, todo se activa solo.
 
-Por eso se puede desplegar el código primero y aplicar la migración cuando se quiera. El panel de banners, en cambio, necesita la migración.
+Por eso el código se pudo desplegar antes de aplicar la migración. El panel de banners, en cambio, necesita la migración.
 
 La vista `public_catalog` se redefine en la migración conservando el filtro de archivados que agregó la migración 7. Si se agrega otro filtro a esa vista en el futuro, hay que repetirlo en ambas.
 

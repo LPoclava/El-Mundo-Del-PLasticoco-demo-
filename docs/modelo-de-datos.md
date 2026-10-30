@@ -1,10 +1,10 @@
 # Modelo de datos — Mundo del Plástico
 
-Estado: **modelo aprobado; migraciones escritas, sin aplicar en ninguna base**. Los archivos están en `supabase/migrations`. Su sintaxis se validó con un parser de PostgreSQL, pero **no se ejecutaron**: hay que probarlas en un proyecto de prueba de Supabase antes de aplicarlas en el real.
+Estado: **modelo aprobado; todas las migraciones de `supabase/migrations` están aplicadas en la base de producción** (confirmado por el equipo). La tabla de la sección 7 conserva solo las del modelo original; las posteriores (roles, banners, ventas) están en sus propios documentos.
 
 > **Autorización:** las secciones de este documento que mencionan `public.staff` e `is_staff()` describen el modelo original. Está en preparación su reemplazo por tres roles (`empleado`, `gerente`, `ceo`), perfiles y auditoría: ver [autorizacion-roles.md](autorizacion-roles.md). Nada de eso está aplicado en Supabase.
 
-> **Categorías y banners:** la migración `20261030000001` agrega subcategorías (un nivel), las cuatro categorías principales y los banners promocionales. Las secciones 3 y 4 de este documento ("sin subcategorías") describen el modelo original; el modelo vigente está en [promociones-y-banners.md](promociones-y-banners.md). Sin aplicar en ninguna base.
+> **Categorías y banners:** la migración `20261030000001` agrega subcategorías (un nivel), las cuatro categorías principales y los banners promocionales. Las secciones 3 y 4 de este documento ("sin subcategorías") describen el modelo original; el modelo vigente está en [promociones-y-banners.md](promociones-y-banners.md). Aplicada en la base de producción.
 
 ## 1. Decisiones confirmadas
 
@@ -74,7 +74,7 @@ Los demás productos siguen en la base y siguen siendo administrables, pero no s
 
 ## 7. Migraciones
 
-Las migraciones están en `supabase/migrations` (sin aplicar):
+Las migraciones del modelo original están en `supabase/migrations` (aplicadas):
 
 | Archivo | Contenido |
 | --- | --- |

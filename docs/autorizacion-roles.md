@@ -1,6 +1,6 @@
 # Autorización por roles y auditoría
 
-Estado: **preparado en el repositorio, sin aplicar en Supabase.** Reemplaza el modelo de `public.staff`
+Estado: **aplicado en la base de producción** (las ocho migraciones de roles y auditoría y el cierre que elimina `is_staff()` y renombra `staff` a `staff_legacy`; el cierre sigue guardado en `supabase/pending/` como registro). Reemplaza el modelo de `public.staff`
 (todos con los mismos permisos) por tres roles jerárquicos: `empleado < gerente < ceo`.
 
 ## 1. Modelo de datos

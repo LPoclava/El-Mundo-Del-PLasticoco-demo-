@@ -1,6 +1,6 @@
 # Punto de venta (escáner, carrito, stock y ventas)
 
-Estado: **código y migración listos, sin aplicar en ninguna base**. La migración `20261031000001_pos_sales_and_stock.sql` se probó con PostgreSQL local (PGlite y un PostgreSQL real temporal); nunca se ejecutó en Supabase.
+Estado: **migración `20261031000001_pos_sales_and_stock.sql` aplicada en la base de producción** (confirmado por el equipo; una consulta de solo lectura confirma que existe `pos_find` y que rechaza a quien no tiene sesión). Antes de aplicarla se probó con PostgreSQL local (PGlite y un PostgreSQL real temporal). **Todavía no se hizo una venta real de punta a punta.**
 
 ## 1. Qué había antes (inspección)
 
@@ -73,7 +73,7 @@ No se usa `service_role` en el frontend ni se desactivó ninguna política. `con
 
 ## 7. Pasos manuales pendientes
 
-1. **Aplicar la migración** en un proyecto de prueba de Supabase primero. No está aplicada en producción.
+1. ~~Aplicar la migración~~ Ya está aplicada en producción. Conviene hacer una primera venta de prueba con un producto real y su stock, y comprobar el descuento y el comprobante.
 2. **Cargar el stock** de cada variante (sin eso nada es vendible). Un gerente puede hacerlo con `adjust_stock` desde el SQL Editor, por ejemplo: `select public.adjust_stock('<id de la variante>', 25, 'Stock inicial');`. Esta etapa **no incluye una pantalla** para cargar stock; conviene sumarla al formulario de productos cuando se conecte a Supabase.
 3. Crear las cuentas de los empleados (Auth + `profiles`), como se explica en `autorizacion-roles.md`.
 4. Si el negocio quiere «Otro medio»: `update public.payment_methods set enabled = true where code = 'otro';` (o agregar otros medios con `insert`).
