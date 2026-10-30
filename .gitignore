@@ -31,7 +31,10 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # env files (can opt-in for committing if needed)
-.env*
+# .env (solo claves PÚBLICAS: URL y clave anónima de Supabase) va en el repositorio, que es privado.
+# Cualquier otro archivo de entorno local sigue sin subirse.
+.env.local
+.env*.local
 
 # vercel
 .vercel
@@ -44,3 +47,10 @@ next-env.d.ts
 !.env.local.example
 
 /supabase/tests/node_modules
+
+# Fuera del repositorio (se conservan en esta carpeta): migraciones, pruebas, documentación y recursos de marca.
+/supabase/
+/scripts/
+/docs/
+/Logo/
+/.impeccable/
