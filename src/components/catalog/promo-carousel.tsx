@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { CATALOG_COPY } from "@/config/catalog-copy";
 import type { PromoBanner } from "@/types/product";
 import { AUTOPLAY_MS, BANNER_RATIO, isExternalLink, stepIndex, swipeDirection } from "@/lib/banners/rules";
 
@@ -79,7 +80,7 @@ export function PromoCarousel({ banners, intervalMs = AUTOPLAY_MS }: Props) {
     <div
       role="region"
       aria-roledescription="carrusel"
-      aria-label="Promociones y combos"
+      aria-label={CATALOG_COPY.promotions.title}
       onKeyDown={onKeyDown}
       onPointerEnter={(e) => e.pointerType === "mouse" && setHovered(true)}
       onPointerLeave={(e) => e.pointerType === "mouse" && setHovered(false)}

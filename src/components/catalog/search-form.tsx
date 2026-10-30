@@ -8,10 +8,10 @@ export function SearchForm({ q, category }: Props) {
   return (
     <form
       id="buscar"
-      action="/"
+      action="/#catalogo"
       method="get"
       role="search"
-      className="flex scroll-mt-4 items-center rounded-lg border border-brand-line bg-white focus-within:border-brand-ink focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-brand-ink"
+      className="flex scroll-mt-4 items-center rounded-lg border border-brand-line bg-white shadow-sm focus-within:border-brand-ink focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-brand-ink"
     >
       {category && <input type="hidden" name="categoria" value={category} />}
       <label htmlFor="q" className="sr-only">
