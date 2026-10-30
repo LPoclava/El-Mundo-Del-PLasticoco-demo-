@@ -3,7 +3,6 @@
  * del negocio, y nunca se leen ni se escriben en Supabase. Se reemplazan por consultas reales
  * cuando se conecte el panel definitivo.
  */
-import { ean13 } from "@/lib/barcode/ean";
 import type { Role } from "./roles";
 import type { AuditEntry, DemoCategory, DemoProduct, DemoState, DemoUser } from "./types";
 
@@ -18,14 +17,6 @@ export const DEMO_CATEGORIES: DemoCategory[] = [
 
 /** Sin productos de ejemplo: el panel de demostración arranca con el listado vacío. */
 export const DEMO_PRODUCTS: DemoProduct[] = [];
-
-/**
- * Código EAN-13 válido con prefijo 200 (rango que GS1 reserva para uso interno): se puede escanear
- * de verdad desde otra pantalla y no corresponde a ningún producto. Sirve para probar la cámara.
- */
-export const SAMPLE_CODES = {
-  unknown: ean13("200000199901"),
-} as const;
 
 export const DEMO_USERS: DemoUser[] = [
   { id: "usr-ceo", name: "Cuenta CEO (demo)", email: "ceo@ejemplo.test", role: "ceo", active: true, createdAt: "2026-09-01T10:00:00-03:00" },

@@ -13,25 +13,26 @@ export function CatalogHero({ children }: { children: React.ReactNode }) {
   return (
     <section
       aria-labelledby="bienvenida"
-      className="relative overflow-hidden rounded-2xl border border-brand-line bg-white px-5 py-7 shadow-sm sm:px-8 sm:py-10"
+      className="relative sm:overflow-hidden sm:rounded-2xl sm:border sm:border-brand-line sm:bg-white sm:px-8 sm:py-10 sm:shadow-sm"
     >
-      {/* Eco del globo del logo: decorativo y apenas visible. */}
-      <GlobeMotif className="pointer-events-none absolute -right-10 -top-12 size-56 text-brand-green/10 sm:-right-6 sm:size-72" />
+      {/* Eco del globo del logo: decorativo, solo en pantallas anchas. */}
+      <GlobeMotif className="pointer-events-none absolute -right-6 -top-12 hidden size-72 text-brand-green/10 sm:block" />
       <GlobeMotif className="pointer-events-none absolute -bottom-16 right-24 hidden size-40 text-brand-orange/15 sm:block" />
 
       <div className="relative max-w-2xl">
-        <p className="flex items-center gap-2 text-sm font-medium text-brand-green-ink">
+        <p className="hidden items-center gap-2 text-sm font-medium text-brand-green-ink sm:flex">
           <span aria-hidden className="flex items-center gap-1">
             <span className="size-2 rounded-full bg-brand-orange" />
             <span className="size-2 rounded-full bg-brand-green" />
           </span>
           {eyebrow}
         </p>
-        <h1 id="bienvenida" className="mt-2 text-3xl font-semibold leading-tight tracking-tight text-balance sm:text-4xl">
+        {/* En celular el logo ya dice el nombre: el título queda solo para lectores de pantalla. */}
+        <h1 id="bienvenida" className="sr-only sm:not-sr-only sm:mt-2 sm:text-4xl sm:font-semibold sm:leading-tight sm:tracking-tight sm:text-balance">
           {title}
         </h1>
-        <p className="mt-2 max-w-xl text-base text-brand-muted text-pretty sm:text-lg">{subtitle}</p>
-        <div className="mt-5 max-w-xl">{children}</div>
+        <p className="mt-2 hidden max-w-xl text-lg text-brand-muted text-pretty sm:block">{subtitle}</p>
+        <div className="max-w-xl sm:mt-5">{children}</div>
       </div>
     </section>
   );

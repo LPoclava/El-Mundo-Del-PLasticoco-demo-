@@ -24,14 +24,6 @@ export function SiteHeader() {
             className="h-11 w-auto sm:h-14"
           />
         </Link>
-        <nav aria-label="Principal" className="flex items-center text-sm text-brand-muted">
-          <Link href="/#buscar" className="inline-flex min-h-11 items-center px-3 hover:text-brand-ink">
-            Buscar
-          </Link>
-          <Link href="/#categorias" className="inline-flex min-h-11 items-center px-3 hover:text-brand-ink">
-            Categorías
-          </Link>
-        </nav>
       </div>
       {/* Franja bicolor, los colores del logo: naranja y verde. */}
       <div aria-hidden className="flex h-1">

@@ -69,6 +69,7 @@ type CategoryRow = {
   parent_slug?: string | null;
   featured_position?: number | null;
   image_path?: string | null;
+  description?: string | null;
 };
 
 /**
@@ -85,26 +86,31 @@ async function fetchCategories(): Promise<Category[]> {
   cacheLife(CATALOG_CACHE);
 
   const supabase = getSupabase();
-  const full = await supabase
-    .from("public_categories")
-    .select("slug,name,parent_slug,featured_position,image_path")
-    .order("name");
-  let rows: CategoryRow[];
-  if (full.error) {
-    if (!isMissingColumn(full.error)) {
-      throw new Error(`No se pudieron leer las categorías: ${full.error.message}`);
+  // Cada migración agregó columnas: se prueba de la más nueva a la más vieja, así el sitio funciona
+  // con cualquier versión de la base (la columna description llegó con la migración 20261101).
+  const attempts = [
+    "slug,name,parent_slug,featured_position,image_path,description",
+    "slug,name,parent_slug,featured_position,image_path",
+    "slug,name",
+  ];
+  let rows: CategoryRow[] | null = null;
+  for (const columns of attempts) {
+    const result = await supabase.from("public_categories").select(columns).order("name");
+    if (!result.error) {
+      rows = (result.data ?? []) as unknown as CategoryRow[];
+      break;
     }
-    const legacy = await supabase.from("public_categories").select("slug,name").order("name");
-    if (legacy.error) throw new Error(`No se pudieron leer las categorías: ${legacy.error.message}`);
-    rows = (legacy.data ?? []) as CategoryRow[];
-  } else {
-    rows = (full.data ?? []) as CategoryRow[];
+    if (!isMissingColumn(result.error)) {
+      throw new Error(`No se pudieron leer las categorías: ${result.error.message}`);
+    }
   }
+  if (!rows) throw new Error("No se pudieron leer las categorías");
   return rows.map((r) => ({
     slug: r.slug,
     name: r.name,
     parentSlug: r.parent_slug ?? null,
     featuredPosition: r.featured_position ?? null,
+    description: r.description ?? null,
     imageUrl: r.image_path ? productImageUrl(r.image_path) : null,
   }));
 }

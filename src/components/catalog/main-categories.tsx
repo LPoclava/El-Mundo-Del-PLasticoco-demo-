@@ -46,7 +46,7 @@ export async function MainCategories({ searchParams }: { searchParams: Promise<R
   const activeMain = active ? (active.parentSlug ?? active.slug) : undefined;
 
   return (
-    <section aria-labelledby="categorias-principales" className="mt-8 sm:mt-10">
+    <section aria-labelledby="categorias-principales" className="mt-6 sm:mt-10">
       <SectionHeading
         id="categorias-principales"
         title={CATALOG_COPY.categories.title}
@@ -88,7 +88,7 @@ function CategoryCard({ category, tone, href, current }: { category: Category; t
         current ? "border-brand-orange ring-2 ring-brand-orange" : `border-brand-line ${t.hoverBorder}`
       }`}
     >
-      <div className={`relative aspect-[4/3] overflow-hidden ${t.tint}`}>
+      <div className={`relative aspect-[3/2] overflow-hidden sm:aspect-[4/3] ${t.tint}`}>
         {category.imageUrl ? (
           // alt vacío: el nombre de la categoría está escrito justo debajo.
           <Image
@@ -115,7 +115,7 @@ function CategoryCard({ category, tone, href, current }: { category: Category; t
         )}
       </div>
 
-      <div className="flex flex-1 items-center justify-between gap-2 px-3 py-3 sm:px-4 sm:py-4">
+      <div className="flex flex-1 items-center justify-between gap-2 px-3 py-2.5 sm:px-4 sm:py-4">
         <div className="min-w-0">
           <h3 className="text-lg font-semibold leading-tight text-balance sm:text-xl">{category.name}</h3>
           <p className="mt-0.5 text-sm text-brand-muted">{CATALOG_COPY.categories.cta}</p>

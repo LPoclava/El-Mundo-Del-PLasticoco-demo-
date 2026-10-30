@@ -32,7 +32,6 @@ export type SectionId =
   | "categorias"
   | "banners"
   | "crm"
-  | "historial"
   | "usuarios"
   | "configuracion";
 
@@ -52,23 +51,17 @@ export type Section = {
 
 export const SECTIONS: readonly Section[] = [
   { id: "inicio", href: "/panel", label: "Inicio", icon: "home", minRole: "empleado" },
-  { id: "precios", href: "/panel/precios", label: "Escáner y ventas", icon: "barcode", minRole: "empleado" },
+  { id: "precios", href: "/panel/precios", label: "Escáner", icon: "barcode", minRole: "empleado" },
   { id: "productos", href: "/panel/productos", label: "Productos", icon: "box", minRole: "gerente" },
   { id: "categorias", href: "/panel/categorias", label: "Categorías", icon: "tag", minRole: "gerente" },
   { id: "banners", href: "/panel/banners", label: "Banners promocionales", icon: "image", minRole: "gerente" },
   { id: "crm", href: "/panel/crm", label: "CRM e informes", icon: "chart", minRole: "gerente" },
-  { id: "historial", href: "/panel/historial", label: "Historial de cambios", icon: "history", minRole: "empleado" },
   { id: "usuarios", href: "/panel/usuarios", label: "Usuarios y permisos", icon: "users", minRole: "ceo" },
   { id: "configuracion", href: "/panel/configuracion", label: "Configuración", icon: "settings", minRole: "ceo" },
 ];
 
 export function sectionsFor(role: Role): Section[] {
   return SECTIONS.filter((s) => atLeast(role, s.minRole));
-}
-
-/** El empleado ve solo su actividad; el gerente el catálogo; el CEO todo. */
-export function historyTitle(role: Role): string {
-  return role === "empleado" ? "Mi actividad" : "Historial de cambios";
 }
 
 export const DEMO_EMAIL_DOMAIN = "demo.mundodelplastico.test";

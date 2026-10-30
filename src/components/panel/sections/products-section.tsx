@@ -64,12 +64,34 @@ function Manager({ db }: { db: SupabaseClient }) {
   const [page, setPage] = useState(1);
   const [reload, setReload] = useState(0);
   const [result, setResult] = useState<Result | null>(null);
-  const [editor, setEditor] = useState<{ id: string | null } | null>(null);
+  // «Completar producto» desde el escáner llega con ?editar=<id> y abre esa ficha. Este componente solo se
+  // dibuja en el navegador (después de verificar la sesión), así que leer la URL acá es seguro.
+  const [editor, setEditor] = useState<{ id: string | null } | null>(() => {
+    const id = typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("editar");
+    return id && /^[0-9a-f-]{36}$/i.test(id) ? { id } : null;
+  });
+  const [unpublished, setUnpublished] = useState<number | null>(null);
   const [pending, setPending] = useState<Pending>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const key = `${q}|${categoryId}|${status}|${page}|${reload}`;
   const refresh = useCallback(() => setReload((n) => n + 1), []);
+
+  // Se quita ?editar= de la dirección para que recargar no vuelva a abrir la ficha.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).has("editar")) window.history.replaceState(null, "", "/panel/productos");
+  }, []);
+
+  // Indicador «sin publicar» (antes estaba en el inicio): productos activos que todavía no se ven en el catálogo.
+  useEffect(() => {
+    let cancelled = false;
+    listProducts(db, { q: "", categoryId: "", status: "sin-publicar", page: 1 })
+      .then((r) => !cancelled && setUnpublished(r.total))
+      .catch(() => !cancelled && setUnpublished(null));
+    return () => {
+      cancelled = true;
+    };
+  }, [db, reload]);
 
   useEffect(() => {
     let cancelled = false;
@@ -124,9 +146,21 @@ function Manager({ db }: { db: SupabaseClient }) {
   return (
     <>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-brand-muted" aria-live="polite">
-          {loading ? "Cargando…" : total === 1 ? "1 producto" : `${total} productos`}
-        </p>
+        <div className="flex flex-wrap items-center gap-3">
+          <p className="text-sm text-brand-muted" aria-live="polite">
+            {loading ? "Cargando…" : total === 1 ? "1 producto" : `${total} productos`}
+          </p>
+          {unpublished !== null && unpublished > 0 && (
+            <button
+              type="button"
+              onClick={() => { setStatus("sin-publicar"); setPage(1); }}
+              className="inline-flex min-h-9 items-center gap-1.5 rounded-full bg-brand-orange/20 px-3 text-sm font-medium hover:bg-brand-orange/30"
+            >
+              {unpublished === 1 ? "1 sin publicar" : `${unpublished} sin publicar`}
+              <span className="text-xs font-normal text-brand-muted">ver</span>
+            </button>
+          )}
+        </div>
         <Button variant="primary" icon="plus" onClick={() => setEditor({ id: null })}>Crear producto</Button>
       </div>
 

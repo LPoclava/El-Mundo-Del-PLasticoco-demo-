@@ -27,6 +27,24 @@ function httpsUrl(value: string | null): string | null {
   }
 }
 
+/** Número comercial de WhatsApp (solo dígitos) o null si no está configurado. */
+export function getWhatsAppNumber(): string | null {
+  return digits(CONTACT.whatsapp);
+}
+
+/**
+ * Enlace de consulta por WhatsApp para un producto, con el mensaje ya escrito. Solo ABRE el chat:
+ * el cliente decide si lo envía, así que no se registra ni se cuenta como venta ni como consulta enviada.
+ * Devuelve null si no hay número configurado (el botón no se muestra).
+ */
+export function productInquiryHref(input: { name: string; price: string; fromPrice?: boolean; variant?: string | null }): string | null {
+  const number = getWhatsAppNumber();
+  if (!number) return null;
+  const product = input.variant ? `${input.name} (${input.variant})` : input.name;
+  const text = `Hola, me interesa el producto ${product}. Precio publicado: ${input.fromPrice ? "desde " : ""}${input.price}. ¿Me podrían confirmar disponibilidad?`;
+  return `https://wa.me/${number}?text=${encodeURIComponent(text)}`;
+}
+
 /** Canales en orden de prioridad: WhatsApp y teléfono primero. */
 export function getContactChannels(): ContactChannel[] {
   const wa = digits(CONTACT.whatsapp);

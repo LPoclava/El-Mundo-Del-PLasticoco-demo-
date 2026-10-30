@@ -9,6 +9,8 @@ export type Category = {
   parentSlug?: string | null;
   /** 1 a 4 en las categorías principales destacadas; null en las demás. */
   featuredPosition?: number | null;
+  /** Texto breve de la categoría (editable desde el panel). */
+  description?: string | null;
   /** Foto de la tarjeta de categoría; null = se muestra un ícono. */
   imageUrl?: string | null;
 };

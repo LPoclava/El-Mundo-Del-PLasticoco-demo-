@@ -6,11 +6,11 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { PromoCarousel } from "@/components/catalog/promo-carousel";
 import {
   createBanner, deleteBanner, listBanners, listMainCategories, reorderBanners,
-  setBannerActive, setCategoryImage, updateBanner, type AdminBanner, type AdminCategory, type BannerInput,
+  setBannerActive, updateBanner, type AdminBanner, type AdminCategory, type BannerInput,
 } from "@/lib/banners/admin";
 import { prepareImage, type PreparedImage } from "@/lib/banners/image";
 import {
-  BANNER_LIMITS, BANNER_RECOMMENDED_SIZE, CATEGORY_RECOMMENDED_SIZE, STATUS_LABEL, bannerStatus, fromLocalInput,
+  BANNER_LIMITS, BANNER_RECOMMENDED_SIZE, STATUS_LABEL, bannerStatus, fromLocalInput,
   toLocalInput, validateBannerForm, type BannerFormErrors, type BannerStatus,
 } from "@/lib/banners/rules";
 import { isBrowserSupabaseConfigured } from "@/lib/supabase/browser";
@@ -21,7 +21,7 @@ import { SupabaseGate } from "../supabase-gate";
 import { useToasts } from "../use-toasts";
 import {
   Badge, Button, CARD_CLASS, Dialog, EmptyState, Field, INPUT_CLASS, Notice, PageHeader, TextInput,
-  Toaster, type Toast,
+  Toaster,
 } from "../ui";
 
 /**
@@ -160,7 +160,6 @@ function Manager({ db }: { db: SupabaseClient }) {
         </section>
       )}
 
-      <CategoryImages db={db} notify={push} />
 
       <Dialog
         open={draft !== null}
@@ -451,112 +450,5 @@ function BannerForm({ db, banner, nextPosition, onCancel, onSaved, onError }: {
         <Button type="submit" variant="primary" disabled={busy}>{busy ? "Guardando…" : banner ? "Guardar cambios" : "Crear banner"}</Button>
       </div>
     </form>
-  );
-}
-
-// ---------------------------------------------------------------- fotos de las categorías principales
-
-function CategoryImages({ db, notify }: { db: SupabaseClient; notify: (message: string, tone?: Toast["tone"]) => void }) {
-  const [categories, setCategories] = useState<AdminCategory[] | null>(null);
-  const [busy, setBusy] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    try {
-      setCategories(await listMainCategories(db));
-    } catch (e) {
-      notify(e instanceof Error ? e.message : friendlyError(null), "error");
-      setCategories([]);
-    }
-  }, [db, notify]);
-
-  useEffect(() => {
-    let cancelled = false;
-    listMainCategories(db)
-      .then((list) => !cancelled && setCategories(list))
-      .catch((e) => {
-        if (cancelled) return;
-        notify(e instanceof Error ? e.message : friendlyError(null), "error");
-        setCategories([]);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [db, notify]);
-
-  if (!categories || categories.length === 0) return null;
-
-  async function change(category: AdminCategory, file: File | undefined) {
-    if (!file) return;
-    setBusy(category.id);
-    let image: PreparedImage | null = null;
-    try {
-      image = await prepareImage(file, "category");
-      await setCategoryImage(db, category, image);
-      await load();
-      notify(`Foto de «${category.name}» actualizada.`);
-    } catch (e) {
-      notify(e instanceof Error ? e.message : friendlyError(null), "error");
-    } finally {
-      if (image) URL.revokeObjectURL(image.previewUrl);
-      setBusy(null);
-    }
-  }
-
-  async function clear(category: AdminCategory) {
-    setBusy(category.id);
-    try {
-      await setCategoryImage(db, category, null);
-      await load();
-      notify(`Foto de «${category.name}» quitada. La tarjeta vuelve a mostrar un ícono.`);
-    } catch (e) {
-      notify(e instanceof Error ? e.message : friendlyError(null), "error");
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  return (
-    <section className={`${CARD_CLASS} p-5`} aria-labelledby="fotos-categorias">
-      <h2 id="fotos-categorias" className="text-base font-semibold">Fotos de las categorías principales</h2>
-      <p className="mt-1 text-sm text-brand-muted">
-        Cada tarjeta de «Explorá por categoría» puede llevar una foto (JPG, PNG o WebP, unos {CATEGORY_RECOMMENDED_SIZE}). Sin foto
-        se muestra un ícono.
-      </p>
-      <ul className="mt-4 grid gap-4 sm:grid-cols-2">
-        {categories.map((c) => (
-          <li key={c.id} className="flex items-center gap-3 rounded-lg border border-brand-line p-3">
-            <div className="relative grid size-16 shrink-0 place-items-center overflow-hidden rounded-lg bg-brand-sand text-brand-muted">
-              {c.imagePath ? (
-                <Image src={productImageUrl(c.imagePath)} alt={`Foto actual de ${c.name}`} fill sizes="64px" className="object-cover" />
-              ) : (
-                <Icon name="image" className="size-6" />
-              )}
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="font-medium">{c.name}</p>
-              <div className="mt-1 flex flex-wrap gap-2">
-                <label className={`inline-flex h-9 cursor-pointer items-center rounded-lg border border-brand-line bg-white px-3 text-sm font-medium hover:border-brand-ink ${busy === c.id ? "pointer-events-none opacity-50" : ""}`}>
-                  {c.imagePath ? "Cambiar foto" : "Subir foto"}
-                  <input
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                    className="sr-only"
-                    disabled={busy === c.id}
-                    aria-label={`${c.imagePath ? "Cambiar" : "Subir"} la foto de ${c.name}`}
-                    onChange={(e) => {
-                      void change(c, e.target.files?.[0]);
-                      e.target.value = "";
-                    }}
-                  />
-                </label>
-                {c.imagePath && (
-                  <Button size="sm" disabled={busy === c.id} onClick={() => void clear(c)}>Quitar</Button>
-                )}
-              </div>
-            </div>
-          </li>
-        ))}
-      </ul>
-    </section>
   );
 }

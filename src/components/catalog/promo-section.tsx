@@ -15,9 +15,9 @@ export async function PromoSection() {
   return (
     <section
       aria-labelledby="promo-title"
-      className="mt-6 rounded-2xl border border-brand-line bg-white p-3 shadow-sm sm:mt-8 sm:p-5"
+      className="mt-4 sm:mt-8 sm:rounded-2xl sm:border sm:border-brand-line sm:bg-white sm:p-5 sm:shadow-sm"
     >
-      <SectionHeading id="promo-title" title={CATALOG_COPY.promotions.title} />
+      <SectionHeading id="promo-title" title={CATALOG_COPY.promotions.title} compact />
       <PromoCarousel banners={banners} />
     </section>
   );

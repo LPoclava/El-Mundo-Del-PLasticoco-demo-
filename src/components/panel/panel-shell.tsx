@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
-  ROLE_LABEL, ROLE_SUMMARY, SECTIONS, demoEmail, historyTitle, sectionsFor, type Role,
+  ROLE_LABEL, ROLE_SUMMARY, SECTIONS, demoEmail, sectionsFor, type Role,
 } from "@/lib/panel-demo/roles";
 import type { Actor } from "@/lib/panel-demo/types";
 import { useDemo } from "./demo-provider";
@@ -14,10 +14,10 @@ import { Badge, Dialog, Notice } from "./ui";
 
 /** Estructura del panel: navegación lateral, barra superior y contenido. Solo demostración. */
 
-function sectionTitle(pathname: string, role: Role): string {
+function sectionTitle(pathname: string): string {
   const section = SECTIONS.find((s) => s.href === pathname);
   if (!section) return "Panel";
-  return section.id === "historial" ? historyTitle(role) : section.label;
+  return section.label;
 }
 
 function Avatar({ name }: { name: string }) {
@@ -35,7 +35,7 @@ function Navigation({ role, collapsed, onNavigate }: { role: Role; collapsed: bo
       <ul className="flex flex-col gap-1">
         {sectionsFor(role).map((s) => {
           const active = s.href === pathname;
-          const label = s.id === "historial" ? historyTitle(role) : s.label;
+          const label = s.label;
           return (
             <li key={s.id}>
               <Link
@@ -241,7 +241,7 @@ export function PanelShell({ children }: { children: ReactNode }) {
           <button type="button" onClick={() => setMobileOpen(true)} aria-label="Abrir menú" aria-expanded={mobileOpen} className="inline-flex size-11 items-center justify-center rounded-lg hover:bg-brand-sand lg:hidden">
             <Icon name="menu" />
           </button>
-          <p className="min-w-0 flex-1 truncate text-base font-semibold">{sectionTitle(pathname, role)}</p>
+          <p className="min-w-0 flex-1 truncate text-base font-semibold">{sectionTitle(pathname)}</p>
           <Badge tone="demo">Modo demo</Badge>
           <ProfileMenu actor={actor} role={role} onSignOut={signOut} />
         </header>

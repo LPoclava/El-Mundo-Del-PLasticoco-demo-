@@ -17,52 +17,58 @@ function tabClass(isActive: boolean) {
   ].join(" ");
 }
 
-/** Las principales primero (en su orden), después el resto por nombre. */
-function sortTop(a: Category, b: Category) {
-  const pa = a.featuredPosition ?? Infinity;
-  const pb = b.featuredPosition ?? Infinity;
-  return pa !== pb ? pa - pb : a.name.localeCompare(b.name, "es");
-}
-
 /**
- * Pestañas con subrayado de acento y desplazamiento horizontal; mantienen la búsqueda activa.
- * Si la categoría elegida tiene subcategorías, se muestran en una segunda fila.
+ * Las tarjetas «Explorá nuestros productos» son el acceso principal a las categorías. Esta barra NO
+ * las repite: solo aparece cuando hace falta
+ * - con una categoría elegida: cuál es, cómo salir de ella y sus subcategorías;
+ * - sin categoría elegida: únicamente las categorías que no cuelgan de ninguna de las cuatro principales
+ *   (si existen), para que sus productos no queden sin acceso.
  */
 export function CategoryNav({ categories, active, q }: Props) {
-  const top = categories.filter((c) => !c.parentSlug).sort(sortTop);
+  const top = categories.filter((c) => !c.parentSlug);
+  const others = top
+    .filter((c) => c.featuredPosition == null)
+    .sort((a, b) => a.name.localeCompare(b.name, "es"));
   const current = categories.find((c) => c.slug === active);
   const main = current ? (current.parentSlug ?? current.slug) : undefined;
   const mainCategory = categories.find((c) => c.slug === main);
   const children = main ? categories.filter((c) => c.parentSlug === main) : [];
 
-  return (
-    <>
-      <nav id="categorias" aria-label="Categorías" className="scroll-mt-4 border-b border-brand-line">
+  if (!mainCategory && others.length === 0) return null;
+
+  if (!mainCategory) {
+    return (
+      <nav aria-label="Otras categorías" className="border-b border-brand-line">
         <ul className="no-scrollbar -mx-3 flex snap-x overflow-x-auto">
-          <li>
-            <Link
-              href={catalogHref({ q })}
-              aria-current={!active ? "page" : undefined}
-              className={tabClass(!active)}
-            >
-              Todas
-            </Link>
-          </li>
-          {top.map((c) => (
+          {others.map((c) => (
             <li key={c.slug}>
-              <Link
-                href={catalogHref({ q, category: c.slug })}
-                aria-current={active === c.slug ? "page" : undefined}
-                className={tabClass(main === c.slug)}
-              >
+              <Link href={catalogHref({ q, category: c.slug })} className={tabClass(false)}>
                 {c.name}
               </Link>
             </li>
           ))}
         </ul>
       </nav>
-      {mainCategory && children.length > 0 && (
-        <nav aria-label={`Subcategorías de ${mainCategory.name}`} className="-mt-2 border-b border-brand-line">
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+        <p className="text-base font-semibold">
+          <span className="sr-only">Categoría elegida: </span>
+          {mainCategory.name}
+        </p>
+        <Link
+          href={catalogHref({ q })}
+          className="inline-flex min-h-11 items-center gap-1 text-sm font-medium text-brand-muted underline underline-offset-4 hover:text-brand-ink"
+        >
+          Ver todos los productos
+        </Link>
+      </div>
+      {mainCategory.description && <p className="max-w-2xl text-sm text-brand-muted">{mainCategory.description}</p>}
+      {children.length > 0 && (
+        <nav aria-label={`Subcategorías de ${mainCategory.name}`} className="border-b border-brand-line">
           <ul className="no-scrollbar -mx-3 flex snap-x overflow-x-auto">
             <li>
               <Link
@@ -87,6 +93,6 @@ export function CategoryNav({ categories, active, q }: Props) {
           </ul>
         </nav>
       )}
-    </>
+    </div>
   );
 }

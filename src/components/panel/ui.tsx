@@ -173,7 +173,7 @@ export const CARD_CLASS = "rounded-xl border border-brand-line bg-white";
 // ---- Diálogo (usa <dialog>: foco atrapado y Escape nativos) ----
 
 export function Dialog({ open, onClose, title, description, variant = "center", children }: {
-  open: boolean; onClose: () => void; title: string; description?: string; variant?: "center" | "sheet"; children: ReactNode;
+  open: boolean; onClose: () => void; title: string; description?: string; variant?: "center" | "sheet" | "top"; children: ReactNode;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
@@ -188,7 +188,9 @@ export function Dialog({ open, onClose, title, description, variant = "center", 
   const position =
     variant === "sheet"
       ? "ml-auto mr-0 h-dvh max-h-none w-[min(30rem,100vw)] rounded-none"
-      : "m-auto max-h-[calc(100dvh-2rem)] w-[min(32rem,calc(100vw-2rem))] rounded-xl";
+      : variant === "top"
+        ? "mx-auto mb-auto mt-0 max-h-[92dvh] w-[min(38rem,100vw)] rounded-b-2xl rounded-t-none"
+        : "m-auto max-h-[calc(100dvh-2rem)] w-[min(32rem,calc(100vw-2rem))] rounded-xl";
 
   return (
     <dialog

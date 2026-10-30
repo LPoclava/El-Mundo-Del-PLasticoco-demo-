@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { CartLine, SaleProblem } from "./cart";
+import { describeStockError } from "./stock";
 
 /**
  * Acceso a datos del punto de venta con la sesión real de quien vende. Toda la validación
@@ -12,6 +13,7 @@ export type PosProduct = {
   productId: string;
   name: string;
   brand: string | null;
+  description: string | null;
   barcode: string | null;
   imagePath: string | null;
   archived: boolean;
@@ -113,7 +115,7 @@ const toReceipt = (r: ReceiptRow): Receipt => ({
 });
 
 type ProductRow = {
-  product_id: string; name: string; brand: string | null; barcode: string | null; image_path: string | null; archived: boolean;
+  product_id: string; name: string; brand: string | null; description?: string | null; barcode: string | null; image_path: string | null; archived: boolean;
   variants: { id: string; size: string | null; color: string | null; price: number | null; stock: number }[];
 };
 
@@ -121,7 +123,7 @@ export async function findProducts(db: SupabaseClient, term: string): Promise<Po
   const { data, error } = await db.rpc("pos_find", { p_term: term.trim() });
   if (error) throw new Error(error.code === "42501" ? "Tu cuenta no tiene permiso para vender." : "No se pudo buscar el producto. Probá de nuevo.");
   return ((data ?? []) as ProductRow[]).map((p) => ({
-    productId: p.product_id, name: p.name, brand: p.brand, barcode: p.barcode, imagePath: p.image_path, archived: p.archived,
+    productId: p.product_id, name: p.name, brand: p.brand, description: p.description ?? null, barcode: p.barcode, imagePath: p.image_path, archived: p.archived,
     variants: p.variants.map((v) => ({ id: v.id, size: v.size, color: v.color, price: v.price === null ? null : Number(v.price), stock: v.stock })),
   }));
 }
@@ -185,24 +187,56 @@ export async function listSales(db: SupabaseClient, filter: SalesFilter): Promis
 
 export type CategoryOption = { id: string; name: string };
 
-export async function listCategories(db: SupabaseClient): Promise<CategoryOption[]> {
-  const { data, error } = await db.from("categories").select("id,name").order("name");
-  if (error) throw new Error("No se pudieron cargar las categorías.");
+/** Categorías principales activas para elegir al registrar un producto (las lee todo el personal). */
+export async function listMainCategories(db: SupabaseClient): Promise<CategoryOption[]> {
+  const { data, error } = await db
+    .from("categories")
+    .select("id,name")
+    .not("featured_position", "is", null)
+    .eq("active", true)
+    .order("featured_position");
+  if (error) {
+    // Antes de la migración 20261101 no existe la columna active: se listan las principales sin filtrar.
+    if (error.code === "42703") {
+      const legacy = await db.from("categories").select("id,name").not("featured_position", "is", null).order("featured_position");
+      if (legacy.error) throw new Error("No se pudieron cargar las categorías.");
+      return (legacy.data ?? []) as CategoryOption[];
+    }
+    throw new Error("No se pudieron cargar las categorías.");
+  }
   return (data ?? []) as CategoryOption[];
 }
 
-/** Alta autorizada de un producto desde el escáner (función scan_create_product): queda sin publicar y con stock 0. */
-export async function createScannedProduct(
+/**
+ * Alta rápida (scan_create_draft): crea el producto SIN publicar y SIN variantes, así que no tiene
+ * precio ni stock: no se puede vender ni mover stock hasta que un gerente lo complete.
+ */
+export async function createDraftProduct(
   db: SupabaseClient,
-  input: { barcode: string; name: string; categoryId: string; price: number },
-): Promise<void> {
-  const { error } = await db.rpc("scan_create_product", {
-    p_barcode: input.barcode, p_name: input.name, p_category_id: input.categoryId, p_price: input.price, p_brand: null,
+  input: { barcode: string; name: string; categoryId: string; description: string },
+): Promise<string> {
+  const { data, error } = await db.rpc("scan_create_draft", {
+    p_barcode: input.barcode, p_name: input.name, p_category_id: input.categoryId, p_description: input.description.trim() || null,
   });
   if (error) {
     if (error.code === "23505") throw new Error("Ese código ya está asignado a otro producto.");
     if (error.code === "42501") throw new Error("Tu cuenta no tiene permiso para registrar productos.");
-    if (error.code === "22023") throw new Error("Revisá los datos: el nombre, la categoría y el precio tienen que ser válidos.");
+    if (error.code === "22023") throw new Error("Revisá los datos: el nombre, la categoría principal y el código tienen que ser válidos.");
     throw new Error("No se pudo registrar el producto. Probá de nuevo.");
   }
+  return data as string;
+}
+
+/** Entrada de mercadería (receive_stock): devuelve el stock resultante. */
+export async function receiveStock(db: SupabaseClient, variantId: string, quantity: number, note: string): Promise<number> {
+  const { data, error } = await db.rpc("receive_stock", { p_variant_id: variantId, p_quantity: quantity, p_note: note.trim() || null });
+  if (error) throw new Error(describeStockError(error));
+  return Number(data);
+}
+
+/** Ajuste de inventario con motivo (adjust_stock): `delta` positivo suma, negativo resta. */
+export async function adjustStock(db: SupabaseClient, variantId: string, delta: number, note: string): Promise<number> {
+  const { data, error } = await db.rpc("adjust_stock", { p_variant_id: variantId, p_delta: delta, p_note: note.trim() });
+  if (error) throw new Error(describeStockError(error));
+  return Number(data);
 }

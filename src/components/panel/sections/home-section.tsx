@@ -1,123 +1,213 @@
 "use client";
 
 import Link from "next/link";
-import { DEMO_TODAY } from "@/lib/panel-demo/data";
-import { describeEntry, visibleAudit } from "@/lib/panel-demo/audit";
-import { formatDateTime } from "@/lib/panel-demo/format";
-import { ROLE_LABEL, atLeast, historyTitle, type IconName, type Role } from "@/lib/panel-demo/roles";
-import { useDemo } from "../demo-provider";
+import { useEffect, useState } from "react";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { formatPrice } from "@/lib/catalog/url";
+import { listSales, type SaleListItem } from "@/lib/pos/api";
+import {
+  LOW_STOCK_THRESHOLD, lowStock, recentMovements, salesSummary, todayRange,
+  type LowStockItem, type MovementItem, type SalesSummary,
+} from "@/lib/pos/dashboard";
+import type { IconName } from "@/lib/panel-demo/roles";
 import { Icon } from "../icons";
-import { Badge, CARD_CLASS, EmptyState, Notice, PageHeader } from "../ui";
+import { Badge, CARD_CLASS, Notice, PageHeader } from "../ui";
+import { PosGate } from "../pos/pos-gate";
 
-const WEEK = 7 * 24 * 60 * 60 * 1000;
+type Role = "empleado" | "gerente" | "ceo";
 
-type Shortcut = { href: string; icon: IconName; title: string; text: string; min: Role };
+const time = new Intl.DateTimeFormat("es-AR", { timeStyle: "short" });
+const dateTime = new Intl.DateTimeFormat("es-AR", { dateStyle: "short", timeStyle: "short" });
+
+type Shortcut = { href: string; icon: IconName; title: string; text: string; manager: boolean };
 
 const SHORTCUTS: Shortcut[] = [
-  { href: "/panel/precios", icon: "barcode", title: "Vender con el escáner", text: "Escaneá, cobrá y descontá stock.", min: "empleado" },
-  { href: "/panel/productos", icon: "box", title: "Gestionar productos", text: "Crear, editar, publicar o archivar.", min: "gerente" },
-  { href: "/panel/categorias", icon: "tag", title: "Ordenar categorías", text: "Crear, renombrar o reasignar.", min: "gerente" },
-  { href: "/panel/crm", icon: "chart", title: "Ver informes", text: "Resumen comercial de ejemplo.", min: "gerente" },
-  { href: "/panel/historial", icon: "history", title: "Revisar cambios", text: "Quién hizo qué y cuándo.", min: "empleado" },
-  { href: "/panel/usuarios", icon: "users", title: "Usuarios y permisos", text: "Altas, roles y estados.", min: "ceo" },
+  { href: "/panel/precios", icon: "barcode", title: "Escáner", text: "Consultar, vender, registrar y cargar stock.", manager: false },
+  { href: "/panel/productos", icon: "box", title: "Productos", text: "Completar fichas, precios, fotos y publicación.", manager: true },
+  { href: "/panel/categorias", icon: "tag", title: "Categorías", text: "Las cuatro principales: nombre, foto y orden.", manager: true },
+  { href: "/panel/banners", icon: "image", title: "Banners promocionales", text: "Carrusel del catálogo.", manager: true },
 ];
 
+/** Inicio del panel: actividad comercial REAL del día. Sin datos, no se inventan cifras. */
 export function HomeSection() {
-  const { state, role, actor } = useDemo();
-  if (!role || !actor) return null;
+  return (
+    <div className="space-y-6">
+      <PageHeader title="Inicio" subtitle="Cómo viene el día: ventas, unidades y stock." />
+      <PosGate>{({ db, role }) => <Dashboard db={db} role={role} />}</PosGate>
+    </div>
+  );
+}
 
-  const live = state.products.filter((p) => !p.archived);
-  const published = live.filter((p) => p.published).length;
-  const scoped = visibleAudit(state.audit, role, actor.id);
-  const since = Date.parse(DEMO_TODAY) - WEEK;
-  const recentCount = scoped.filter((e) => Date.parse(e.at) >= since).length;
+type Data = {
+  summary: SalesSummary;
+  sales: SaleListItem[];
+  low: LowStockItem[] | null;
+  movements: MovementItem[] | null;
+};
 
-  const indicators = [
-    { label: "Productos registrados", value: state.products.length },
-    { label: "Productos publicados", value: published },
-    { label: "Sin publicar", value: live.length - published },
-    { label: role === "empleado" ? "Mis cambios (7 días)" : "Cambios (7 días)", value: recentCount },
+function Dashboard({ db, role }: { db: SupabaseClient; role: Role }) {
+  const manager = role !== "empleado";
+  const [data, setData] = useState<Data | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const { from, to } = todayRange();
+    Promise.all([
+      salesSummary(db, from, to),
+      listSales(db, { from: null, to: null, method: "" }),
+      manager ? lowStock(db) : Promise.resolve(null),
+      manager ? recentMovements(db) : Promise.resolve(null),
+    ])
+      .then(([summary, sales, low, movements]) => {
+        if (!cancelled) setData({ summary, sales: sales.slice(0, 5), low, movements });
+      })
+      .catch((e) => !cancelled && setError(e instanceof Error ? e.message : "No se pudo cargar el inicio."));
+    return () => {
+      cancelled = true;
+    };
+  }, [db, manager]);
+
+  if (error) return <Notice tone="warn" title="No se pudo cargar el inicio">{error}</Notice>;
+  if (!data) return <p role="status" className="text-sm text-brand-muted">Cargando la actividad del día…</p>;
+
+  const { summary } = data;
+  const mine = manager ? "" : " (tuyas)";
+  const kpis = [
+    { label: `Ventas de hoy${mine}`, value: String(summary.salesCount) },
+    { label: `Facturación del día${mine}`, value: formatPrice(summary.revenue) },
+    { label: `Unidades vendidas${mine}`, value: String(summary.units) },
+    ...(manager && data.low ? [{ label: `Variantes con ${LOW_STOCK_THRESHOLD} o menos`, value: String(data.low.length) }] : []),
   ];
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Panel de gestión"
-        subtitle="Administrá productos, consultá precios y supervisá la actividad del negocio desde un solo lugar."
-      />
-
-      <Notice tone="demo" title={`Estás viendo la demo como ${ROLE_LABEL[role]}`}>
-        Las cifras, productos y movimientos son ficticios y viven solo en esta pantalla. Recargar la página los restablece.
-      </Notice>
-
-      <section aria-label="Indicadores" className={`${CARD_CLASS} grid grid-cols-2 divide-brand-line md:grid-cols-4 md:divide-x`}>
-        {indicators.map((i, idx) => (
-          <div key={i.label} className={`px-5 py-4 ${idx > 1 ? "border-t border-brand-line md:border-t-0" : ""} ${idx % 2 === 1 ? "border-l border-brand-line md:border-l-0" : ""}`}>
-            <p className="text-sm text-brand-muted">{i.label}</p>
-            <p className="mt-1 text-2xl font-semibold tabular-nums">{i.value}</p>
+      <section aria-label="Indicadores del día" className={`${CARD_CLASS} grid grid-cols-2 md:grid-cols-4`}>
+        {kpis.map((k, i) => (
+          <div key={k.label} className={`px-5 py-4 ${i > 1 ? "border-t border-brand-line md:border-t-0" : ""} ${i % 2 === 1 ? "border-l border-brand-line" : ""} ${i > 0 ? "md:border-l md:border-brand-line" : ""}`}>
+            <p className="text-sm text-brand-muted">{k.label}</p>
+            <p className="mt-1 text-2xl font-semibold tabular-nums">{k.value}</p>
           </div>
         ))}
       </section>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-        <section aria-labelledby="actividad-titulo" className={CARD_CLASS}>
-          <div className="flex items-center justify-between gap-3 border-b border-brand-line px-5 py-3">
-            <h2 id="actividad-titulo" className="text-base font-semibold">
-              {role === "empleado" ? "Mi actividad reciente" : "Actividad reciente"}
-            </h2>
-            <Link href="/panel/historial" className="inline-flex min-h-11 items-center text-sm font-medium underline underline-offset-4 hover:decoration-2">
-              {historyTitle(role)}
-            </Link>
-          </div>
-          {scoped.length === 0 ? (
-            <div className="p-5"><EmptyState title="Todavía no hay actividad">Los cambios que hagas en la demo aparecen acá.</EmptyState></div>
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Panel title="Últimas ventas" link={{ href: "/panel/precios", label: "Ir al escáner" }}>
+          {data.sales.length === 0 ? (
+            <Empty>Todavía no hay ventas registradas.</Empty>
           ) : (
             <ul className="divide-y divide-brand-line">
-              {scoped.slice(0, 6).map((e) => (
-                <li key={e.id} className="flex items-start gap-3 px-5 py-3">
-                  <span className="mt-0.5 inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-brand-sand text-brand-muted">
-                    <Icon name={e.action === "create" ? "plus" : e.action === "link" ? "link" : e.action === "archive" ? "archive" : e.action === "user" ? "users" : e.action === "price" ? "barcode" : "edit"} className="size-4" />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm">{describeEntry(e)}</p>
-                    {(e.from || e.to) && (
-                      <p className="mt-0.5 text-xs text-brand-muted tabular-nums">
-                        {e.from && <span>{e.from}</span>}
-                        {e.from && e.to && <span aria-hidden> → </span>}
-                        {e.to && <span className="font-medium text-brand-ink">{e.to}</span>}
-                      </p>
-                    )}
+              {data.sales.map((s) => (
+                <li key={s.id} className="flex items-start justify-between gap-3 px-5 py-3 text-sm">
+                  <div className="min-w-0">
+                    <p className="font-medium tabular-nums">#{s.number} · {formatPrice(s.total)}</p>
+                    <p className="truncate text-xs text-brand-muted">{s.lines.map((l) => `${l.quantity} × ${l.productName}`).join(", ")}</p>
                   </div>
-                  <div className="shrink-0 text-right">
-                    <p className="text-xs text-brand-muted tabular-nums">{formatDateTime(e.at)}</p>
-                    <Badge>{ROLE_LABEL[e.role]}</Badge>
-                  </div>
+                  <p className="shrink-0 text-xs tabular-nums text-brand-muted">{dateTime.format(new Date(s.createdAt))}{manager ? ` · ${s.userName}` : ""}</p>
                 </li>
               ))}
             </ul>
           )}
-        </section>
+        </Panel>
 
-        <section aria-labelledby="accesos-titulo" className={CARD_CLASS}>
-          <h2 id="accesos-titulo" className="border-b border-brand-line px-5 py-3 text-base font-semibold">Accesos rápidos</h2>
-          <ul className="divide-y divide-brand-line">
-            {SHORTCUTS.filter((s) => atLeast(role, s.min)).map((s) => (
-              <li key={s.href}>
-                <Link href={s.href} className="flex min-h-14 items-center gap-3 px-5 py-3 hover:bg-brand-cream">
-                  <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-brand-orange/15">
-                    <Icon name={s.icon} className="size-5" />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-sm font-medium">{s.title}</span>
-                    <span className="block text-xs text-brand-muted">{s.text}</span>
-                  </span>
-                  <Icon name="chevronRight" className="size-4 text-brand-muted" />
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
+        <Panel title="Más vendidos hoy">
+          {summary.topProducts.length === 0 ? (
+            <Empty>Hoy todavía no se vendió nada.</Empty>
+          ) : (
+            <ol className="divide-y divide-brand-line">
+              {summary.topProducts.map((t, i) => (
+                <li key={`${t.name}-${t.variant ?? ""}`} className="flex items-center justify-between gap-3 px-5 py-3 text-sm">
+                  <span className="min-w-0"><span className="mr-2 tabular-nums text-brand-muted">{i + 1}.</span>{t.name}{t.variant ? ` (${t.variant})` : ""}</span>
+                  <span className="shrink-0 font-medium tabular-nums">{t.units} u.</span>
+                </li>
+              ))}
+            </ol>
+          )}
+        </Panel>
+
+        {manager && data.low && (
+          <Panel title={`Stock bajo (${LOW_STOCK_THRESHOLD} o menos)`} link={{ href: "/panel/productos", label: "Ver productos" }}>
+            {data.low.length === 0 ? (
+              <Empty>Ninguna variante está por debajo del umbral.</Empty>
+            ) : (
+              <ul className="divide-y divide-brand-line">
+                {data.low.map((l, i) => (
+                  <li key={i} className="flex items-center justify-between gap-3 px-5 py-3 text-sm">
+                    <span className="min-w-0">{l.name}{l.variant ? ` (${l.variant})` : ""}</span>
+                    <Badge tone={l.stock === 0 ? "danger" : "warn"}>{l.stock === 0 ? "Sin stock" : `${l.stock} u.`}</Badge>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Panel>
+        )}
+
+        {manager && data.movements && (
+          <Panel title="Actividad de inventario">
+            {data.movements.length === 0 ? (
+              <Empty>Todavía no hay movimientos de stock.</Empty>
+            ) : (
+              <ul className="divide-y divide-brand-line">
+                {data.movements.map((m) => (
+                  <li key={m.id} className="flex items-start justify-between gap-3 px-5 py-3 text-sm">
+                    <div className="min-w-0">
+                      <p>
+                        <Badge tone={m.reason === "venta" ? "muted" : m.reason === "entrada" ? "ok" : "warn"}>{REASON[m.reason]}</Badge>{" "}
+                        {m.productName ?? "Producto eliminado"}{m.variant ? ` (${m.variant})` : ""}
+                      </p>
+                      <p className="mt-0.5 text-xs tabular-nums text-brand-muted">
+                        {m.stockBefore} → {m.stockAfter} ({m.delta > 0 ? "+" : ""}{m.delta}){m.note ? ` · ${m.note}` : ""}
+                      </p>
+                    </div>
+                    <p className="shrink-0 text-xs tabular-nums text-brand-muted">{time.format(new Date(m.createdAt))}</p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Panel>
+        )}
       </div>
+
+      <Notice title="Consultas por WhatsApp">
+        Todavía no se registran: el botón del catálogo solo abre WhatsApp y no hay una fuente de datos de consultas. Cuando exista,
+        este indicador se suma acá.
+      </Notice>
+
+      <section aria-labelledby="accesos-titulo" className={CARD_CLASS}>
+        <h2 id="accesos-titulo" className="border-b border-brand-line px-5 py-3 text-base font-semibold">Accesos rápidos</h2>
+        <ul className="divide-y divide-brand-line">
+          {SHORTCUTS.filter((s) => manager || !s.manager).map((s) => (
+            <li key={s.href}>
+              <Link href={s.href} className="flex min-h-14 items-center gap-3 px-5 py-3 hover:bg-brand-cream">
+                <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-brand-orange/15"><Icon name={s.icon} className="size-5" /></span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-medium">{s.title}</span>
+                  <span className="block text-xs text-brand-muted">{s.text}</span>
+                </span>
+                <Icon name="chevronRight" className="size-4 text-brand-muted" />
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </section>
     </div>
   );
+}
+
+const REASON: Record<MovementItem["reason"], string> = { venta: "Venta", entrada: "Entrada", ajuste: "Ajuste", inicial: "Alta" };
+
+function Panel({ title, link, children }: { title: string; link?: { href: string; label: string }; children: React.ReactNode }) {
+  return (
+    <section className={CARD_CLASS} aria-label={title}>
+      <div className="flex items-center justify-between gap-3 border-b border-brand-line px-5 py-3">
+        <h2 className="text-base font-semibold">{title}</h2>
+        {link && <Link href={link.href} className="inline-flex min-h-11 items-center text-sm font-medium underline underline-offset-4 hover:decoration-2">{link.label}</Link>}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function Empty({ children }: { children: React.ReactNode }) {
+  return <p className="px-5 py-6 text-sm text-brand-muted">{children}</p>;
 }
