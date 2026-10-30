@@ -43,11 +43,12 @@ export function Button({ variant = "secondary", size = "md", icon, className = "
   );
 }
 
-export function LinkButton({ href, variant = "secondary", size = "md", icon, children }: {
+export function LinkButton({ href, variant = "secondary", size = "md", icon, children, className = "", "aria-label": ariaLabel }: {
   href: string; variant?: keyof typeof BUTTON_VARIANT; size?: keyof typeof BUTTON_SIZE; icon?: IconName; children: ReactNode;
+  className?: string; "aria-label"?: string;
 }) {
   return (
-    <Link href={href} className={buttonClass(variant, size)}>
+    <Link href={href} aria-label={ariaLabel} className={`${buttonClass(variant, size)} ${className}`}>
       {icon && <Icon name={icon} className="size-4" />}
       {children}
     </Link>
@@ -156,10 +157,22 @@ export function EmptyState({ title, children, action }: { title: string; childre
   );
 }
 
-export function PageHeader({ title, subtitle, actions }: { title: string; subtitle?: string; actions?: ReactNode }) {
+/**
+ * Encabezado de una pantalla del panel. `back` es para las pantallas internas (crear, editar): lleva a la
+ * pantalla de la que se vino, así cada operación completa tiene su propia página y no un modal.
+ */
+export function PageHeader({ title, subtitle, actions, back }: {
+  title: string; subtitle?: string; actions?: ReactNode; back?: { href: string; label: string };
+}) {
   return (
     <div className="flex flex-wrap items-end justify-between gap-4">
       <div className="min-w-0">
+        {back && (
+          <Link href={back.href} className="-ml-1 mb-1 inline-flex min-h-11 items-center gap-1 rounded-lg px-1 text-sm font-medium text-brand-muted hover:text-brand-ink">
+            <Icon name="chevronLeft" className="size-4" />
+            {back.label}
+          </Link>
+        )}
         <h1 className="text-2xl font-semibold tracking-tight text-balance">{title}</h1>
         {subtitle && <p className="mt-1 max-w-2xl text-brand-muted">{subtitle}</p>}
       </div>
@@ -172,8 +185,12 @@ export const CARD_CLASS = "rounded-xl border border-brand-line bg-white";
 
 // ---- Diálogo (usa <dialog>: foco atrapado y Escape nativos) ----
 
-export function Dialog({ open, onClose, title, description, variant = "center", children }: {
-  open: boolean; onClose: () => void; title: string; description?: string; variant?: "center" | "sheet" | "top"; children: ReactNode;
+/**
+ * Solo para confirmaciones, alertas y acciones secundarias (archivar, eliminar, vaciar). Una funcionalidad
+ * completa (crear, editar, vender) va en su propia pantalla, no acá: ese es el estándar Full Page del panel.
+ */
+export function Dialog({ open, onClose, title, description, children }: {
+  open: boolean; onClose: () => void; title: string; description?: string; children: ReactNode;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
@@ -185,12 +202,7 @@ export function Dialog({ open, onClose, title, description, variant = "center", 
     if (!open && el.open) el.close();
   }, [open]);
 
-  const position =
-    variant === "sheet"
-      ? "ml-auto mr-0 h-dvh max-h-none w-[min(30rem,100vw)] rounded-none"
-      : variant === "top"
-        ? "mx-auto mb-auto mt-0 max-h-[92dvh] w-[min(38rem,100vw)] rounded-b-2xl rounded-t-none"
-        : "m-auto max-h-[calc(100dvh-2rem)] w-[min(32rem,calc(100vw-2rem))] rounded-xl";
+  const position = "m-auto max-h-[calc(100dvh-2rem)] w-[min(32rem,calc(100vw-2rem))] rounded-xl";
 
   return (
     <dialog

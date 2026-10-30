@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { formatPrice } from "@/lib/catalog/url";
@@ -12,12 +13,12 @@ import { hiddenReasons, publishBlockers } from "@/lib/products/rules";
 import { isBrowserSupabaseConfigured } from "@/lib/supabase/browser";
 import { productImageUrl } from "@/lib/supabase/public";
 import { Icon } from "../icons";
+import { takeFlash } from "../flash";
 import { SupabaseGate } from "../supabase-gate";
 import { useToasts } from "../use-toasts";
 import {
-  Badge, Button, CARD_CLASS, Dialog, EmptyState, INPUT_CLASS, Notice, PageHeader, ProductThumb, Toaster,
+  Badge, Button, CARD_CLASS, Dialog, EmptyState, INPUT_CLASS, LinkButton, Notice, PageHeader, ProductThumb, Toaster,
 } from "../ui";
-import { ProductFormSheet } from "./product-form";
 
 const STATUS_OPTIONS: [StatusFilter, string][] = [
   ["todos", "Todos los estados"], ["publicados", "Publicados"], ["sin-publicar", "Sin publicar"], ["archivados", "Archivados"],
@@ -55,6 +56,7 @@ function StatusBadges({ p }: { p: ProductListItem }) {
 }
 
 function Manager({ db }: { db: SupabaseClient }) {
+  const router = useRouter();
   const { toasts, push } = useToasts();
   const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [qInput, setQInput] = useState("");
@@ -64,12 +66,6 @@ function Manager({ db }: { db: SupabaseClient }) {
   const [page, setPage] = useState(1);
   const [reload, setReload] = useState(0);
   const [result, setResult] = useState<Result | null>(null);
-  // «Completar producto» desde el escáner llega con ?editar=<id> y abre esa ficha. Este componente solo se
-  // dibuja en el navegador (después de verificar la sesión), así que leer la URL acá es seguro.
-  const [editor, setEditor] = useState<{ id: string | null } | null>(() => {
-    const id = typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("editar");
-    return id && /^[0-9a-f-]{36}$/i.test(id) ? { id } : null;
-  });
   const [unpublished, setUnpublished] = useState<number | null>(null);
   const [pending, setPending] = useState<Pending>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -77,10 +73,17 @@ function Manager({ db }: { db: SupabaseClient }) {
   const key = `${q}|${categoryId}|${status}|${page}|${reload}`;
   const refresh = useCallback(() => setReload((n) => n + 1), []);
 
-  // Se quita ?editar= de la dirección para que recargar no vuelva a abrir la ficha.
+  // Enlaces viejos con ?editar=<id> (antes la edición era un modal) llevan a la pantalla de edición.
   useEffect(() => {
-    if (new URLSearchParams(window.location.search).has("editar")) window.history.replaceState(null, "", "/panel/productos");
-  }, []);
+    const id = new URLSearchParams(window.location.search).get("editar");
+    if (id && /^[0-9a-f-]{36}$/i.test(id)) router.replace(`/panel/productos/${id}`);
+  }, [router]);
+
+  // Aviso de la pantalla de edición («Producto guardado»): se muestra al volver al listado.
+  useEffect(() => {
+    const flash = takeFlash();
+    if (flash) push(flash.message, flash.tone);
+  }, [push]);
 
   // Indicador «sin publicar» (antes estaba en el inicio): productos activos que todavía no se ven en el catálogo.
   useEffect(() => {
@@ -161,7 +164,7 @@ function Manager({ db }: { db: SupabaseClient }) {
             </button>
           )}
         </div>
-        <Button variant="primary" icon="plus" onClick={() => setEditor({ id: null })}>Crear producto</Button>
+        <LinkButton href="/panel/productos/nuevo" variant="primary" icon="plus">Crear producto</LinkButton>
       </div>
 
       <section className={`${CARD_CLASS} p-4`} aria-label="Filtros">
@@ -205,7 +208,7 @@ function Manager({ db }: { db: SupabaseClient }) {
         hasFilters ? (
           <EmptyState title="No hay productos con esos filtros">Probá con otra palabra o con otro estado.</EmptyState>
         ) : (
-          <EmptyState title="Todavía no hay productos" action={<Button variant="primary" icon="plus" onClick={() => setEditor({ id: null })}>Crear el primer producto</Button>}>
+          <EmptyState title="Todavía no hay productos" action={<LinkButton href="/panel/productos/nuevo" variant="primary" icon="plus">Crear el primer producto</LinkButton>}>
             Los productos que crees acá se guardan en la base y, con foto principal y precio, aparecen en el catálogo.
           </EmptyState>
         )
@@ -248,7 +251,7 @@ function Manager({ db }: { db: SupabaseClient }) {
                     </p>
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2 sm:pl-[4.25rem]">
-                    <Button size="sm" icon="edit" disabled={busy} onClick={() => setEditor({ id: p.id })} aria-label={`Editar ${p.name}`}>Editar</Button>
+                    <LinkButton size="sm" icon="edit" href={`/panel/productos/${p.id}`} aria-label={`Editar ${p.name}`}>Editar</LinkButton>
                     {!p.archivedAt && (p.publishEnabled ? (
                       <Button size="sm" icon="eyeOff" disabled={busy} onClick={() => setPending({ product: p, kind: "unpublish" })} aria-label={`Despublicar ${p.name}`}>Despublicar</Button>
                     ) : (
@@ -275,15 +278,6 @@ function Manager({ db }: { db: SupabaseClient }) {
         </nav>
       )}
 
-      <ProductFormSheet
-        db={db}
-        productId={editor?.id ?? null}
-        open={editor !== null}
-        categories={categories}
-        onClose={() => setEditor(null)}
-        onChanged={refresh}
-        notify={push}
-      />
 
       <Dialog open={pending !== null} onClose={() => setPending(null)} title={pending?.kind === "archive" ? "¿Archivar este producto?" : "¿Despublicar este producto?"}>
         {pending && (

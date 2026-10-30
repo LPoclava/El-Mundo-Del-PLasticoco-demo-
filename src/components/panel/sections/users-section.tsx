@@ -1,12 +1,11 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { formatDate } from "@/lib/panel-demo/format";
 import { ROLES, ROLE_LABEL, ROLE_SUMMARY, type Role } from "@/lib/panel-demo/roles";
 import { useDemo } from "../demo-provider";
-import {
-  Badge, Button, CARD_CLASS, Dialog, DemoBadge, Notice, PageHeader, SelectInput, TextInput,
-} from "../ui";
+import { Badge, Button, CARD_CLASS, DemoBadge, LinkButton, Notice, PageHeader, SelectInput, TextInput } from "../ui";
 
 /**
  * Usuarios y permisos de DEMOSTRACIÓN. No crea cuentas ni toca Supabase Auth. Reproduce las reglas
@@ -14,7 +13,6 @@ import {
  */
 export function UsersSection() {
   const { state, actor, actions, notify } = useDemo();
-  const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   function setRole(id: string, role: Role) {
@@ -34,7 +32,7 @@ export function UsersSection() {
       <PageHeader
         title="Usuarios y permisos"
         subtitle="Quién puede entrar y qué puede hacer. Solo el CEO administra usuarios y roles."
-        actions={<><DemoBadge>Usuarios ficticios</DemoBadge><Button variant="primary" icon="plus" onClick={() => setCreating(true)}>Nuevo usuario</Button></>}
+        actions={<><DemoBadge>Usuarios ficticios</DemoBadge><LinkButton href="/panel/usuarios/nuevo" variant="primary" icon="plus">Nuevo usuario</LinkButton></>}
       />
 
       <section aria-label="Jerarquía de roles" className={`${CARD_CLASS} p-5`}>
@@ -122,9 +120,19 @@ export function UsersSection() {
         Reglas que ya aplica el sistema real: nadie cambia su propio rol, y no se puede dejar la aplicación sin un CEO activo.
       </p>
 
-      <Dialog open={creating} onClose={() => setCreating(false)} title="Nuevo usuario" description="Simulación: no se crea ninguna cuenta real.">
-        {creating && <NewUserForm onClose={() => setCreating(false)} />}
-      </Dialog>
+    </div>
+  );
+}
+
+/** Alta de un usuario de demostración en su propia pantalla (/panel/usuarios/nuevo). */
+export function NewUserScreen() {
+  const router = useRouter();
+  return (
+    <div className="space-y-6">
+      <PageHeader back={{ href: "/panel/usuarios", label: "Usuarios y permisos" }} title="Nuevo usuario" subtitle="Simulación: no se crea ninguna cuenta real." />
+      <div className={`${CARD_CLASS} max-w-xl p-4 sm:p-6`}>
+        <NewUserForm onClose={() => router.push("/panel/usuarios")} />
+      </div>
     </div>
   );
 }

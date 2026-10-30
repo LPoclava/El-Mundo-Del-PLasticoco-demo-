@@ -1,12 +1,13 @@
 "use client";
 
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { prepareImage } from "@/lib/banners/image";
 import { PRODUCT_MAX_IMAGES, PRODUCT_RECOMMENDED_SIZE } from "@/lib/banners/rules";
 import {
-  SaveError, getProduct, saveProduct, type AdminProduct, type CategoryOption, type ImageDraft,
+  SaveError, getProduct, listCategories, saveProduct, type AdminProduct, type CategoryOption, type ImageDraft,
 } from "@/lib/products/admin";
 import {
   PRODUCT_LIMITS, ensureSinglePrimary, hasErrors, moveItem, parsePrice, pricesOf, publishBlockers,
@@ -14,68 +15,110 @@ import {
 } from "@/lib/products/rules";
 import { productImageUrl } from "@/lib/supabase/public";
 import { Icon } from "../icons";
-import { Button, Dialog, Field, INPUT_CLASS, Notice, TextInput } from "../ui";
+import { BrandLoader } from "@/components/brand-loader";
+import { withTimeout } from "@/lib/async";
+import { isBrowserSupabaseConfigured } from "@/lib/supabase/browser";
+import { setFlash } from "../flash";
+import { SupabaseGate } from "../supabase-gate";
+import { useToasts } from "../use-toasts";
+import { Button, CARD_CLASS, Field, INPUT_CLASS, LinkButton, Notice, PageHeader, TextInput, Toaster } from "../ui";
 
 let seq = 0;
 const nextKey = () => `k${++seq}`;
 
 const clean = (v: string) => v.trim() || null;
 
-type Props = {
+type FormProps = {
   db: SupabaseClient;
-  /** null = producto nuevo. */
-  productId: string | null;
-  open: boolean;
   categories: CategoryOption[];
+  /** Vuelve al listado (al guardar o al cancelar). */
   onClose: () => void;
-  /** Se llama tras guardar (o tras un guardado parcial) para refrescar el listado. */
+  /** Se llama tras guardar (o tras un guardado parcial). */
   onChanged: () => void;
   notify: (message: string, tone?: "ok" | "error") => void;
 };
 
-/** Alta y edición de un producto REAL (Supabase): datos, variantes con precio y hasta 5 fotos. */
-export function ProductFormSheet({ db, productId, open, categories, onClose, onChanged, notify }: Props) {
+/**
+ * Pantalla completa de alta y edición de un producto REAL (Supabase): datos, variantes con precio y hasta 5
+ * fotos. Vive en /panel/productos/nuevo y /panel/productos/[id]: se puede recargar, compartir y volver atrás.
+ */
+export function ProductEditor({ productId }: { productId: string | null }) {
   return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      variant="sheet"
-      title={productId ? "Editar producto" : "Crear producto"}
-      description="Los cambios se guardan en la base real."
-    >
-      {open && <Loader key={productId ?? "nuevo"} db={db} productId={productId} categories={categories} onClose={onClose} onChanged={onChanged} notify={notify} />}
-    </Dialog>
+    <div className="space-y-6">
+      <PageHeader
+        back={{ href: "/panel/productos", label: "Productos" }}
+        title={productId ? "Editar producto" : "Crear producto"}
+        subtitle="Los cambios se guardan en la base real."
+      />
+      {isBrowserSupabaseConfigured ? (
+        <SupabaseGate action="administrar productos">{(db) => <EditorData key={productId ?? "nuevo"} db={db} productId={productId} />}</SupabaseGate>
+      ) : (
+        <Notice tone="warn" title="Supabase no está configurado">
+          Faltan las variables NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_ANON_KEY (ver .env.local.example).
+        </Notice>
+      )}
+    </div>
   );
 }
 
-type Loaded = { state: "loading" } | { state: "error"; message: string } | { state: "ready"; product: AdminProduct | null };
+const LOAD_TIMEOUT_MS = 20_000;
 
-function Loader(props: Omit<Props, "open">) {
-  const { db, productId } = props;
-  // Un producto nuevo no necesita leer nada; uno existente se lee de la base antes de mostrar el formulario.
-  const [loaded, setLoaded] = useState<Loaded>(productId ? { state: "loading" } : { state: "ready", product: null });
+type Loaded =
+  | { state: "loading" }
+  | { state: "error"; message: string }
+  | { state: "ready"; product: AdminProduct | null; categories: CategoryOption[] };
 
+function EditorData({ db, productId }: { db: SupabaseClient; productId: string | null }) {
+  const router = useRouter();
+  const { toasts, push } = useToasts();
+  const [loaded, setLoaded] = useState<Loaded>({ state: "loading" });
+  const [attempt, setAttempt] = useState(0);
+
+  // El formulario necesita las categorías y, al editar, el producto: hasta tenerlos no hay pantalla que mostrar.
   useEffect(() => {
-    if (!productId) return;
     let cancelled = false;
-    getProduct(db, productId)
-      .then((product) => !cancelled && setLoaded({ state: "ready", product }))
+    withTimeout(Promise.all([listCategories(db), productId ? getProduct(db, productId) : Promise.resolve(null)]), LOAD_TIMEOUT_MS)
+      .then(([categories, product]) => !cancelled && setLoaded({ state: "ready", product, categories }))
       .catch((e: unknown) => !cancelled && setLoaded({ state: "error", message: e instanceof Error ? e.message : "No se pudo leer el producto." }));
     return () => {
       cancelled = true;
     };
-  }, [db, productId]);
+  }, [db, productId, attempt]);
 
-  if (loaded.state === "loading") return <p role="status" className="text-sm text-brand-muted">Cargando el producto…</p>;
+  if (loaded.state === "loading") return <BrandLoader label={productId ? "Cargando el producto…" : "Preparando el formulario…"} />;
   if (loaded.state === "error") {
     return (
       <div className="space-y-3">
         <Notice tone="warn" title="No se pudo abrir el producto">{loaded.message}</Notice>
-        <Button onClick={props.onClose}>Cerrar</Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            icon="refresh"
+            onClick={() => {
+              setLoaded({ state: "loading" });
+              setAttempt((n) => n + 1);
+            }}
+          >
+            Reintentar
+          </Button>
+          <LinkButton href="/panel/productos">Volver a productos</LinkButton>
+        </div>
       </div>
     );
   }
-  return <FormBody {...props} initial={loaded.product} />;
+  return (
+    <>
+      <FormBody
+        db={db}
+        initial={loaded.product}
+        categories={loaded.categories}
+        onClose={() => router.push("/panel/productos")}
+        onChanged={() => undefined}
+        // Los avisos de éxito se muestran en el listado, que es adonde se vuelve al guardar.
+        notify={(message, tone = "ok") => (tone === "ok" ? setFlash({ message, tone }) : push(message, tone))}
+      />
+      <Toaster toasts={toasts} />
+    </>
+  );
 }
 
 const draftsOf = (p: AdminProduct | null): VariantDraft[] =>
@@ -91,7 +134,7 @@ function previewOf(d: ImageDraft): string | null {
   return d.image?.previewUrl ?? (d.path ? productImageUrl(d.path) : null);
 }
 
-function FormBody({ db, initial, categories, onClose, onChanged, notify }: Omit<Props, "open" | "productId"> & { initial: AdminProduct | null }) {
+function FormBody({ db, initial, categories, onClose, onChanged, notify }: FormProps & { initial: AdminProduct | null }) {
   const [baseline, setBaseline] = useState<AdminProduct | null>(initial);
   const [productId, setProductId] = useState<string | null>(initial?.id ?? null);
   const [name, setName] = useState(initial?.name ?? "");
@@ -229,7 +272,7 @@ function FormBody({ db, initial, categories, onClose, onChanged, notify }: Omit<
   }
 
   return (
-    <form onSubmit={submit} noValidate className="space-y-5" aria-busy={busy}>
+    <form onSubmit={submit} noValidate className={`${CARD_CLASS} max-w-4xl space-y-5 p-4 sm:p-6`} aria-busy={busy}>
       {formError && (
         <Notice tone="warn" title="No se pudo guardar todo">
           {formError}
@@ -374,7 +417,8 @@ function FormBody({ db, initial, categories, onClose, onChanged, notify }: Omit<
         {canPublish && <p className="mt-1 pl-9 text-xs text-brand-muted">Con foto principal y precio válido el producto aparece en el catálogo al guardar.</p>}
       </div>
 
-      <div className="flex justify-end gap-2 border-t border-brand-line pt-4">
+      {/* Acciones siempre a mano en formularios largos (sobre todo en el celular). */}
+      <div className="sticky bottom-0 z-10 -mx-4 -mb-4 flex justify-end gap-2 rounded-b-xl border-t border-brand-line bg-white/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:-mb-6 sm:px-6">
         <Button variant="ghost" onClick={onClose} disabled={busy}>Cancelar</Button>
         <Button type="submit" variant="primary" disabled={busy || processing}>{busy ? "Guardando…" : productId ? "Guardar cambios" : "Crear producto"}</Button>
       </div>

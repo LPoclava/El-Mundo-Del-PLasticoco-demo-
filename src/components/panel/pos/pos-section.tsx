@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
@@ -12,16 +13,17 @@ import {
 } from "@/lib/pos/api";
 import { BarcodeScanner } from "../barcode-scanner";
 import { Icon } from "../icons";
-import { Button, CARD_CLASS, Dialog, INPUT_CLASS, Toaster, type Toast } from "../ui";
-import { CartModal } from "./pos-cart-modal";
+import { Button, CARD_CLASS, INPUT_CLASS, Toaster, type Toast } from "../ui";
+import { CartScreen } from "./pos-cart-screen";
 import { PosGate } from "./pos-gate";
 import { RecentSales } from "./pos-recent-sales";
 import { ResultPanel, resultTitle, type ScanResult } from "./pos-result-panel";
 
 /**
  * Escáner como centro de operaciones (prueba piloto): consultar un producto, registrar uno nuevo,
- * agregar a la venta y actualizar stock desde la misma pantalla. El resultado de cada lectura
- * aparece arriba, sin desplazarse. La venta real la valida y registra confirm_sale() en PostgreSQL
+ * agregar a la venta y actualizar stock. El resultado de cada lectura aparece en la parte de arriba de la
+ * página (no en un modal) y la venta tiene su propia pantalla (?vista=venta), con la que funciona el botón
+ * «atrás» del navegador. La venta real la valida y registra confirm_sale() en PostgreSQL
  * (permisos, precios, stock, total, idempotencia): esta pantalla es solo la interfaz.
  */
 export function PosSection() {
@@ -52,7 +54,6 @@ function Scanner({ db, role }: { db: SupabaseClient; role: "empleado" | "gerente
   const lookupBusy = useRef(false);
   const [term, setTerm] = useState("");
   const [matches, setMatches] = useState<Matches>(null);
-  const [cartOpen, setCartOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<{ message: string; details: string[] } | null>(null);
   const [receipt, setReceipt] = useState<Receipt | null>(null);
@@ -61,6 +62,23 @@ function Scanner({ db, role }: { db: SupabaseClient; role: "empleado" | "gerente
   const attemptRef = useRef<{ sig: string; key: string } | null>(null);
   const manualRef = useRef<HTMLInputElement>(null);
   const { toasts, push } = useToasts();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const onSale = searchParams.get("vista") === "venta";
+  const resultRef = useRef<HTMLElement>(null);
+
+  // El resultado aparece arriba de la página: se lleva a la vista y se anuncia sin mover el foco del lector.
+  const hasResult = result !== null;
+  useEffect(() => {
+    if (hasResult) resultRef.current?.scrollIntoView({ block: "start", behavior: "smooth" });
+  }, [hasResult]);
+
+  const openSale = () => router.push("/panel/precios?vista=venta");
+  const backToScanner = () => {
+    setFailure(null);
+    if (cartRef.current.length === 0) setReceipt(null);
+    router.push("/panel/precios");
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -164,8 +182,59 @@ function Scanner({ db, role }: { db: SupabaseClient; role: "empleado" | "gerente
     setFailure({ message: f.message, details: f.problems.map(describeProblem) });
   }
 
+  const cartActions = {
+    setQuantity: (id: string, n: number) => updateCart(setQuantity(cartRef.current, id, n)),
+    step: (id: string, d: 1 | -1) => updateCart(changeQuantity(cartRef.current, id, d)),
+    remove: (id: string) => updateCart(removeLine(cartRef.current, id)),
+    clear: () => { updateCart([]); setMethod(null); attemptRef.current = null; setFailure(null); },
+  };
+
+  if (onSale) {
+    return (
+      <div className="space-y-4">
+        <Button variant="ghost" icon="chevronLeft" onClick={backToScanner} className="-ml-2">Volver al escáner</Button>
+        <CartScreen
+          onBack={backToScanner}
+          cart={cart}
+          actions={cartActions}
+          methods={methods}
+          method={method}
+          onMethod={setMethod}
+          busy={busy}
+          failure={failure}
+          receipt={receipt}
+          onConfirm={() => void confirm()}
+          onNewSale={() => { setReceipt(null); router.push("/panel/precios"); }}
+        />
+        <Toaster toasts={toasts} />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-5 pb-28">
+      {/* Resultado de la última lectura: arriba de la página, en línea (no es un modal). */}
+      {result && (
+        <section ref={resultRef} aria-labelledby="resultado-titulo" className={`${CARD_CLASS} scroll-mt-20 border-brand-ink/20 p-4 shadow-sm sm:p-5`}>
+          <div className="mb-3 flex items-start justify-between gap-3">
+            <h2 id="resultado-titulo" aria-live="polite" className="min-w-0 text-lg font-semibold leading-snug">{resultTitle(result)}</h2>
+            <button
+              type="button"
+              onClick={() => showResult(null)}
+              aria-label="Cerrar el resultado y seguir escaneando"
+              className="-mr-2 -mt-1 inline-flex size-11 shrink-0 items-center justify-center rounded-lg text-brand-muted hover:bg-brand-sand hover:text-brand-ink"
+            >
+              <Icon name="x" />
+            </button>
+          </div>
+          <ResultPanel
+            db={db} result={result} canManage={canManage} onClose={() => showResult(null)}
+            onAdd={add} onNotify={push}
+            onRefresh={(code) => lookup(code, "refresh")}
+          />
+        </section>
+      )}
+
       <section className={`${CARD_CLASS} p-4 sm:p-5`} aria-label="Escáner de códigos de barras">
         <BarcodeScanner
           continuous
@@ -220,8 +289,8 @@ function Scanner({ db, role }: { db: SupabaseClient; role: "empleado" | "gerente
       {/* Carrito flotante: abajo a la derecha, siempre a mano mientras se escanea. */}
       <button
         type="button"
-        onClick={() => setCartOpen(true)}
-        aria-label={`Abrir el carrito: ${units} ${units === 1 ? "unidad" : "unidades"}${units > 0 ? `, total ${total.toLocaleString("es-AR")} pesos` : ""}`}
+        onClick={openSale}
+        aria-label={`Ir a la venta: ${units} ${units === 1 ? "unidad" : "unidades"}${units > 0 ? `, total ${total.toLocaleString("es-AR")} pesos` : ""}`}
         className={`fixed bottom-4 right-4 z-30 flex h-14 items-center gap-2 rounded-full px-4 shadow-lg ring-1 ring-black/5 motion-safe:transition motion-safe:active:scale-95 sm:bottom-6 sm:right-6 ${
           units > 0 ? "bg-brand-orange text-brand-ink hover:bg-brand-orange/90" : "bg-white text-brand-ink hover:bg-brand-sand"
         }`}
@@ -233,37 +302,6 @@ function Scanner({ db, role }: { db: SupabaseClient; role: "empleado" | "gerente
         </svg>
         <span className="min-w-6 rounded-full bg-brand-ink px-2 py-0.5 text-center text-sm font-semibold tabular-nums text-white" aria-hidden>{units}</span>
       </button>
-
-      {/* Resultado del escaneo: panel superior, siempre a la vista. */}
-      <Dialog open={result !== null} onClose={() => showResult(null)} variant="top" title={result ? resultTitle(result) : ""}>
-        {result && (
-          <ResultPanel
-            db={db} result={result} canManage={canManage} onClose={() => showResult(null)}
-            onAdd={add} onNotify={push}
-            onRefresh={(code) => lookup(code, "refresh")}
-          />
-        )}
-      </Dialog>
-
-      <CartModal
-        open={cartOpen}
-        onClose={() => { setCartOpen(false); setFailure(null); if (cartRef.current.length === 0) setReceipt(null); }}
-        cart={cart}
-        actions={{
-          setQuantity: (id, n) => updateCart(setQuantity(cartRef.current, id, n)),
-          step: (id, d) => updateCart(changeQuantity(cartRef.current, id, d)),
-          remove: (id) => updateCart(removeLine(cartRef.current, id)),
-          clear: () => { updateCart([]); setMethod(null); attemptRef.current = null; setFailure(null); },
-        }}
-        methods={methods}
-        method={method}
-        onMethod={setMethod}
-        busy={busy}
-        failure={failure}
-        receipt={receipt}
-        onConfirm={() => void confirm()}
-        onNewSale={() => { setReceipt(null); setCartOpen(false); }}
-      />
 
       <Toaster toasts={toasts} />
     </div>

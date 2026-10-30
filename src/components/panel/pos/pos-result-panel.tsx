@@ -230,7 +230,7 @@ function CompleteButton({ productId, canManage }: { productId: string; canManage
   }
   return (
     <Link
-      href={`/panel/productos?editar=${productId}`}
+      href={`/panel/productos/${productId}`}
       className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-brand-orange text-base font-medium text-brand-ink hover:bg-brand-orange/85"
     >
       <Icon name="edit" className="size-4" />Completar producto

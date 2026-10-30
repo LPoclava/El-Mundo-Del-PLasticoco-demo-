@@ -1,9 +1,12 @@
 "use client";
 
 import Image from "next/image";
+import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { BrandLoader } from "@/components/brand-loader";
 import { PromoCarousel } from "@/components/catalog/promo-carousel";
+import { withTimeout } from "@/lib/async";
 import {
   createBanner, deleteBanner, listBanners, listMainCategories, reorderBanners,
   setBannerActive, updateBanner, type AdminBanner, type AdminCategory, type BannerInput,
@@ -17,10 +20,11 @@ import { isBrowserSupabaseConfigured } from "@/lib/supabase/browser";
 import { friendlyError } from "@/lib/supabase/errors";
 import { productImageUrl } from "@/lib/supabase/public";
 import { Icon } from "../icons";
+import { setFlash, takeFlash } from "../flash";
 import { SupabaseGate } from "../supabase-gate";
 import { useToasts } from "../use-toasts";
 import {
-  Badge, Button, CARD_CLASS, Dialog, EmptyState, Field, INPUT_CLASS, Notice, PageHeader, TextInput,
+  Badge, Button, CARD_CLASS, Dialog, EmptyState, Field, INPUT_CLASS, LinkButton, Notice, PageHeader, TextInput,
   Toaster,
 } from "../ui";
 
@@ -48,20 +52,127 @@ export function BannersSection() {
   );
 }
 
+// ---------------------------------------------------------------- pantalla de edición
+
+const LOAD_TIMEOUT_MS = 20_000;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Alta o edición de un banner en su propia pantalla (no un modal): la vista previa tiene todo el ancho y la
+ * dirección se puede recargar. bannerId null = banner nuevo.
+ */
+export function BannerEditor({ bannerId }: { bannerId: string | null }) {
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        back={{ href: "/panel/banners", label: "Banners promocionales" }}
+        title={bannerId ? "Editar banner" : "Nuevo banner"}
+        subtitle="Lo que ves en la vista previa es lo que va a ver el cliente."
+      />
+      {!isBrowserSupabaseConfigured ? (
+        <Notice tone="warn" title="Supabase no está configurado">
+          Faltan las variables NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_ANON_KEY (ver .env.local.example).
+        </Notice>
+      ) : bannerId !== null && !UUID.test(bannerId) ? (
+        <MissingBanner />
+      ) : (
+        <SupabaseGate action="administrar banners">{(db) => <EditorData key={bannerId ?? "new"} db={db} bannerId={bannerId} />}</SupabaseGate>
+      )}
+    </div>
+  );
+}
+
+/** Lee el id de la dirección (/panel/banners/[id]) en el navegador, donde vive la sesión. */
+export function EditBannerRoute() {
+  const { id } = useParams<{ id: string }>();
+  return <BannerEditor bannerId={id ?? ""} />;
+}
+
+function MissingBanner() {
+  return (
+    <div className="space-y-3">
+      <Notice tone="warn" title="Ese banner no existe">Puede que lo hayan eliminado o que la dirección esté incompleta.</Notice>
+      <LinkButton href="/panel/banners">Volver a banners</LinkButton>
+    </div>
+  );
+}
+
+type Loaded = { state: "loading" } | { state: "error"; message: string } | { state: "ready"; banners: AdminBanner[] };
+
+function EditorData({ db, bannerId }: { db: SupabaseClient; bannerId: string | null }) {
+  const router = useRouter();
+  const { toasts, push } = useToasts();
+  const [loaded, setLoaded] = useState<Loaded>({ state: "loading" });
+  const [attempt, setAttempt] = useState(0);
+
+  // El listado da el banner a editar y la posición del próximo banner nuevo.
+  useEffect(() => {
+    let cancelled = false;
+    withTimeout(listBanners(db), LOAD_TIMEOUT_MS)
+      .then((banners) => !cancelled && setLoaded({ state: "ready", banners }))
+      .catch((e: unknown) => !cancelled && setLoaded({ state: "error", message: e instanceof Error ? e.message : friendlyError(null) }));
+    return () => {
+      cancelled = true;
+    };
+  }, [db, attempt]);
+
+  if (loaded.state === "loading") return <BrandLoader label={bannerId ? "Cargando el banner…" : "Preparando el formulario…"} />;
+  if (loaded.state === "error") {
+    return (
+      <div className="space-y-3">
+        <Notice tone="warn" title="No se pudo abrir el banner">{loaded.message}</Notice>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            icon="refresh"
+            onClick={() => {
+              setLoaded({ state: "loading" });
+              setAttempt((n) => n + 1);
+            }}
+          >
+            Reintentar
+          </Button>
+          <LinkButton href="/panel/banners">Volver a banners</LinkButton>
+        </div>
+      </div>
+    );
+  }
+  const banner = bannerId ? (loaded.banners.find((b) => b.id === bannerId.toLowerCase()) ?? null) : null;
+  if (bannerId && !banner) return <MissingBanner />;
+  return (
+    <div className={`${CARD_CLASS} max-w-4xl p-4 sm:p-6`}>
+      <BannerForm
+        db={db}
+        banner={banner}
+        nextPosition={Math.max(0, ...loaded.banners.map((b) => b.position)) + 1}
+        onCancel={() => router.push("/panel/banners")}
+        onSaved={async (message) => {
+          setFlash({ message, tone: "ok" });
+          router.push("/panel/banners");
+        }}
+        onError={(message) => push(message, "error")}
+      />
+      <Toaster toasts={toasts} />
+    </div>
+  );
+}
+
 // ---------------------------------------------------------------- administrador
 
 const clean = (v: string) => v.trim() || null;
-
-type Draft = { mode: "new" } | { mode: "edit"; banner: AdminBanner } | null;
 
 function Manager({ db }: { db: SupabaseClient }) {
   const [banners, setBanners] = useState<AdminBanner[] | null>(null);
   const [now, setNow] = useState(0);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [draft, setDraft] = useState<Draft>(null);
   const [deleting, setDeleting] = useState<AdminBanner | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const { toasts, push } = useToasts();
+
+  // Aviso de la pantalla de edición («Banner creado…»): se muestra al volver al listado.
+  useEffect(() => {
+    const flash = takeFlash();
+    if (flash) push(flash.message, flash.tone);
+  }, [push]);
 
   const reload = useCallback(async () => {
     try {
@@ -121,7 +232,7 @@ function Manager({ db }: { db: SupabaseClient }) {
       </div>
     );
   }
-  if (!banners) return <p role="status" className="text-sm text-brand-muted">Cargando banners…</p>;
+  if (!banners) return <BrandLoader label="Cargando banners…" />;
 
   const activeCount = banners.filter((b) => bannerStatus(b, now) === "active").length;
 
@@ -131,11 +242,11 @@ function Manager({ db }: { db: SupabaseClient }) {
         <p className="text-sm text-brand-muted" aria-live="polite">
           {banners.length === 0 ? "Todavía no hay banners." : `${activeCount} en el catálogo ahora · ${banners.length} en total`}
         </p>
-        <Button variant="primary" icon="plus" onClick={() => setDraft({ mode: "new" })}>Nuevo banner</Button>
+        <LinkButton href="/panel/banners/nuevo" variant="primary" icon="plus">Nuevo banner</LinkButton>
       </div>
 
       {banners.length === 0 ? (
-        <EmptyState title="El catálogo no muestra promociones" action={<Button variant="primary" icon="plus" onClick={() => setDraft({ mode: "new" })}>Crear el primer banner</Button>}>
+        <EmptyState title="El catálogo no muestra promociones" action={<LinkButton href="/panel/banners/nuevo" variant="primary" icon="plus">Crear el primer banner</LinkButton>}>
           Mientras no haya banners activos, la sección «Promociones y combos» no aparece en el catálogo.
         </EmptyState>
       ) : (
@@ -152,38 +263,13 @@ function Manager({ db }: { db: SupabaseClient }) {
                 onUp={() => move(i, -1)}
                 onDown={() => move(i, 1)}
                 onToggle={() => run(b.id, () => setBannerActive(db, b.id, !b.isActive), b.isActive ? "Banner desactivado." : "Banner activado.")}
-                onEdit={() => setDraft({ mode: "edit", banner: b })}
+                editHref={`/panel/banners/${b.id}`}
                 onDelete={() => setDeleting(b)}
               />
             ))}
           </ol>
         </section>
       )}
-
-
-      <Dialog
-        open={draft !== null}
-        onClose={() => setDraft(null)}
-        variant="sheet"
-        title={draft?.mode === "edit" ? "Editar banner" : "Nuevo banner"}
-        description="Lo que ves en la vista previa es lo que va a ver el cliente."
-      >
-        {draft && (
-          <BannerForm
-            key={draft.mode === "edit" ? draft.banner.id : "new"}
-            db={db}
-            banner={draft.mode === "edit" ? draft.banner : null}
-            nextPosition={Math.max(0, ...banners.map((b) => b.position)) + 1}
-            onCancel={() => setDraft(null)}
-            onSaved={async (message) => {
-              setDraft(null);
-              await reload();
-              push(message);
-            }}
-            onError={(message) => push(message, "error")}
-          />
-        )}
-      </Dialog>
 
       <Dialog open={deleting !== null} onClose={() => setDeleting(null)} title="Eliminar banner">
         {deleting && (
@@ -239,9 +325,9 @@ function schedule(b: AdminBanner): string | null {
   return null;
 }
 
-function BannerRow({ banner, position, total, status, busy, onUp, onDown, onToggle, onEdit, onDelete }: {
+function BannerRow({ banner, position, total, status, busy, onUp, onDown, onToggle, editHref, onDelete }: {
   banner: AdminBanner; position: number; total: number; status: BannerStatus; busy: boolean;
-  onUp: () => void; onDown: () => void; onToggle: () => void; onEdit: () => void; onDelete: () => void;
+  onUp: () => void; onDown: () => void; onToggle: () => void; editHref: string; onDelete: () => void;
 }) {
   const name = banner.title ?? "Banner sin título";
   const when = schedule(banner);
@@ -274,7 +360,7 @@ function BannerRow({ banner, position, total, status, busy, onUp, onDown, onTogg
         <Button size="sm" disabled={busy} onClick={onToggle} aria-pressed={banner.isActive}>
           {banner.isActive ? "Desactivar" : "Activar"}
         </Button>
-        <Button size="sm" icon="edit" disabled={busy} onClick={onEdit} aria-label={`Editar «${name}»`}>Editar</Button>
+        <LinkButton size="sm" icon="edit" href={editHref} aria-label={`Editar «${name}»`}>Editar</LinkButton>
         <Button size="sm" icon="trash" disabled={busy} onClick={onDelete} aria-label={`Eliminar «${name}»`}>Eliminar</Button>
       </div>
     </li>
@@ -445,7 +531,8 @@ function BannerForm({ db, banner, nextPosition, onCancel, onSaved, onError }: {
         Mostrar en el catálogo (activo)
       </label>
 
-      <div className="flex justify-end gap-2 border-t border-brand-line pt-4">
+      {/* Acciones siempre a mano en formularios largos (sobre todo en el celular). */}
+      <div className="sticky bottom-0 z-10 -mx-4 -mb-4 flex justify-end gap-2 rounded-b-xl border-t border-brand-line bg-white/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:-mb-6 sm:px-6">
         <Button variant="ghost" onClick={onCancel} disabled={busy}>Cancelar</Button>
         <Button type="submit" variant="primary" disabled={busy}>{busy ? "Guardando…" : banner ? "Guardar cambios" : "Crear banner"}</Button>
       </div>

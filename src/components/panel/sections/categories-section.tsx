@@ -1,8 +1,11 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState, type FormEvent } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { BrandLoader } from "@/components/brand-loader";
+import { withTimeout } from "@/lib/async";
 import { prepareImage } from "@/lib/banners/image";
 import { CATEGORY_RECOMMENDED_SIZE } from "@/lib/banners/rules";
 import {
@@ -12,9 +15,10 @@ import {
 import { isBrowserSupabaseConfigured } from "@/lib/supabase/browser";
 import { productImageUrl } from "@/lib/supabase/public";
 import { Icon } from "../icons";
+import { setFlash, takeFlash } from "../flash";
 import { SupabaseGate } from "../supabase-gate";
 import { useToasts } from "../use-toasts";
-import { Badge, Button, CARD_CLASS, Dialog, Field, Notice, PageHeader, SelectInput, TextInput, Toaster } from "../ui";
+import { Badge, Button, CARD_CLASS, Dialog, Field, LinkButton, Notice, PageHeader, SelectInput, TextInput, Toaster } from "../ui";
 
 /**
  * Categorías REALES (Supabase). Las cuatro principales (Cocina, Baño, Librería, Regalería) se editan,
@@ -34,12 +38,94 @@ export function CategoriesSection() {
   );
 }
 
+const LOAD_TIMEOUT_MS = 20_000;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Edición de una categoría en su propia pantalla (/panel/categorias/[id]): nombre, descripción, foto y visibilidad. */
+export function EditCategoryRoute() {
+  const { id } = useParams<{ id: string }>();
+  const valid = UUID.test(id ?? "");
+  return (
+    <div className="space-y-6">
+      <PageHeader back={{ href: "/panel/categorias", label: "Categorías" }} title="Editar categoría" subtitle="Los cambios se ven en el catálogo en menos de dos minutos." />
+      {!isBrowserSupabaseConfigured ? (
+        <Notice tone="warn" title="Supabase no está configurado">Faltan las variables del proyecto. Sin ellas no se pueden leer ni guardar categorías.</Notice>
+      ) : !valid ? (
+        <MissingCategory />
+      ) : (
+        <SupabaseGate action="administrar categorías">{(db) => <EditorData db={db} id={id.toLowerCase()} />}</SupabaseGate>
+      )}
+    </div>
+  );
+}
+
+function MissingCategory() {
+  return (
+    <div className="space-y-3">
+      <Notice tone="warn" title="Esa categoría no existe">Puede que la hayan eliminado o que la dirección esté incompleta.</Notice>
+      <LinkButton href="/panel/categorias">Volver a categorías</LinkButton>
+    </div>
+  );
+}
+
+type Loaded = { state: "loading" } | { state: "error"; message: string } | { state: "ready"; category: AdminCategoryRow | null };
+
+function EditorData({ db, id }: { db: SupabaseClient; id: string }) {
+  const router = useRouter();
+  const { toasts, push } = useToasts();
+  const [loaded, setLoaded] = useState<Loaded>({ state: "loading" });
+  const [attempt, setAttempt] = useState(0);
+  // Último aviso de éxito: si se vuelve al listado, se muestra ahí.
+  const lastSaved = useRef<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    withTimeout(listAllCategories(db), LOAD_TIMEOUT_MS)
+      .then((rows) => !cancelled && setLoaded({ state: "ready", category: rows.find((r) => r.id === id) ?? null }))
+      .catch((e: unknown) => !cancelled && setLoaded({ state: "error", message: e instanceof Error ? e.message : "No se pudo leer la categoría." }));
+    return () => {
+      cancelled = true;
+    };
+  }, [db, id, attempt]);
+
+  if (loaded.state === "loading") return <BrandLoader label="Cargando la categoría…" />;
+  if (loaded.state === "error") {
+    return (
+      <div className="space-y-3">
+        <Notice tone="warn" title="No se pudo abrir la categoría">{loaded.message}</Notice>
+        <div className="flex flex-wrap gap-2">
+          <Button icon="refresh" onClick={() => { setLoaded({ state: "loading" }); setAttempt((n) => n + 1); }}>Reintentar</Button>
+          <LinkButton href="/panel/categorias">Volver a categorías</LinkButton>
+        </div>
+      </div>
+    );
+  }
+  if (!loaded.category) return <MissingCategory />;
+  return (
+    <div className={`${CARD_CLASS} max-w-2xl p-4 sm:p-6`}>
+      <EditForm
+        db={db}
+        category={loaded.category}
+        onClose={() => {
+          if (lastSaved.current) setFlash({ message: lastSaved.current, tone: "ok" });
+          router.push("/panel/categorias");
+        }}
+        onSaved={(m) => {
+          lastSaved.current = m;
+          push(m);
+        }}
+        onError={(m) => push(m, "error")}
+      />
+      <Toaster toasts={toasts} />
+    </div>
+  );
+}
+
 function Manager({ db }: { db: SupabaseClient }) {
   const { toasts, push } = useToasts();
   const [rows, setRows] = useState<AdminCategoryRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [version, setVersion] = useState(0);
-  const [editing, setEditing] = useState<AdminCategoryRow | null>(null);
   const [deleting, setDeleting] = useState<AdminCategoryRow | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -55,8 +141,21 @@ function Manager({ db }: { db: SupabaseClient }) {
 
   const reload = () => setVersion((v) => v + 1);
 
-  if (error) return <Notice tone="warn" title="No se pudieron cargar las categorías">{error}</Notice>;
-  if (!rows) return <p role="status" className="text-sm text-brand-muted">Cargando categorías…</p>;
+  // Aviso de la pantalla de edición («Categoría guardada»): se muestra al volver al listado.
+  useEffect(() => {
+    const flash = takeFlash();
+    if (flash) push(flash.message, flash.tone);
+  }, [push]);
+
+  if (error) {
+    return (
+      <div className="space-y-3">
+        <Notice tone="warn" title="No se pudieron cargar las categorías">{error}</Notice>
+        <Button icon="refresh" onClick={() => { setError(null); reload(); }}>Reintentar</Button>
+      </div>
+    );
+  }
+  if (!rows) return <BrandLoader label="Cargando categorías…" />;
 
   const main = rows.filter((r) => r.featuredPosition !== null).sort((a, b) => (a.featuredPosition ?? 0) - (b.featuredPosition ?? 0));
   const others = rows.filter((r) => r.featuredPosition === null);
@@ -111,7 +210,7 @@ function Manager({ db }: { db: SupabaseClient }) {
               <div className="flex flex-wrap gap-2">
                 <Button size="sm" disabled={busy || i === 0} onClick={() => move(i, -1)} aria-label={`Subir ${c.name}`}><Icon name="chevronDown" className="size-4 rotate-180" /></Button>
                 <Button size="sm" disabled={busy || i === main.length - 1} onClick={() => move(i, 1)} aria-label={`Bajar ${c.name}`}><Icon name="chevronDown" className="size-4" /></Button>
-                <Button size="sm" icon="edit" disabled={busy} onClick={() => setEditing(c)}>Editar</Button>
+                <LinkButton size="sm" icon="edit" href={`/panel/categorias/${c.id}`} aria-label={`Editar ${c.name}`}>Editar</LinkButton>
                 <Button size="sm" disabled={busy} aria-pressed={!c.active} onClick={() => void run(() => updateCategory(db, c.id, { name: c.name, description: c.description, active: !c.active }), c.active ? `«${c.name}» quedó oculta en el catálogo.` : `«${c.name}» vuelve a verse en el catálogo.`)}>
                   {c.active ? "Ocultar" : "Mostrar"}
                 </Button>
@@ -137,7 +236,7 @@ function Manager({ db }: { db: SupabaseClient }) {
                     {c.parentId ? `Dentro de ${nameOf(c.parentId)}` : "Sin categoría principal"} · {c.productCount === 1 ? "1 producto" : `${c.productCount} productos`}
                   </p>
                 </div>
-                <Button size="sm" icon="edit" disabled={busy} onClick={() => setEditing(c)}>Editar</Button>
+                <LinkButton size="sm" icon="edit" href={`/panel/categorias/${c.id}`} aria-label={`Editar ${c.name}`}>Editar</LinkButton>
                 <Button size="sm" icon="trash" disabled={busy} onClick={() => setDeleting(c)}>Eliminar</Button>
               </li>
             ))}
@@ -145,14 +244,6 @@ function Manager({ db }: { db: SupabaseClient }) {
         </section>
       )}
 
-      <Dialog open={editing !== null} onClose={() => setEditing(null)} title="Editar categoría">
-        {editing && (
-          <EditForm
-            key={editing.id} db={db} category={editing} onClose={() => setEditing(null)}
-            onSaved={(m) => { push(m); reload(); }} onError={(m) => push(m, "error")}
-          />
-        )}
-      </Dialog>
 
       <Dialog open={deleting !== null} onClose={() => setDeleting(null)} title="Eliminar categoría">
         {deleting && (

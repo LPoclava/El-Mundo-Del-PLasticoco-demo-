@@ -8,16 +8,22 @@ import {
   ROLE_LABEL, ROLE_SUMMARY, SECTIONS, demoEmail, sectionsFor, type Role,
 } from "@/lib/panel-demo/roles";
 import type { Actor } from "@/lib/panel-demo/types";
+import { BrandLoader } from "@/components/brand-loader";
 import { useDemo } from "./demo-provider";
 import { Icon } from "./icons";
 import { Badge, Dialog, Notice } from "./ui";
 
 /** Estructura del panel: navegación lateral, barra superior y contenido. Solo demostración. */
 
+/** Sección a la que pertenece una dirección; las pantallas internas (/panel/productos/nuevo) cuentan como su sección. */
+function sectionOf(pathname: string) {
+  return [...SECTIONS]
+    .sort((a, b) => b.href.length - a.href.length)
+    .find((s) => pathname === s.href || (s.href !== "/panel" && pathname.startsWith(`${s.href}/`)));
+}
+
 function sectionTitle(pathname: string): string {
-  const section = SECTIONS.find((s) => s.href === pathname);
-  if (!section) return "Panel";
-  return section.label;
+  return sectionOf(pathname)?.label ?? "Panel";
 }
 
 function Avatar({ name }: { name: string }) {
@@ -34,7 +40,7 @@ function Navigation({ role, collapsed, onNavigate }: { role: Role; collapsed: bo
     <nav aria-label="Secciones del panel" className="flex-1 overflow-y-auto px-3 py-2">
       <ul className="flex flex-col gap-1">
         {sectionsFor(role).map((s) => {
-          const active = s.href === pathname;
+          const active = sectionOf(pathname)?.id === s.id;
           const label = s.label;
           return (
             <li key={s.id}>
@@ -198,11 +204,7 @@ export function PanelShell({ children }: { children: ReactNode }) {
 
   const { role, actor } = demo;
   if (demo.status !== "in" || !role || !actor) {
-    return (
-      <div className="grid min-h-dvh place-items-center bg-brand-cream text-sm text-brand-muted" role="status">
-        {demo.status === "out" ? "Volviendo al inicio de sesión…" : "Cargando panel…"}
-      </div>
-    );
+    return <BrandLoader fullscreen label={demo.status === "out" ? "Volviendo al inicio de sesión…" : "Cargando el panel…"} />;
   }
 
   const signOut = () => {
@@ -245,7 +247,7 @@ export function PanelShell({ children }: { children: ReactNode }) {
           <Badge tone="demo">Modo demo</Badge>
           <ProfileMenu actor={actor} role={role} onSignOut={signOut} />
         </header>
-        <main id="contenido" className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+        <main id="contenido" className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
           {children}
         </main>
       </div>

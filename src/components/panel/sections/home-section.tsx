@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { BrandLoader } from "@/components/brand-loader";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { formatPrice } from "@/lib/catalog/url";
 import { listSales, type SaleListItem } from "@/lib/pos/api";
@@ -69,7 +70,7 @@ function Dashboard({ db, role }: { db: SupabaseClient; role: Role }) {
   }, [db, manager]);
 
   if (error) return <Notice tone="warn" title="No se pudo cargar el inicio">{error}</Notice>;
-  if (!data) return <p role="status" className="text-sm text-brand-muted">Cargando la actividad del día…</p>;
+  if (!data) return <BrandLoader label="Cargando la actividad del día…" />;
 
   const { summary } = data;
   const mine = manager ? "" : " (tuyas)";

@@ -59,3 +59,42 @@ body {
   0%, 100% { top: 10%; }
   50% { top: 88%; }
 }
+
+/* Pantalla de carga de marca (src/components/brand-loader.tsx).
+   Aparece a los 150 ms para que una carga rápida no produzca un destello. */
+@keyframes loader-show {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes loader-logo-in {
+  from { opacity: 0; transform: scale(0.94); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes loader-bar {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(250%); }
+}
+.brand-loader {
+  animation: loader-show 0.2s ease-out 0.15s both;
+}
+.brand-loader-logo {
+  animation: loader-logo-in 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) 0.15s both;
+}
+.brand-loader-bar {
+  background: linear-gradient(90deg, var(--color-brand-orange), var(--color-brand-green));
+  animation: loader-bar 1.3s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  /* Sin escala ni desplazamiento: la aparición demorada se mantiene (evita el destello) pero sin transición. */
+  .brand-loader {
+    animation: loader-show 0s linear 0.15s both;
+  }
+  .brand-loader-logo {
+    animation: none;
+  }
+  .brand-loader-bar {
+    width: 100%;
+    animation: none;
+    background: linear-gradient(90deg, var(--color-brand-orange) 70%, var(--color-brand-green) 70%);
+  }
+}

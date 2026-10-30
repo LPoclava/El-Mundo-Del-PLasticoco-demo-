@@ -5,7 +5,7 @@ import { formatPrice } from "@/lib/catalog/url";
 import { cartIssues, cartTotal, cartUnits, lineSubtotal, type Cart } from "@/lib/pos/cart";
 import type { PaymentMethod, Receipt } from "@/lib/pos/api";
 import { Icon } from "../icons";
-import { Button, Dialog } from "../ui";
+import { Button, CARD_CLASS, Dialog } from "../ui";
 import { QuantityStepper, Thumb } from "./pos-parts";
 
 const dateTime = new Intl.DateTimeFormat("es-AR", { dateStyle: "short", timeStyle: "short" });
@@ -18,8 +18,8 @@ export type CartActions = {
 };
 
 type Props = {
-  open: boolean;
-  onClose: () => void;
+  /** Vuelve al escáner (la venta en curso se conserva). */
+  onBack: () => void;
   cart: Cart;
   actions: CartActions;
   methods: PaymentMethod[] | null;
@@ -33,10 +33,11 @@ type Props = {
 };
 
 /**
- * Detalle de la venta. Pasos: 1) carrito (editar), 2) revisar y elegir medio de pago, 3) comprobante.
- * El carrito solo se vacía cuando el servidor confirma la venta.
+ * Pantalla de la venta (no un modal): 1) carrito (editar), 2) revisar y elegir medio de pago, 3) comprobante.
+ * El carrito solo se vacía cuando el servidor confirma la venta. Solo «Vaciar carrito» pide confirmación en un
+ * diálogo, porque es una acción secundaria y destructiva.
  */
-export function CartModal({ open, onClose, cart, actions, methods, method, onMethod, busy, failure, receipt, onConfirm, onNewSale }: Props) {
+export function CartScreen({ onBack, cart, actions, methods, method, onMethod, busy, failure, receipt, onConfirm, onNewSale }: Props) {
   const [review, setReview] = useState(false);
   const [clearing, setClearing] = useState(false);
   const issues = cartIssues(cart);
@@ -45,14 +46,15 @@ export function CartModal({ open, onClose, cart, actions, methods, method, onMet
 
   return (
     <>
-      <Dialog open={open} onClose={onClose} variant="sheet" title={title}>
+      <section aria-labelledby="venta-titulo" className={`${CARD_CLASS} mx-auto w-full max-w-3xl p-4 sm:p-6`}>
+        <h2 id="venta-titulo" tabIndex={-1} className="mb-4 text-xl font-semibold tracking-tight outline-none">{title}</h2>
         {receipt ? (
           <ReceiptView receipt={receipt} onNew={() => { setReview(false); onNewSale(); }} />
         ) : cart.length === 0 ? (
           <div className="py-8 text-center">
             <p className="font-medium">El carrito está vacío</p>
             <p className="mt-1 text-sm text-brand-muted">Escaneá un producto y elegí «Agregar al carrito».</p>
-            <Button className="mt-4" onClick={onClose}>Seguir escaneando</Button>
+            <Button className="mt-4" onClick={onBack}>Seguir escaneando</Button>
           </div>
         ) : !review ? (
           <div className="space-y-4">
@@ -100,7 +102,7 @@ export function CartModal({ open, onClose, cart, actions, methods, method, onMet
                 Registrar venta
               </Button>
               <div className="grid grid-cols-2 gap-2">
-                <Button onClick={onClose}>Seguir escaneando</Button>
+                <Button onClick={onBack}>Seguir escaneando</Button>
                 <Button variant="ghost" className="border border-brand-line" onClick={() => setClearing(true)}>Vaciar carrito</Button>
               </div>
             </div>
@@ -158,7 +160,7 @@ export function CartModal({ open, onClose, cart, actions, methods, method, onMet
             </div>
           </div>
         )}
-      </Dialog>
+      </section>
 
       <Dialog open={clearing} onClose={() => setClearing(false)} title="Vaciar el carrito">
         <p className="text-sm text-brand-muted">Se van a quitar los {cart.length} productos del carrito. No se descuenta stock ni se registra nada.</p>

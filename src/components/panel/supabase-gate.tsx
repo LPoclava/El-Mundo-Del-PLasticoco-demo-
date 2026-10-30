@@ -2,6 +2,8 @@
 
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { BrandLoader } from "@/components/brand-loader";
+import { withTimeout } from "@/lib/async";
 import { getBrowserSupabase } from "@/lib/supabase/browser";
 import { friendlyError } from "@/lib/supabase/errors";
 import { Button, CARD_CLASS, Notice, TextInput } from "./ui";
@@ -12,8 +14,11 @@ import { Button, CARD_CLASS, Notice, TextInput } from "./ui";
  * cada persona puede hacer lo decide la base con RLS, esta pantalla solo evita mostrar
  * formularios a quien no corresponde.
  */
+const SESSION_TIMEOUT_MS = 15_000;
+
 type Gate =
   | { state: "loading" }
+  | { state: "error"; message: string }
   | { state: "signedOut" }
   | { state: "forbidden"; email: string }
   | { state: "ready"; name: string };
@@ -21,19 +26,30 @@ type Gate =
 export function SupabaseGate({ action, children }: { action: string; children: (db: SupabaseClient) => ReactNode }) {
   const db = getBrowserSupabase();
   const [gate, setGate] = useState<Gate>({ state: "loading" });
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
 
+    // Sin red o con el servidor caído, la verificación termina en un aviso con «Reintentar»: la pantalla de
+    // carga nunca queda visible para siempre.
     async function evaluate() {
-      const { data } = await db.auth.getSession();
+      try {
+        await check();
+      } catch (e) {
+        if (!cancelled) setGate({ state: "error", message: e instanceof Error ? e.message : "No se pudo verificar la sesión." });
+      }
+    }
+
+    async function check() {
+      const { data } = await withTimeout(db.auth.getSession(), SESSION_TIMEOUT_MS);
       const user = data.session?.user;
       if (!user) {
         if (!cancelled) setGate({ state: "signedOut" });
         return;
       }
       // El rol se lee de public.profiles (nunca del token ni de user_metadata, que el usuario puede editar).
-      const profile = await db.from("profiles").select("role,active,display_name").eq("user_id", user.id).maybeSingle();
+      const profile = await withTimeout(db.from("profiles").select("role,active,display_name").eq("user_id", user.id).maybeSingle(), SESSION_TIMEOUT_MS);
       if (cancelled) return;
       const allowed = !profile.error && profile.data?.active && ["gerente", "ceo"].includes(profile.data.role);
       setGate(allowed ? { state: "ready", name: profile.data?.display_name ?? user.email ?? "" } : { state: "forbidden", email: user.email ?? "" });
@@ -48,10 +64,24 @@ export function SupabaseGate({ action, children }: { action: string; children: (
       cancelled = true;
       sub.subscription.unsubscribe();
     };
-  }, [db]);
+  }, [db, attempt]);
 
-  if (gate.state === "loading") {
-    return <p role="status" className="text-sm text-brand-muted">Verificando tu sesión…</p>;
+  if (gate.state === "loading") return <BrandLoader label="Recuperando tu sesión…" />;
+  if (gate.state === "error") {
+    return (
+      <div className="space-y-3">
+        <Notice tone="warn" title="No pudimos verificar tu sesión">{gate.message} Revisá la conexión e intentá de nuevo.</Notice>
+        <Button
+          icon="refresh"
+          onClick={() => {
+            setGate({ state: "loading" });
+            setAttempt((n) => n + 1);
+          }}
+        >
+          Reintentar
+        </Button>
+      </div>
+    );
   }
   if (gate.state === "signedOut") return <SignIn db={db} />;
   if (gate.state === "forbidden") {
