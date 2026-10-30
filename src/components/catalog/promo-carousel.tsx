@@ -233,7 +233,7 @@ function Slide({
           sizes="(min-width: 1280px) 1280px, 100vw"
           className="object-cover"
           draggable={false}
-          {...(eager ? { priority: true } : {})}
+          preload={eager}
         />
       </span>
       {withCaption && (

@@ -30,9 +30,13 @@ body {
   background: color-mix(in srgb, var(--color-brand-orange) 40%, white);
 }
 
-:focus-visible {
-  outline: 2px solid var(--color-brand-ink);
-  outline-offset: 2px;
+/* Foco por defecto en la capa base: un componente que dibuja su propio foco (la tarjeta de producto, el
+   buscador) puede reemplazarlo con utilidades sin que aparezcan dos contornos. */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--color-brand-ink);
+    outline-offset: 2px;
+  }
 }
 
 .no-scrollbar {
@@ -46,12 +50,6 @@ body {
 @keyframes rise-in {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: none; }
-}
-
-/* Cambio de foto en la galería de la ficha de producto. */
-@keyframes fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
 }
 
 /* Línea de guía del escáner de códigos de barras (se desactiva con "reducir movimiento"). */

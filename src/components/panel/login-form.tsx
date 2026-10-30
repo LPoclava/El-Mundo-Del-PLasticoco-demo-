@@ -71,7 +71,7 @@ export function LoginForm() {
       <aside className="hidden bg-brand-ink px-12 py-14 text-white lg:flex lg:flex-col lg:justify-between">
         <div>
           <span className="inline-flex rounded-lg bg-white px-3 py-2">
-            <Image src="/brand/logo-horizontal.png" alt="El Mundo del Plástico" width={900} height={329} className="h-12 w-auto" priority />
+            <Image src="/brand/logo-horizontal.png" alt="El Mundo del Plástico" width={900} height={329} className="h-12 w-auto" preload />
           </span>
           <h2 className="mt-10 max-w-sm text-3xl font-semibold tracking-tight text-balance">
             Gestión del catálogo, a la medida de cada persona del equipo.
@@ -93,7 +93,7 @@ export function LoginForm() {
       <main id="contenido" className="flex min-h-dvh items-center justify-center px-4 py-10 sm:px-8 lg:min-h-0">
         <div className="w-full max-w-md">
           <Link href="/" className="mb-8 inline-flex lg:hidden" aria-label="Mundo del Plástico — catálogo">
-            <Image src="/brand/logo-horizontal.png" alt="El Mundo del Plástico" width={900} height={329} className="h-12 w-auto" priority />
+            <Image src="/brand/logo-horizontal.png" alt="El Mundo del Plástico" width={900} height={329} className="h-12 w-auto" preload />
           </Link>
 
           <h1 className="text-2xl font-semibold tracking-tight">Panel de administración</h1>

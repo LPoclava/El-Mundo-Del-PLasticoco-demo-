@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 import { notFound, permanentRedirect } from "next/navigation";
 import { Breadcrumbs, type Crumb } from "@/components/product/breadcrumbs";
 import { ProductGallery } from "@/components/product/product-gallery";
@@ -48,7 +49,6 @@ export default async function ProductPage({ params }: PageProps<"/producto/[slug
   // Una sola URL por producto: si el nombre cambió (o el enlace llegó distinto), se redirige a la vigente.
   if (safeDecode(slug) !== productSlug(product)) permanentRedirect(productPath(product));
 
-  const related = await getRelatedProducts(product);
   const back = product.parentCategory ?? product.category;
   const crumbs: Crumb[] = [{ label: "Inicio", href: "/" }];
   if (product.parentCategory) crumbs.push({ label: product.parentCategory.name, href: categoryHref(product.parentCategory.slug) });
@@ -92,8 +92,7 @@ export default async function ProductPage({ params }: PageProps<"/producto/[slug
         <ProductGallery name={product.name} images={product.images} />
 
         <div className="min-w-0">
-          {product.brand && <p className="text-sm font-medium uppercase tracking-wide text-brand-green-ink">{product.brand}</p>}
-          <h1 className="mt-1 text-2xl font-semibold leading-tight tracking-tight text-balance sm:text-3xl">{product.name}</h1>
+          <h1 className="text-2xl font-semibold leading-tight tracking-tight text-balance sm:text-3xl">{product.name}</h1>
 
           <div className="mt-4 border-t border-brand-line pt-5">
             <ProductPurchase
@@ -136,19 +135,28 @@ export default async function ProductPage({ params }: PageProps<"/producto/[slug
         </div>
       </div>
 
-      {related.length > 0 && (
-        <section aria-labelledby="relacionados" className="mt-12 border-t border-brand-line pt-8">
-          <SectionHeading id="relacionados" title={`Más de ${back.name}`} />
-          <ProductGrid products={related} />
-          <Link
-            href={categoryHref(back.slug)}
-            className="mt-6 inline-flex h-11 items-center rounded-lg bg-brand-ink px-5 text-sm font-medium text-white hover:bg-brand-ink/85"
-          >
-            Ver todo {back.name}
-          </Link>
-        </section>
-      )}
+      {/* Los relacionados llegan aparte: la ficha se muestra sin esperarlos. */}
+      <Suspense fallback={null}>
+        <RelatedProducts product={product} category={back} />
+      </Suspense>
     </main>
+  );
+}
+
+async function RelatedProducts({ product, category }: { product: ProductDetail; category: { slug: string; name: string } }) {
+  const related = await getRelatedProducts(product);
+  if (related.length === 0) return null;
+  return (
+    <section aria-labelledby="relacionados" className="mt-12 border-t border-brand-line pt-8">
+      <SectionHeading id="relacionados" title={`Más de ${category.name}`} />
+      <ProductGrid products={related} />
+      <Link
+        href={categoryHref(category.slug)}
+        className="mt-6 inline-flex h-11 items-center rounded-lg bg-brand-ink px-5 text-sm font-medium text-white hover:bg-brand-ink/85"
+      >
+        Ver todo {category.name}
+      </Link>
+    </section>
   );
 }
 

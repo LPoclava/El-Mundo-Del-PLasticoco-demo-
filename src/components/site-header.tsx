@@ -20,7 +20,7 @@ export function SiteHeader() {
             width={900}
             height={329}
             sizes="(min-width: 640px) 156px, 120px"
-            priority
+            preload
             className="h-11 w-auto sm:h-14"
           />
         </Link>

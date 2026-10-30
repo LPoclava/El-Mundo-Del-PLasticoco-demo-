@@ -9,7 +9,7 @@ import { SearchForm } from "./search-form";
  * prerenderiza); el buscador sí (recuerda lo buscado), por eso va aparte, dentro de <Suspense>.
  */
 export function CatalogHero({ children }: { children: React.ReactNode }) {
-  const { eyebrow, title, subtitle } = CATALOG_COPY.hero;
+  const { title, subtitle } = CATALOG_COPY.hero;
   return (
     <section
       aria-labelledby="bienvenida"
@@ -20,15 +20,8 @@ export function CatalogHero({ children }: { children: React.ReactNode }) {
       <GlobeMotif className="pointer-events-none absolute -bottom-16 right-24 hidden size-40 text-brand-orange/15 sm:block" />
 
       <div className="relative max-w-2xl">
-        <p className="hidden items-center gap-2 text-sm font-medium text-brand-green-ink sm:flex">
-          <span aria-hidden className="flex items-center gap-1">
-            <span className="size-2 rounded-full bg-brand-orange" />
-            <span className="size-2 rounded-full bg-brand-green" />
-          </span>
-          {eyebrow}
-        </p>
         {/* En celular el logo ya dice el nombre: el título queda solo para lectores de pantalla. */}
-        <h1 id="bienvenida" className="sr-only sm:not-sr-only sm:mt-2 sm:text-4xl sm:font-semibold sm:leading-tight sm:tracking-tight sm:text-balance">
+        <h1 id="bienvenida" className="sr-only sm:not-sr-only sm:text-4xl sm:font-semibold sm:leading-tight sm:tracking-tight sm:text-balance">
           {title}
         </h1>
         <p className="mt-2 hidden max-w-xl text-lg text-brand-muted text-pretty sm:block">{subtitle}</p>

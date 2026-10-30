@@ -418,7 +418,7 @@ function FormBody({ db, initial, categories, onClose, onChanged, notify }: FormP
       </div>
 
       {/* Acciones siempre a mano en formularios largos (sobre todo en el celular). */}
-      <div className="sticky bottom-0 z-10 -mx-4 -mb-4 flex justify-end gap-2 rounded-b-xl border-t border-brand-line bg-white/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:-mb-6 sm:px-6">
+      <div className="sticky bottom-0 z-10 -mx-4 -mb-4 flex justify-end gap-2 rounded-b-xl border-t border-brand-line bg-white px-4 py-3 sm:-mx-6 sm:-mb-6 sm:px-6">
         <Button variant="ghost" onClick={onClose} disabled={busy}>Cancelar</Button>
         <Button type="submit" variant="primary" disabled={busy || processing}>{busy ? "Guardando…" : productId ? "Guardar cambios" : "Crear producto"}</Button>
       </div>

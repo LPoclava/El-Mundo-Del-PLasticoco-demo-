@@ -43,9 +43,9 @@ export function ProductGallery({ name, images }: Props) {
           src={current.url}
           alt={count > 1 ? `${name}, foto ${index + 1} de ${count}` : name}
           fill
-          priority={index === 0}
+          preload={index === 0}
           sizes="(min-width: 1024px) 560px, (min-width: 768px) 50vw, 100vw"
-          className="object-contain p-2 motion-safe:animate-[fade-in_0.2s_ease-out]"
+          className="object-contain p-2"
           draggable={false}
         />
         {count > 1 && (
@@ -81,7 +81,7 @@ export function ProductGallery({ name, images }: Props) {
                 }
               }}
               className={`relative aspect-square overflow-hidden rounded-lg border-2 bg-white motion-safe:transition-colors ${
-                i === index ? "border-brand-orange" : "border-brand-line hover:border-brand-ink/40"
+                i === index ? "border-brand-ink" : "border-brand-line hover:border-brand-ink/40"
               }`}
             >
               <Image src={img.url} alt="" fill sizes="96px" className="object-contain p-1" />

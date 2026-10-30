@@ -63,7 +63,7 @@ export function ProductPurchase({ name, path, variants, price, hasPriceRange }: 
                 <label
                   key={v.id}
                   className={`flex min-h-12 cursor-pointer items-center justify-between gap-3 rounded-xl border-2 bg-white px-3 py-2 text-sm has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-brand-ink motion-safe:transition-colors ${
-                    checked ? "border-brand-orange bg-brand-orange/5" : "border-brand-line hover:border-brand-ink/40"
+                    checked ? "border-brand-ink bg-brand-orange/10" : "border-brand-line hover:border-brand-ink/40"
                   }`}
                 >
                   <span className="flex min-w-0 items-center gap-2.5">

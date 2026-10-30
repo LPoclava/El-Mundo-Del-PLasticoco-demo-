@@ -30,7 +30,7 @@ export function ProductCard({ product, eager = false }: Props) {
         />
       </div>
       <h3 className="mt-2.5 line-clamp-2 min-h-[2.6em] text-sm leading-snug text-brand-ink">
-        <Link href={productPath(product)} className="outline-none after:absolute after:inset-0 after:rounded-lg group-hover:underline group-hover:underline-offset-2">
+        <Link href={productPath(product)} className="outline-none focus-visible:outline-none after:absolute after:inset-0 after:rounded-lg group-hover:underline group-hover:underline-offset-2">
           {product.name}
         </Link>
       </h3>

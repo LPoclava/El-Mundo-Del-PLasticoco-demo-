@@ -4,7 +4,6 @@
  */
 export const CATALOG_COPY = {
   hero: {
-    eyebrow: "Catálogo online",
     title: "Bienvenido a El Mundo del Plástico",
     subtitle: "Mirá el catálogo, buscá lo que necesitás y consultanos cuando quieras.",
   },
