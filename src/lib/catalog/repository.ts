@@ -1,5 +1,5 @@
 import { cacheLife } from "next/cache";
-import type { CatalogProduct, Category, PromoBanner } from "@/types/product";
+import type { CatalogProduct, Category, ProductDetail, PromoBanner } from "@/types/product";
 import { isSafeBannerLink } from "@/lib/banners/rules";
 import { getSupabase, isSupabaseConfigured, productImageUrl } from "@/lib/supabase/public";
 
@@ -222,4 +222,102 @@ async function fromSupabase(query: CatalogQuery): Promise<CatalogPage> {
   }));
 
   return { items, total, page, pageCount };
+}
+
+type DetailRow = CatalogRow & { description: string | null; main_category_slug?: string | null };
+type ImageRow = { path: string; is_primary: boolean; position: number };
+type VariantRow = { id: string; size: string | null; color: string | null; price: number; position: number };
+
+/** La vista todavía no existe en la base (migración 20261102000001 sin aplicar). */
+function isMissingRelation(error: { code?: string; message?: string }): boolean {
+  return error.code === "42P01" || error.code === "PGRST205" || /could not find the table|does not exist/i.test(error.message ?? "");
+}
+
+/**
+ * Ficha de un producto. Devuelve null si no existe, no está publicado o está archivado: la vista
+ * public_catalog ya aplica la regla de publicación, así que una URL directa no expone nada más.
+ */
+export async function getProduct(id: string): Promise<ProductDetail | null> {
+  if (!isSupabaseConfigured) return null;
+  return fetchProduct(id);
+}
+
+async function fetchProduct(id: string): Promise<ProductDetail | null> {
+  "use cache";
+  cacheLife(CATALOG_CACHE);
+
+  const supabase = getSupabase();
+  const [row, images, variants, categories] = await Promise.all([
+    supabase
+      .from("public_catalog")
+      .select(`${CATALOG_COLUMNS},description,main_category_slug`)
+      .eq("id", id)
+      .maybeSingle(),
+    supabase.from("public_product_images").select("path,is_primary,position").eq("product_id", id),
+    supabase.from("public_product_variants").select("id,size,color,price,position").eq("product_id", id),
+    fetchCategories(),
+  ]);
+  if (row.error) throw new Error(`No se pudo leer el producto: ${row.error.message}`);
+  const p = row.data as DetailRow | null;
+  if (!p) return null;
+
+  // Sin las vistas de la ficha se muestra lo que ya publica el catálogo: foto principal y precio general.
+  for (const r of [images, variants]) {
+    if (r.error && !isMissingRelation(r.error)) throw new Error(`No se pudo leer el producto: ${r.error.message}`);
+  }
+  const imageRows = images.error ? [] : ((images.data ?? []) as ImageRow[]);
+  const variantRows = variants.error ? [] : ((variants.data ?? []) as VariantRow[]);
+
+  const sortedImages = [...imageRows].sort((a, b) => Number(b.is_primary) - Number(a.is_primary) || a.position - b.position);
+  const imageList = sortedImages.length
+    ? sortedImages.map((i) => ({ url: productImageUrl(i.path), isPrimary: i.is_primary }))
+    : [{ url: productImageUrl(p.image_path), isPrimary: true }];
+
+  const name = (slug: string) => categories.find((c) => c.slug === slug)?.name ?? slug;
+  const main = p.main_category_slug && p.main_category_slug !== p.category_slug ? p.main_category_slug : null;
+
+  return {
+    id: p.id,
+    name: p.name,
+    brand: p.brand,
+    description: p.description?.trim() || null,
+    category: { slug: p.category_slug, name: name(p.category_slug) },
+    parentCategory: main ? { slug: main, name: name(main) } : null,
+    images: imageList,
+    variants: [...variantRows]
+      .sort((a, b) => a.position - b.position || a.price - b.price)
+      .map((v) => ({ id: v.id, size: v.size, color: v.color, price: Number(v.price) })),
+    price: Number(p.price),
+    hasPriceRange: p.has_price_range,
+  };
+}
+
+/** Hasta 6 productos publicados de la misma categoría principal (o de la misma categoría). */
+export async function getRelatedProducts(product: ProductDetail): Promise<CatalogProduct[]> {
+  if (!isSupabaseConfigured) return [];
+  return fetchRelated(product.id, product.parentCategory?.slug ?? product.category.slug);
+}
+
+async function fetchRelated(id: string, categorySlug: string): Promise<CatalogProduct[]> {
+  "use cache";
+  cacheLife(CATALOG_CACHE);
+
+  const request = (column: string) =>
+    getSupabase().from("public_catalog").select(CATALOG_COLUMNS).eq(column, categorySlug).neq("id", id).order("name_sort").limit(6);
+  let result = await request("main_category_slug");
+  if (result.error && isMissingColumn(result.error)) result = await request("category_slug");
+  if (result.error) {
+    // Los relacionados son un extra: si fallan, la ficha se muestra igual.
+    console.error(`No se pudieron leer los productos relacionados: ${result.error.message}`);
+    return [];
+  }
+  return ((result.data ?? []) as CatalogRow[]).map((r) => ({
+    id: r.id,
+    name: r.name,
+    brand: r.brand,
+    categorySlug: r.category_slug,
+    imageUrl: productImageUrl(r.image_path),
+    price: r.price,
+    hasPriceRange: r.has_price_range,
+  }));
 }

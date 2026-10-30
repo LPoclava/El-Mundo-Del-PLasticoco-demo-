@@ -48,6 +48,12 @@ body {
   to { opacity: 1; transform: none; }
 }
 
+/* Cambio de foto en la galería de la ficha de producto. */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 /* Línea de guía del escáner de códigos de barras (se desactiva con "reducir movimiento"). */
 @keyframes scan-line {
   0%, 100% { top: 10%; }

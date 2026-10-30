@@ -1,4 +1,5 @@
 import { CONTACT } from "@/config/contact";
+import { inquiryText } from "@/lib/catalog/product";
 
 export type ContactChannelId = "whatsapp" | "phone" | "instagram" | "facebook";
 
@@ -37,12 +38,10 @@ export function getWhatsAppNumber(): string | null {
  * el cliente decide si lo envía, así que no se registra ni se cuenta como venta ni como consulta enviada.
  * Devuelve null si no hay número configurado (el botón no se muestra).
  */
-export function productInquiryHref(input: { name: string; price: string; fromPrice?: boolean; variant?: string | null }): string | null {
+export function productInquiryHref(input: Parameters<typeof inquiryText>[0]): string | null {
   const number = getWhatsAppNumber();
   if (!number) return null;
-  const product = input.variant ? `${input.name} (${input.variant})` : input.name;
-  const text = `Hola, me interesa el producto ${product}. Precio publicado: ${input.fromPrice ? "desde " : ""}${input.price}. ¿Me podrían confirmar disponibilidad?`;
-  return `https://wa.me/${number}?text=${encodeURIComponent(text)}`;
+  return `https://wa.me/${number}?text=${encodeURIComponent(inquiryText(input))}`;
 }
 
 /** Canales en orden de prioridad: WhatsApp y teléfono primero. */

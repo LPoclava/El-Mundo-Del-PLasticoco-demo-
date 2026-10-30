@@ -1,8 +1,8 @@
 import Image from "next/image";
+import Link from "next/link";
 import type { CatalogProduct } from "@/types/product";
 import { formatPrice } from "@/lib/catalog/url";
-import { productInquiryHref } from "@/lib/contact";
-import { ContactIcon } from "@/components/contact/contact-icon";
+import { productPath } from "@/lib/catalog/product";
 
 type Props = {
   product: CatalogProduct;
@@ -10,24 +10,29 @@ type Props = {
   eager?: boolean;
 };
 
+/**
+ * Tarjeta del catálogo. Toda la tarjeta lleva a la ficha del producto: el enlace está en el nombre y
+ * su área se extiende a la tarjeta completa (una sola parada de teclado, foto incluida). La consulta
+ * por WhatsApp está en la ficha, donde se elige la variante.
+ */
 export function ProductCard({ product, eager = false }: Props) {
-  // Sin número comercial configurado no hay botón. Abrir WhatsApp no es una venta ni una consulta enviada.
-  const inquiry = productInquiryHref({ name: product.name, price: formatPrice(product.price), fromPrice: product.hasPriceRange });
   return (
-    <article className="flex h-full flex-col">
+    <article className="group relative flex h-full flex-col rounded-lg motion-safe:transition-transform motion-safe:active:scale-[0.98] has-[a:focus-visible]:outline has-[a:focus-visible]:outline-2 has-[a:focus-visible]:outline-offset-2 has-[a:focus-visible]:outline-brand-ink">
       <div className="relative aspect-square overflow-hidden rounded-lg bg-brand-sand">
         <Image
           src={product.imageUrl}
           alt={product.name}
           fill
           sizes="(min-width: 1280px) 16vw, (min-width: 1024px) 20vw, (min-width: 768px) 25vw, (min-width: 640px) 33vw, 50vw"
-          className="object-cover"
+          className="object-cover motion-safe:transition-transform motion-safe:duration-300 motion-safe:group-hover:scale-[1.03]"
           unoptimized={product.imageUrl.endsWith(".svg")}
           {...(eager ? { loading: "eager" as const, fetchPriority: "high" as const } : {})}
         />
       </div>
       <h3 className="mt-2.5 line-clamp-2 min-h-[2.6em] text-sm leading-snug text-brand-ink">
-        {product.name}
+        <Link href={productPath(product)} className="outline-none after:absolute after:inset-0 after:rounded-lg group-hover:underline group-hover:underline-offset-2">
+          {product.name}
+        </Link>
       </h3>
       <p className="mb-2 mt-1 text-base font-semibold tabular-nums">
         {product.hasPriceRange && (
@@ -35,18 +40,15 @@ export function ProductCard({ product, eager = false }: Props) {
         )}
         {formatPrice(product.price)}
       </p>
-      {inquiry && (
-        <a
-          href={inquiry}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label={`Consultar por WhatsApp: ${product.name}`}
-          className="mt-auto inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-brand-green/50 bg-white px-3 text-sm font-medium text-brand-green-ink hover:bg-brand-green/10 active:bg-brand-green/15 motion-safe:transition-colors"
-        >
-          <ContactIcon id="whatsapp" className="size-4 shrink-0" />
-          Consultar por WhatsApp
-        </a>
-      )}
+      <span
+        aria-hidden
+        className="mt-auto inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-lg border border-brand-line bg-white px-3 text-sm font-medium text-brand-ink group-hover:border-brand-ink motion-safe:transition-colors"
+      >
+        Ver producto
+        <svg viewBox="0 0 24 24" className="size-4 motion-safe:transition-transform motion-safe:group-hover:translate-x-0.5" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+          <path d="M5 12h14M13 6l6 6-6 6" />
+        </svg>
+      </span>
     </article>
   );
 }

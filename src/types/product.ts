@@ -39,3 +39,28 @@ export type CatalogProduct = {
   /** true si las variantes tienen precios distintos (se muestra "Desde"). */
   hasPriceRange: boolean;
 };
+
+/** Variante pública: solo las que tienen precio (vista public_product_variants). */
+export type ProductVariant = {
+  id: string;
+  size: string | null;
+  color: string | null;
+  price: number;
+};
+
+/** Ficha de un producto publicado. Nunca incluye stock, SKU ni código de barras. */
+export type ProductDetail = {
+  id: string;
+  name: string;
+  brand: string | null;
+  description: string | null;
+  category: { slug: string; name: string };
+  /** Categoría principal cuando el producto está en una subcategoría; null si ya es la principal. */
+  parentCategory: { slug: string; name: string } | null;
+  /** Primero la foto principal; hasta 5. */
+  images: { url: string; isPrimary: boolean }[];
+  /** Vacío solo si la base todavía no tiene la vista de variantes (se muestra el precio general). */
+  variants: ProductVariant[];
+  price: number;
+  hasPriceRange: boolean;
+};
