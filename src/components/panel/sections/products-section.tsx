@@ -223,7 +223,7 @@ function Manager({ db }: { db: SupabaseClient }) {
                   <div className="flex items-start gap-3">
                     {p.primaryPath ? (
                       <span className="relative size-14 shrink-0 overflow-hidden rounded-lg bg-brand-sand">
-                        <Image src={productImageUrl(p.primaryPath)} alt="" fill sizes="56px" className="object-cover" />
+                        <Image src={productImageUrl(p.primaryPath)} alt={p.name} fill sizes="56px" className="object-cover" />
                       </span>
                     ) : (
                       <ProductThumb seed={p.id} className="size-14" />

@@ -53,6 +53,7 @@ export function PromoCarousel({ banners, intervalMs = AUTOPLAY_MS }: Props) {
   const swiped = useRef(false);
 
   const current = Math.min(index, Math.max(count - 1, 0));
+  const withCaption = banners.some(hasCaption);
   const playing = count > 1 && !reduced && !userPaused && !hovered && !focused && !touching && !hidden;
 
   const go = useCallback((direction: 1 | -1) => setIndex((i) => stepIndex(i, count, direction)), [count]);
@@ -91,7 +92,7 @@ export function PromoCarousel({ banners, intervalMs = AUTOPLAY_MS }: Props) {
     >
       <div
         className="relative overflow-hidden rounded-xl bg-brand-sand"
-        style={{ aspectRatio: BANNER_RATIO, touchAction: "pan-y" }}
+        style={{ touchAction: "pan-y" }}
         onPointerDown={(e) => {
           swipe.current = { x: e.clientX, y: e.clientY };
           swiped.current = false;
@@ -122,7 +123,7 @@ export function PromoCarousel({ banners, intervalMs = AUTOPLAY_MS }: Props) {
         }}
       >
         <div
-          className="absolute inset-0 flex motion-safe:transition-transform motion-safe:duration-500 motion-safe:ease-out"
+          className="flex motion-safe:transition-transform motion-safe:duration-500 motion-safe:ease-out"
           style={{ transform: `translateX(-${current * 100}%)` }}
           aria-live={playing ? "off" : "polite"}
         >
@@ -134,19 +135,21 @@ export function PromoCarousel({ banners, intervalMs = AUTOPLAY_MS }: Props) {
               count={count}
               active={i === current}
               eager={i === 0}
+              withCaption={withCaption}
             />
           ))}
         </div>
 
         {count > 1 && (
-          <>
-            <button type="button" onClick={() => go(-1)} aria-label="Promoción anterior" className={`${ARROW_OVERLAY} left-3`}>
+          // Las flechas se centran sobre la IMAGEN (no sobre el texto de abajo) y no tapan sus bordes.
+          <div className="pointer-events-none absolute inset-x-0 top-0" style={{ aspectRatio: BANNER_RATIO }}>
+            <button type="button" onClick={() => go(-1)} aria-label="Promoción anterior" className={`${ARROW_OVERLAY} pointer-events-auto left-3`}>
               <Chevron direction="left" />
             </button>
-            <button type="button" onClick={() => go(1)} aria-label="Promoción siguiente" className={`${ARROW_OVERLAY} right-3`}>
+            <button type="button" onClick={() => go(1)} aria-label="Promoción siguiente" className={`${ARROW_OVERLAY} pointer-events-auto right-3`}>
               <Chevron direction="right" />
             </button>
-          </>
+          </div>
         )}
       </div>
 
@@ -160,7 +163,7 @@ export function PromoCarousel({ banners, intervalMs = AUTOPLAY_MS }: Props) {
               type="button"
               onClick={() => setUserPaused((p) => !p)}
               aria-label={userPaused ? "Reanudar el avance automático" : "Pausar el avance automático"}
-              className="grid size-8 place-items-center rounded-full text-brand-ink hover:bg-brand-sand"
+              className="grid size-11 place-items-center rounded-full text-brand-ink hover:bg-brand-sand"
             >
               {userPaused ? <PlayIcon /> : <PauseIcon />}
             </button>
@@ -173,7 +176,7 @@ export function PromoCarousel({ banners, intervalMs = AUTOPLAY_MS }: Props) {
                   onClick={() => setIndex(i)}
                   aria-label={`Ir a la promoción ${i + 1} de ${count}`}
                   aria-current={i === current ? "true" : undefined}
-                  className="grid h-8 min-w-8 place-items-center"
+                  className="grid h-11 min-w-11 place-items-center"
                 >
                   <span
                     aria-hidden
@@ -194,83 +197,84 @@ export function PromoCarousel({ banners, intervalMs = AUTOPLAY_MS }: Props) {
   );
 }
 
+function hasCaption(b: PromoBanner): boolean {
+  return Boolean(b.title || b.body || b.badge || (b.ctaLabel && b.linkUrl));
+}
+
+/**
+ * Una diapositiva: la imagen se ve COMPLETA y sin nada encima (muchos banners ya traen su texto
+ * dentro). Si el banner tiene título, etiqueta, texto o botón, van debajo, en una franja aparte.
+ * El enlace toma su nombre del contenido (descripción de la imagen y textos), no de la posición.
+ */
 function Slide({
   banner,
   position,
   count,
   active,
   eager,
+  withCaption,
 }: {
   banner: PromoBanner;
   position: number;
   count: number;
   active: boolean;
   eager: boolean;
+  withCaption: boolean;
 }) {
-  const hasText = Boolean(banner.title || banner.body || banner.badge || banner.ctaLabel);
-  const alt = banner.imageAlt ?? banner.title ?? "Promoción de Mundo del Plástico";
+  const alt = banner.imageAlt ?? banner.title ?? "Promoción de El Mundo del Plástico";
 
   const content = (
     <>
-      <Image
-        src={banner.imageUrl}
-        alt={alt}
-        fill
-        sizes="(min-width: 1280px) 1280px, 100vw"
-        className="object-cover"
-        draggable={false}
-        {...(eager ? { priority: true } : {})}
-      />
-      {hasText && (
-        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 via-black/45 to-transparent px-4 pb-3 pt-10 text-white sm:px-6 sm:pb-5 sm:pt-16">
-          {banner.badge && (
-            <span className="mb-1 inline-block rounded bg-brand-orange px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-brand-ink">
-              {banner.badge}
-            </span>
-          )}
-          {banner.title && (
-            <p className="line-clamp-2 text-base font-semibold leading-tight sm:text-2xl">{banner.title}</p>
-          )}
-          {banner.body && (
-            <p className="mt-0.5 line-clamp-2 max-w-2xl text-sm text-white/90 max-sm:hidden sm:mt-1 sm:text-base">{banner.body}</p>
-          )}
+      <span className="relative block w-full" style={{ aspectRatio: BANNER_RATIO }}>
+        <Image
+          src={banner.imageUrl}
+          alt={alt}
+          fill
+          sizes="(min-width: 1280px) 1280px, 100vw"
+          className="object-cover"
+          draggable={false}
+          {...(eager ? { priority: true } : {})}
+        />
+      </span>
+      {withCaption && (
+        <span className="flex flex-1 flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-brand-line bg-white px-4 py-3 sm:px-5">
+          <span className="min-w-0">
+            {banner.badge && (
+              <span className="mr-2 inline-block rounded bg-brand-orange px-2 py-0.5 align-middle text-xs font-semibold text-brand-ink">
+                {banner.badge}
+              </span>
+            )}
+            {banner.title && <span className="align-middle text-base font-semibold sm:text-lg">{banner.title}</span>}
+            {banner.body && <span className="mt-0.5 block line-clamp-2 text-sm text-brand-muted">{banner.body}</span>}
+          </span>
           {banner.ctaLabel && banner.linkUrl && (
-            <span className="mt-3 inline-flex min-h-11 items-center rounded-lg bg-white px-4 text-sm font-semibold text-brand-ink max-sm:hidden">
+            <span className="inline-flex min-h-11 shrink-0 items-center rounded-lg bg-brand-ink px-4 text-sm font-semibold text-white group-hover:bg-brand-ink/85">
               {banner.ctaLabel}
             </span>
           )}
-        </div>
+        </span>
       )}
     </>
   );
 
-  const className = "relative block h-full w-full shrink-0 grow-0 basis-full";
-  const group = {
-    role: "group",
-    "aria-roledescription": "diapositiva",
-    "aria-label": `${position} de ${count}`,
-    "aria-hidden": !active || undefined,
-    inert: !active || undefined,
-  } as const;
-
-  if (!banner.linkUrl) {
-    return (
-      <div className={className} {...group}>
-        {content}
-      </div>
-    );
-  }
-  if (isExternalLink(banner.linkUrl)) {
-    return (
-      <a href={banner.linkUrl} target="_blank" rel="noopener noreferrer" className={className} {...group}>
-        {content}
-      </a>
-    );
-  }
+  const inner = "group flex h-full w-full flex-col";
   return (
-    <Link href={banner.linkUrl} className={className} {...group}>
-      {content}
-    </Link>
+    <div
+      role="group"
+      aria-roledescription="diapositiva"
+      aria-label={`Promoción ${position} de ${count}`}
+      aria-hidden={!active || undefined}
+      inert={!active || undefined}
+      className="flex w-full shrink-0 grow-0 basis-full flex-col"
+    >
+      {!banner.linkUrl ? (
+        <div className={inner}>{content}</div>
+      ) : isExternalLink(banner.linkUrl) ? (
+        <a href={banner.linkUrl} target="_blank" rel="noopener noreferrer" className={inner}>{content}</a>
+      ) : (
+        <Link href={banner.linkUrl} className={inner}>{content}</Link>
+      )}
+    </div>
   );
 }
 

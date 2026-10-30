@@ -35,7 +35,7 @@ export function SearchForm({ q, category }: Props) {
       />
       <button
         type="submit"
-        className="m-1 h-11 rounded-md bg-brand-ink px-4 text-sm font-medium text-white hover:bg-brand-ink/85"
+        className="m-1 h-11 shrink-0 rounded-md bg-brand-ink px-3 text-sm font-medium text-white hover:bg-brand-ink/85 sm:px-4"
       >
         Buscar
       </button>

@@ -90,10 +90,9 @@ function CategoryCard({ category, tone, href, current }: { category: Category; t
     >
       <div className={`relative aspect-[3/2] overflow-hidden sm:aspect-[4/3] ${t.tint}`}>
         {category.imageUrl ? (
-          // alt vacío: el nombre de la categoría está escrito justo debajo.
           <Image
             src={category.imageUrl}
-            alt=""
+            alt={category.name}
             fill
             sizes="(min-width: 1280px) 300px, (min-width: 1024px) 25vw, 50vw"
             className="object-cover motion-safe:transition-transform motion-safe:duration-500 motion-safe:group-hover:scale-105"

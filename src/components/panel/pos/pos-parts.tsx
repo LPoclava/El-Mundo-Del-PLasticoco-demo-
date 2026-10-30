@@ -7,11 +7,11 @@ import { productImageUrl } from "@/lib/supabase/public";
 import { Icon } from "../icons";
 import { Button, INPUT_CLASS } from "../ui";
 
-export function Thumb({ path }: { path: string | null }) {
+export function Thumb({ path, name = "" }: { path: string | null; name?: string }) {
   return (
     <div className="relative size-12 shrink-0 overflow-hidden rounded-lg bg-brand-sand">
       {path ? (
-        <Image src={productImageUrl(path)} alt="" fill sizes="48px" className="object-cover" />
+        <Image src={productImageUrl(path)} alt={name} fill sizes="48px" className="object-cover" />
       ) : (
         <span aria-hidden className="grid size-full place-items-center text-brand-muted"><Icon name="box" className="size-5" /></span>
       )}

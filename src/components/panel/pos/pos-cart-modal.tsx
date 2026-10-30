@@ -62,7 +62,7 @@ export function CartModal({ open, onClose, cart, actions, methods, method, onMet
                 return (
                   <li key={line.variantId} className="py-3">
                     <div className="flex items-start gap-3">
-                      <Thumb path={line.imagePath} />
+                      <Thumb path={line.imagePath} name={line.name} />
                       <div className="min-w-0 flex-1">
                         <p className="font-medium leading-snug">{line.name}</p>
                         <p className="text-xs text-brand-muted">{line.variantLabel ?? "Variante única"}{line.barcode ? ` · ${line.barcode}` : ""}</p>

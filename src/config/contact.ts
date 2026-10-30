@@ -13,9 +13,16 @@ export const CONTACT: {
   phone: string | null;
   instagramUrl: string | null;
   facebookUrl: string | null;
+  /** Dirección del local, tal como se quiere mostrar. null = no se muestra (falta confirmarla con el negocio). */
+  address: string | null;
+  /** Horarios de atención, una línea por renglón. null = no se muestra (falta confirmarlos con el negocio). */
+  hours: string[] | null;
 } = {
   whatsapp: "5492902404916",
   phone: "542902404916",
   instagramUrl: null,
   facebookUrl: "https://www.facebook.com/plasticosnavarrete",
+  // PENDIENTE: no hay dirección ni horarios confirmados. No completar con datos supuestos.
+  address: null,
+  hours: null,
 };
