@@ -8,8 +8,9 @@ import {
   CatalogResults,
   CatalogResultsSkeleton,
 } from "@/components/catalog/catalog-results";
-import { MainCategories, MainCategoriesSkeleton } from "@/components/catalog/main-categories";
-import { PromoSection } from "@/components/catalog/promo-section";
+import { HomeFront, HomeFrontSkeleton } from "@/components/catalog/home-front";
+import { HowToBuy } from "@/components/catalog/how-to-buy";
+import { WhatsAppFloat } from "@/components/catalog/whatsapp-float";
 import { CATALOG_COPY } from "@/config/catalog-copy";
 
 /**
@@ -21,21 +22,11 @@ export default function Home({ searchParams }: PageProps<"/">) {
     <main id="contenido" className="mx-auto max-w-7xl px-4 pt-4 sm:pt-6">
       <h1 className="sr-only">{CATALOG_COPY.hero.title}</h1>
 
-      {/* Celular y tablet: promociones arriba y categorías debajo. Escritorio: lado a lado (banner a la
-          izquierda, categorías en 2 × 2 a la derecha) para que la primera pantalla muestre las dos cosas.
-          Sin banners vigentes, las categorías ocupan todo el ancho. */}
-      <div className="grid items-start gap-6 lg:gap-8 lg:has-[>[data-promo]]:grid-cols-[minmax(0,1.65fr)_minmax(0,1fr)]">
-        {/* Sin banners vigentes la sección no existe, por eso no hay esqueleto: se ocultaría de golpe. */}
-        <Suspense fallback={null}>
-          <PromoSection />
-        </Suspense>
+      <Suspense fallback={<HomeFrontSkeleton />}>
+        <HomeFront searchParams={searchParams} />
+      </Suspense>
 
-        <Suspense fallback={<MainCategoriesSkeleton />}>
-          <MainCategories searchParams={searchParams} />
-        </Suspense>
-      </div>
-
-      <div id="catalogo" className="mt-8 scroll-mt-4 border-t border-brand-line pt-6 lg:mt-10 lg:pt-8">
+      <div id="catalogo" className="scroll-mt-4 border-t border-brand-line pt-6 lg:pt-8">
         <Suspense fallback={<CatalogControlsSkeleton />}>
           <CatalogControls searchParams={searchParams} />
         </Suspense>
@@ -47,7 +38,9 @@ export default function Home({ searchParams }: PageProps<"/">) {
         </div>
       </div>
 
+      <HowToBuy />
       <ContactSection />
+      <WhatsAppFloat />
     </main>
   );
 }

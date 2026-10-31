@@ -90,7 +90,7 @@ export function CrmSection() {
           <div className="inline-flex rounded-lg border border-brand-line p-0.5" role="group" aria-label="Período">
             {(Object.keys(SALES_SERIES) as SalesPeriod[]).map((p) => (
               <button key={p} type="button" aria-pressed={period === p} onClick={() => setPeriod(p)}
-                className={`h-9 rounded-md px-3 text-sm font-medium ${period === p ? "bg-brand-ink text-white" : "hover:bg-brand-sand"}`}>
+                className={`h-11 rounded-md px-3 text-sm font-medium ${period === p ? "bg-brand-ink text-white" : "hover:bg-brand-sand"}`}>
                 {SALES_SERIES[p].label}
               </button>
             ))}

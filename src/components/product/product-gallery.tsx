@@ -12,10 +12,16 @@ type Props = { name: string; images: { url: string }[] };
  */
 export function ProductGallery({ name, images }: Props) {
   const [index, setIndex] = useState(0);
+  // Resolución real de cada foto (la que entrega el optimizador, que nunca agranda: si el original es chico,
+  // llega chico). Con ella se limita el tamaño en pantalla para no mostrar una foto ampliada y borrosa.
+  const [natural, setNatural] = useState<Record<string, number>>({});
   const thumbs = useRef<(HTMLButtonElement | null)[]>([]);
   const start = useRef<{ x: number; y: number } | null>(null);
   const count = images.length;
   const current = images[Math.min(index, count - 1)];
+  const naturalWidth = natural[current.url];
+  // Nunca por debajo de 320 px (una foto diminuta no debe dejar un cuadro diminuto).
+  const maxWidth = naturalWidth ? Math.max(naturalWidth, 320) : undefined;
 
   const go = (next: number, focus = false) => {
     const i = (next + count) % count;
@@ -24,7 +30,7 @@ export function ProductGallery({ name, images }: Props) {
   };
 
   return (
-    <div>
+    <div className="mx-auto w-full" style={{ maxWidth }}>
       <div
         className="relative aspect-square overflow-hidden rounded-2xl border border-brand-line bg-white"
         style={{ touchAction: "pan-y" }}
@@ -47,6 +53,10 @@ export function ProductGallery({ name, images }: Props) {
           sizes="(min-width: 1024px) 560px, (min-width: 768px) 50vw, 100vw"
           className="object-contain p-2"
           draggable={false}
+          onLoad={(e) => {
+            const w = e.currentTarget.naturalWidth;
+            if (w > 0) setNatural((cur) => (cur[current.url] === w ? cur : { ...cur, [current.url]: w }));
+          }}
         />
         {count > 1 && (
           <>

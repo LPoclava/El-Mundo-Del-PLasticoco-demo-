@@ -44,6 +44,14 @@ export function productInquiryHref(input: Parameters<typeof inquiryText>[0]): st
   return `https://wa.me/${number}?text=${encodeURIComponent(inquiryText(input))}`;
 }
 
+/**
+ * Enlace de WhatsApp con un mensaje general (sin producto). Solo abre el chat. null si no hay número configurado.
+ */
+export function generalInquiryHref(text: string): string | null {
+  const number = getWhatsAppNumber();
+  return number ? `https://wa.me/${number}?text=${encodeURIComponent(text)}` : null;
+}
+
 /** Canales en orden de prioridad: WhatsApp y teléfono primero. */
 export function getContactChannels(): ContactChannel[] {
   const wa = digits(CONTACT.whatsapp);

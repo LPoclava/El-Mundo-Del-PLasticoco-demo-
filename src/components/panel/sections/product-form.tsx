@@ -53,8 +53,8 @@ export function ProductEditor({ productId }: { productId: string | null }) {
       {isBrowserSupabaseConfigured ? (
         <SupabaseGate action="administrar productos">{(db) => <EditorData key={productId ?? "nuevo"} db={db} productId={productId} />}</SupabaseGate>
       ) : (
-        <Notice tone="warn" title="Supabase no está configurado">
-          Faltan las variables NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_ANON_KEY (ver .env.local.example).
+        <Notice tone="warn" title="Falta configurar la conexión">
+          Sin la conexión con la base de datos no se puede leer ni guardar nada acá. Avisá a quien administra el sistema.
         </Notice>
       )}
     </div>
@@ -157,6 +157,7 @@ function FormBody({ db, initial, categories, onClose, onChanged, notify }: FormP
   const [wantPublished, setWantPublished] = useState(initial?.publishEnabled ?? false);
   const [errors, setErrors] = useState<ProductFormErrors>({ variants: {} });
   const [photoErrors, setPhotoErrors] = useState<string[]>([]);
+  const [photoWarnings, setPhotoWarnings] = useState<string[]>([]);
   const [formError, setFormError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [processing, setProcessing] = useState(false);
@@ -179,6 +180,7 @@ function FormBody({ db, initial, categories, onClose, onChanged, notify }: FormP
     const room = PRODUCT_MAX_IMAGES - images.length;
     const list = Array.from(files);
     const problems: string[] = [];
+    const warnings: string[] = [];
     if (list.length > room) problems.push(`Solo entran ${PRODUCT_MAX_IMAGES} fotos: se usaron ${Math.max(room, 0)} de las ${list.length} elegidas.`);
     setProcessing(true);
     const added: ImageDraft[] = [];
@@ -186,6 +188,7 @@ function FormBody({ db, initial, categories, onClose, onChanged, notify }: FormP
       try {
         const image = await prepareImage(file, "product");
         previews.current.add(image.previewUrl);
+        if (image.warning) warnings.push(`${file.name}: ${image.warning}`);
         added.push({ key: nextKey(), id: null, path: null, image, isPrimary: false });
       } catch (e) {
         problems.push(`${file.name}: ${e instanceof Error ? e.message : "no se pudo leer."}`);
@@ -193,6 +196,7 @@ function FormBody({ db, initial, categories, onClose, onChanged, notify }: FormP
     }
     setProcessing(false);
     setPhotoErrors(problems);
+    setPhotoWarnings(warnings);
     if (added.length > 0) setImages((cur) => ensureSinglePrimary([...cur, ...added]));
   }
 
@@ -399,6 +403,11 @@ function FormBody({ db, initial, categories, onClose, onChanged, notify }: FormP
         {photoErrors.length > 0 && (
           <ul role="alert" className="space-y-1 text-sm text-brand-danger">
             {photoErrors.map((m) => <li key={m}>{m}</li>)}
+          </ul>
+        )}
+        {photoWarnings.length > 0 && (
+          <ul role="status" className="space-y-1 rounded-lg border border-brand-orange/50 bg-brand-orange/10 p-3 text-sm">
+            {photoWarnings.map((m) => <li key={m}>{m}</li>)}
           </ul>
         )}
         <p className="text-xs text-brand-muted">Las fotos nuevas se suben al guardar; las que quitás se borran de Storage recién cuando el guardado termina bien.</p>

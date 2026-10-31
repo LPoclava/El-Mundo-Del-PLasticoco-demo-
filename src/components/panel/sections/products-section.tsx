@@ -35,8 +35,8 @@ export function ProductsSection() {
       {isBrowserSupabaseConfigured ? (
         <SupabaseGate action="administrar productos">{(db) => <Manager db={db} />}</SupabaseGate>
       ) : (
-        <Notice tone="warn" title="Supabase no está configurado">
-          Faltan las variables NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_ANON_KEY (ver .env.local.example).
+        <Notice tone="warn" title="Falta configurar la conexión">
+          Sin la conexión con la base de datos no se puede leer ni guardar nada acá. Avisá a quien administra el sistema.
         </Notice>
       )}
     </div>
@@ -157,7 +157,7 @@ function Manager({ db }: { db: SupabaseClient }) {
             <button
               type="button"
               onClick={() => { setStatus("sin-publicar"); setPage(1); }}
-              className="inline-flex min-h-9 items-center gap-1.5 rounded-full bg-brand-orange/20 px-3 text-sm font-medium hover:bg-brand-orange/30"
+              className="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-brand-orange/20 px-3 text-sm font-medium hover:bg-brand-orange/30"
             >
               {unpublished === 1 ? "1 sin publicar" : `${unpublished} sin publicar`}
               <span className="text-xs font-normal text-brand-muted">ver</span>

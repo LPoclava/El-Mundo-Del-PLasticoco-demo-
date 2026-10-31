@@ -47,6 +47,7 @@ export async function MainCategories({ searchParams }: { searchParams: Promise<R
   return (
     <section aria-labelledby="categorias-principales" className="@container min-w-0">
       <SectionHeading id="categorias-principales" title={CATALOG_COPY.categories.title} />
+      <nav aria-labelledby="categorias-principales">
       <ul className={`grid grid-cols-2 gap-3 ${WIDE_COLUMNS[featured.length] ?? WIDE_COLUMNS[4]}`}>
         {featured.map((category, i) => (
           <li key={category.slug}>
@@ -60,6 +61,7 @@ export async function MainCategories({ searchParams }: { searchParams: Promise<R
           </li>
         ))}
       </ul>
+      </nav>
     </section>
   );
 }

@@ -32,7 +32,7 @@ export function SettingsSection() {
           </div>
         </form>
         <p className="mt-4 text-xs text-brand-muted">
-          Los canales de contacto del catálogo público (WhatsApp, teléfono, redes) hoy se editan en el archivo <code className="rounded bg-brand-sand px-1">src/config/contact.ts</code>.
+          Los canales de contacto del catálogo público (WhatsApp, teléfono, redes) todavía no se editan desde acá: por ahora los cambia quien administra el sistema.
         </p>
       </section>
 
@@ -50,7 +50,7 @@ export function SettingsSection() {
         <h2 id="seguridad-titulo" className="text-base font-semibold">Acceso y seguridad</h2>
         <div className="mt-3">
           <Notice tone="info" title="Todavía no está conectado">
-            El inicio de sesión real con Supabase Auth, los roles de la base y la auditoría definitiva se conectan en la próxima etapa. Esta demo no los usa.
+            Esta pantalla es de ejemplo: los permisos y la auditoría definitivos se conectan en una próxima etapa.
           </Notice>
         </div>
       </section>

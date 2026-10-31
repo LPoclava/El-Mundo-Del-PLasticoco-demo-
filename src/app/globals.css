@@ -113,3 +113,10 @@ body {
     animation: page-enter 0.24s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
   }
 }
+
+/* Impresión del comprobante de venta: solo se imprime el comprobante, sin menú ni botones. */
+@media print {
+  body * { visibility: hidden; }
+  #comprobante, #comprobante * { visibility: visible; }
+  #comprobante { position: absolute; inset: 0 auto auto 0; width: 100%; padding: 16px; background: #fff; }
+}

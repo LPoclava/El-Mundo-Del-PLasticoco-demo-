@@ -5,15 +5,13 @@ import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { formatPrice } from "@/lib/catalog/url";
-import { parseQuantity } from "@/lib/pos/cart";
 import {
-  adjustStock, createDraftProduct, listMainCategories, receiveStock, sellable, variantLabel,
+  createDraftProduct, listMainCategories, sellable, variantLabel,
   type CategoryOption, type PosProduct, type PosVariant,
 } from "@/lib/pos/api";
-import { STOCK_LABEL, checkStockOperation, type AdjustDirection, type StockMode } from "@/lib/pos/stock";
 import { productImageUrl } from "@/lib/supabase/public";
 import { Icon } from "../icons";
-import { Badge, Button, INPUT_CLASS, Notice, SelectInput, TextInput } from "../ui";
+import { Badge, Button, Notice, SelectInput, TextInput } from "../ui";
 
 export type ScanResult =
   | { kind: "loading"; code: string }
@@ -67,22 +65,13 @@ function Thumb({ path, name }: { path: string | null; name: string }) {
 
 // ---------------------------------------------------------------- producto existente
 
-type Mode = "ver" | "stock";
-
-function FoundProduct({ db, product, canManage, onClose, onAdd, onRefresh, onNotify }: Props & { product: PosProduct }) {
-  const [mode, setMode] = useState<Mode>("ver");
+function FoundProduct({ product, canManage, onClose, onAdd }: Props & { product: PosProduct }) {
   const [showDetails, setShowDetails] = useState(false);
-  const firstSellable = product.variants.find((v) => sellable(product, v));
-  const [variantId, setVariantId] = useState<string | null>((firstSellable ?? product.variants[0])?.id ?? null);
-  const [qty, setQty] = useState("1");
-  const variant = product.variants.find((v) => v.id === variantId) ?? null;
-  const ok = variant !== null && sellable(product, variant);
-  const n = parseQuantity(qty);
-  const overStock = variant !== null && n !== null && n > variant.stock;
   const incomplete = product.variants.length === 0;
+  const many = product.variants.length > 1;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <div className="flex items-start gap-3">
         <Thumb path={product.imagePath} name={product.name} />
         <div className="min-w-0 flex-1">
@@ -93,108 +82,51 @@ function FoundProduct({ db, product, canManage, onClose, onAdd, onRefresh, onNot
             {product.archived && <Badge tone="danger">Archivado: no se vende</Badge>}
             {incomplete && <Badge tone="warn">Producto incompleto</Badge>}
           </div>
-          {!incomplete && (
-            <p className="mt-1.5 text-lg font-semibold tabular-nums">
-              {rangeLabel(product)}
-            </p>
-          )}
+          {!incomplete && <p className="mt-1 text-lg font-semibold tabular-nums">{rangeLabel(product)}</p>}
         </div>
       </div>
 
       {incomplete ? (
         <div className="space-y-3">
           <Notice tone="warn" title="Todavía no se puede vender">
-            Este producto no tiene variantes ni precio cargados, así que no se puede agregar a una venta ni cargarle stock.
+            Este producto no tiene variantes ni precio cargados, así que no se puede agregar a una venta.
           </Notice>
           <CompleteButton productId={product.productId} canManage={canManage} />
         </div>
-      ) : mode === "ver" ? (
-        <>
-          <fieldset>
-            <legend className="mb-2 text-sm font-medium">{product.variants.length > 1 ? "Elegí la variante" : "Variante"}</legend>
-            <ul className="space-y-2">
-              {product.variants.map((v) => {
-                const label = variantLabel(v) ?? "Única";
-                const selected = v.id === variantId;
-                return (
-                  <li key={v.id}>
-                    <label
-                      className={`flex min-h-14 cursor-pointer items-center gap-3 rounded-xl border px-3 py-2 has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-brand-ink ${
-                        selected ? "border-brand-ink bg-brand-sand" : "border-brand-line bg-white hover:border-brand-ink"
-                      }`}
-                    >
-                      <input type="radio" name="variante" value={v.id} checked={selected} onChange={() => setVariantId(v.id)} className="size-5 accent-brand-green" />
-                      <span className="min-w-0 flex-1">
-                        <span className="block text-sm font-medium">{label}</span>
-                        <span className="block text-xs text-brand-muted tabular-nums">
-                          {v.price !== null && v.price > 0 ? formatPrice(v.price) : "Sin precio"} · {v.stock > 0 ? `Stock: ${v.stock}` : "Sin stock"}
-                        </span>
-                      </span>
-                      {!sellable(product, v) && <Badge tone="warn">{v.price === null || v.price <= 0 ? "Sin precio" : "Sin stock"}</Badge>}
-                    </label>
-                  </li>
-                );
-              })}
-            </ul>
-          </fieldset>
-
-          {showDetails && <Details product={product} />}
-
-          {/* Tres acciones distintas: consultar, vender y mover stock. */}
-          <div className="space-y-3 border-t border-brand-line pt-4">
-            <Button variant="ghost" icon="info" className="w-full justify-start border border-brand-line" aria-expanded={showDetails} onClick={() => setShowDetails((v) => !v)}>
-              {showDetails ? "Ocultar la ficha" : "Consultar producto"}
-              <span className="ml-auto hidden text-xs font-normal text-brand-muted sm:inline">solo mirar, no cambia nada</span>
-            </Button>
-
-            <div className="rounded-xl border-2 border-brand-orange/60 bg-brand-orange/10 p-3">
-              <p className="text-sm font-semibold">Venta</p>
-              <div className="mt-2 flex flex-wrap items-center gap-3">
-                <label htmlFor="res-qty" className="text-sm">Cantidad</label>
-                <input
-                  id="res-qty" inputMode="numeric" value={qty} aria-invalid={n === null || overStock}
-                  onChange={(e) => /^\d{0,4}$/.test(e.target.value) && setQty(e.target.value)}
-                  className={`${INPUT_CLASS} h-12 w-20 px-1 text-center tabular-nums`}
-                />
-                <Button
-                  variant="primary" icon="plus" className="h-12 min-w-44 flex-1 text-base"
-                  disabled={!ok || n === null || overStock}
-                  onClick={() => variant && n !== null && onAdd(product, variant, n)}
-                >
-                  Agregar al carrito
-                </Button>
-              </div>
-              {overStock && variant && <p role="alert" className="mt-1.5 text-sm text-brand-danger">Solo hay {variant.stock} en stock.</p>}
-              {!ok && variant && <p className="mt-1.5 text-sm text-brand-muted">Esta variante no se puede vender: {product.archived ? "el producto está archivado" : variant.price === null || variant.price <= 0 ? "no tiene precio" : "no tiene stock"}.</p>}
-            </div>
-
-            <div className="rounded-xl border-2 border-brand-green/50 bg-brand-green/10 p-3">
-              <p className="text-sm font-semibold">Inventario</p>
-              <Button
-                className="mt-2 h-12 w-full border-brand-green/60 text-base text-brand-green-ink" icon="refresh"
-                disabled={!canManage || variant === null || product.archived} aria-disabled={!canManage}
-                onClick={() => setMode("stock")}
-              >
-                Actualizar stock
-              </Button>
-              {!canManage && <p className="mt-1.5 text-sm text-brand-muted">Solo un gerente o el CEO puede cargar o ajustar stock.</p>}
-            </div>
-          </div>
-        </>
       ) : (
-        variant && (
-          <StockForm
-            db={db} product={product} variant={variant} onBack={() => setMode("ver")}
-            onDone={async (message) => {
-              onNotify(message);
-              await onRefresh(product.barcode ?? product.name);
-              setMode("ver");
-            }}
-          />
-        )
+        <ul className="space-y-2">
+          {product.variants.map((v) => {
+            const ok = sellable(product, v);
+            const label = variantLabel(v) ?? (many ? "Única" : null);
+            return (
+              <li key={v.id} className="flex items-center gap-3 rounded-xl border border-brand-line bg-white p-2 pl-3">
+                <span className="min-w-0 flex-1">
+                  {label && <span className="block text-sm font-medium">{label}</span>}
+                  <span className="block text-sm tabular-nums text-brand-muted">
+                    {v.price !== null && v.price > 0 ? formatPrice(v.price) : "Sin precio"} · {v.stock > 0 ? `Stock ${v.stock}` : "Sin stock"}
+                  </span>
+                </span>
+                <Button
+                  variant="primary" icon="plus" className="h-12 shrink-0 px-4 text-base"
+                  disabled={!ok} onClick={() => onAdd(product, v, 1)}
+                  aria-label={`Agregar al carrito: ${product.name}${label ? ` (${label})` : ""}`}
+                >
+                  Agregar
+                </Button>
+              </li>
+            );
+          })}
+        </ul>
       )}
 
-      <Button variant="ghost" className="w-full" onClick={onClose}>Cerrar y seguir escaneando</Button>
+      {showDetails && <Details product={product} />}
+
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <Button variant="ghost" icon="info" aria-expanded={showDetails} onClick={() => setShowDetails((v) => !v)}>
+          {showDetails ? "Ocultar ficha" : "Ver ficha"}
+        </Button>
+        <Button variant="ghost" onClick={onClose}>Seguir escaneando</Button>
+      </div>
     </div>
   );
 }
@@ -235,95 +167,6 @@ function CompleteButton({ productId, canManage }: { productId: string; canManage
     >
       <Icon name="edit" className="size-4" />Completar producto
     </Link>
-  );
-}
-
-// ---------------------------------------------------------------- entrada y ajuste de stock
-
-function StockForm({ db, product, variant, onBack, onDone }: {
-  db: SupabaseClient; product: PosProduct; variant: PosVariant; onBack: () => void; onDone: (message: string) => Promise<void>;
-}) {
-  const [mode, setMode] = useState<StockMode>("entrada");
-  const [direction, setDirection] = useState<AdjustDirection>("sumar");
-  const [quantity, setQuantity] = useState("");
-  const [note, setNote] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const sending = useRef(false);
-
-  const check = checkStockOperation({ mode, direction, quantity, note, current: variant.stock });
-
-  async function submit(e: FormEvent) {
-    e.preventDefault();
-    if (sending.current) return;
-    if (!check.ok) {
-      setError(check.error);
-      return;
-    }
-    sending.current = true;
-    setBusy(true);
-    setError(null);
-    try {
-      const resulting = mode === "entrada"
-        ? await receiveStock(db, variant.id, check.delta, note)
-        : await adjustStock(db, variant.id, check.delta, note);
-      await onDone(mode === "entrada"
-        ? `Entrada registrada: +${check.delta}. Stock ahora: ${resulting}.`
-        : `Ajuste registrado (${check.delta > 0 ? "+" : ""}${check.delta}). Stock ahora: ${resulting}.`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo registrar el movimiento.");
-      sending.current = false;
-      setBusy(false);
-    }
-  }
-
-  const label = variantLabel(variant) ?? "Única";
-  return (
-    <form onSubmit={submit} noValidate className="space-y-4 rounded-xl border-2 border-brand-green/50 bg-brand-green/5 p-4">
-      <div>
-        <p className="font-semibold">Actualizar stock</p>
-        <p className="text-sm text-brand-muted">{product.name} · {label} · Stock actual: <strong className="text-brand-ink tabular-nums">{variant.stock}</strong></p>
-      </div>
-
-      <div role="radiogroup" aria-label="Tipo de movimiento" className="grid grid-cols-2 gap-2">
-        {(["entrada", "ajuste"] as StockMode[]).map((m) => (
-          <label key={m} className={`flex min-h-12 cursor-pointer items-center justify-center rounded-lg border px-2 text-center text-sm font-medium has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-brand-ink ${mode === m ? "border-brand-green bg-brand-green text-white" : "border-brand-line bg-white"}`}>
-            <input type="radio" name="tipo" value={m} checked={mode === m} onChange={() => { setMode(m); setError(null); }} className="sr-only" />
-            {STOCK_LABEL[m]}
-          </label>
-        ))}
-      </div>
-
-      {mode === "ajuste" && (
-        <div role="radiogroup" aria-label="Sumar o restar" className="grid grid-cols-2 gap-2">
-          {(["sumar", "restar"] as AdjustDirection[]).map((d) => (
-            <label key={d} className={`flex min-h-11 cursor-pointer items-center justify-center rounded-lg border text-sm font-medium has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-brand-ink ${direction === d ? "border-brand-ink bg-brand-ink text-white" : "border-brand-line bg-white"}`}>
-              <input type="radio" name="sentido" value={d} checked={direction === d} onChange={() => { setDirection(d); setError(null); }} className="sr-only" />
-              {d === "sumar" ? "Sumar unidades" : "Restar unidades"}
-            </label>
-          ))}
-        </div>
-      )}
-
-      <TextInput
-        label={mode === "entrada" ? "Unidades recibidas" : "Unidades a ajustar"} inputMode="numeric" value={quantity}
-        onChange={(e) => { if (/^\d{0,7}$/.test(e.target.value)) { setQuantity(e.target.value); setError(null); } }}
-        hint={check.ok ? `El stock pasará de ${variant.stock} a ${check.resulting}.` : undefined}
-      />
-      <TextInput
-        label={mode === "entrada" ? "Nota (opcional)" : "Motivo del ajuste"} value={note} maxLength={200}
-        placeholder={mode === "entrada" ? "Ej.: remito 0012" : "Ej.: rotura, conteo, devolución al proveedor"}
-        onChange={(e) => { setNote(e.target.value); setError(null); }}
-      />
-      {error && <p role="alert" className="text-sm text-brand-danger">{error}</p>}
-
-      <div className="flex flex-wrap justify-end gap-2">
-        <Button variant="ghost" onClick={onBack} disabled={busy}>Volver</Button>
-        <Button type="submit" variant="primary" className="h-12 min-w-44" disabled={busy}>
-          {busy ? "Guardando…" : mode === "entrada" ? "Confirmar entrada" : "Confirmar ajuste"}
-        </Button>
-      </div>
-    </form>
   );
 }
 

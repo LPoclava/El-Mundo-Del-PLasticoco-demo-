@@ -43,9 +43,8 @@ export function BannersSection() {
       {isBrowserSupabaseConfigured ? (
         <SupabaseGate action="administrar banners">{(db) => <Manager db={db} />}</SupabaseGate>
       ) : (
-        <Notice tone="warn" title="Supabase no está configurado">
-          Faltan las variables NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_ANON_KEY (ver .env.local.example). Sin ellas
-          esta sección no puede guardar ni leer banners.
+        <Notice tone="warn" title="Falta configurar la conexión">
+          Sin la conexión con la base de datos no se puede leer ni guardar nada acá. Avisá a quien administra el sistema.
         </Notice>
       )}
     </div>
@@ -70,8 +69,8 @@ export function BannerEditor({ bannerId }: { bannerId: string | null }) {
         subtitle="Lo que ves en la vista previa es lo que va a ver el cliente."
       />
       {!isBrowserSupabaseConfigured ? (
-        <Notice tone="warn" title="Supabase no está configurado">
-          Faltan las variables NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_ANON_KEY (ver .env.local.example).
+        <Notice tone="warn" title="Falta configurar la conexión">
+          Sin la conexión con la base de datos no se puede leer ni guardar nada acá. Avisá a quien administra el sistema.
         </Notice>
       ) : bannerId !== null && !UUID.test(bannerId) ? (
         <MissingBanner />

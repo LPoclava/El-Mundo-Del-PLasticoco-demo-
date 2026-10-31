@@ -73,7 +73,7 @@ export function UsersSection() {
                   <td className="px-5 py-3"><span className="block font-medium">{u.name}{self && <span className="ml-2 text-xs font-normal text-brand-muted">(vos)</span>}</span><span className="block text-xs text-brand-muted">{u.email}</span></td>
                   <td className="px-3 py-3">
                     <label className="sr-only" htmlFor={`rol-${u.id}`}>Rol de {u.name}</label>
-                    <select id={`rol-${u.id}`} value={u.role} disabled={self} onChange={(e) => setRole(u.id, e.target.value as Role)} className="h-9 rounded-lg border border-brand-line bg-white px-2 text-sm disabled:bg-brand-sand disabled:text-brand-muted">
+                    <select id={`rol-${u.id}`} value={u.role} disabled={self} onChange={(e) => setRole(u.id, e.target.value as Role)} className="h-11 rounded-lg border border-brand-line bg-white px-2 text-sm disabled:bg-brand-sand disabled:text-brand-muted">
                       {ROLES.map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
                     </select>
                   </td>
@@ -104,7 +104,7 @@ export function UsersSection() {
                 </div>
                 <div className="flex items-center gap-2">
                   <label className="sr-only" htmlFor={`rolm-${u.id}`}>Rol de {u.name}</label>
-                  <select id={`rolm-${u.id}`} value={u.role} disabled={self} onChange={(e) => setRole(u.id, e.target.value as Role)} className="h-9 flex-1 rounded-lg border border-brand-line bg-white px-2 text-sm disabled:bg-brand-sand disabled:text-brand-muted">
+                  <select id={`rolm-${u.id}`} value={u.role} disabled={self} onChange={(e) => setRole(u.id, e.target.value as Role)} className="h-11 flex-1 rounded-lg border border-brand-line bg-white px-2 text-sm disabled:bg-brand-sand disabled:text-brand-muted">
                     {ROLES.map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
                   </select>
                   <Button size="sm" disabled={self} onClick={() => setActive(u.id, !u.active)}>{u.active ? "Desactivar" : "Activar"}</Button>
@@ -162,7 +162,7 @@ function NewUserForm({ onClose }: { onClose: () => void }) {
         {ROLES.map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
       </SelectInput>
       {error && <p className="text-sm text-brand-danger">{error}</p>}
-      <p className="text-xs text-brand-muted">En el sistema real, la cuenta se crea primero en Supabase Auth y después se le asigna el perfil con su rol.</p>
+      <p className="text-xs text-brand-muted">En el sistema definitivo, la cuenta se crea primero y después se le asigna el perfil con su rol.</p>
       <div className="flex justify-end gap-2">
         <Button variant="ghost" onClick={onClose}>Cancelar</Button>
         <Button type="submit" variant="primary">Crear usuario</Button>

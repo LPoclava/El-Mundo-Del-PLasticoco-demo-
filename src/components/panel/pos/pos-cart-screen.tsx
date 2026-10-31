@@ -6,6 +6,7 @@ import { cartIssues, cartTotal, cartUnits, lineSubtotal, type Cart } from "@/lib
 import type { PaymentMethod, Receipt } from "@/lib/pos/api";
 import { Icon } from "../icons";
 import { Button, CARD_CLASS, Dialog } from "../ui";
+import { receiptText } from "@/lib/pos/receipt";
 import { QuantityStepper, Thumb } from "./pos-parts";
 
 const dateTime = new Intl.DateTimeFormat("es-AR", { dateStyle: "short", timeStyle: "short" });
@@ -174,8 +175,26 @@ export function CartScreen({ onBack, cart, actions, methods, method, onMethod, b
 }
 
 function ReceiptView({ receipt, onNew }: { receipt: Receipt; onNew: () => void }) {
+  const [shared, setShared] = useState<string | null>(null);
+
+  async function share() {
+    const text = receiptText(receipt);
+    try {
+      if (typeof navigator.share === "function") {
+        await navigator.share({ title: `Comprobante #${receipt.number}`, text });
+        return;
+      }
+      await navigator.clipboard.writeText(text);
+      setShared("Comprobante copiado: pegalo donde quieras compartirlo.");
+    } catch (e) {
+      // Cerrar el menú de compartir no es un error.
+      if (e instanceof DOMException && e.name === "AbortError") return;
+      setShared("No se pudo compartir desde este navegador. Probá con Imprimir.");
+    }
+  }
+
   return (
-    <div role="status" className="space-y-3">
+    <div role="status" id="comprobante" className="space-y-3">
       <p className="flex items-center gap-2 font-semibold text-brand-green-ink">
         <Icon name="check" className="size-5" />
         {receipt.replayed ? "Esta venta ya estaba registrada" : "Venta confirmada"}
@@ -199,7 +218,12 @@ function ReceiptView({ receipt, onNew }: { receipt: Receipt; onNew: () => void }
         {receipt.stockUpdated ? "Stock descontado: " : ""}
         {receipt.items.filter((i) => i.stockAfter !== null).map((i) => `${i.productName}: quedan ${i.stockAfter}`).join(" · ")}
       </p>
-      <Button variant="primary" className="h-12 w-full" onClick={onNew}>Nueva venta</Button>
+      <div className="grid grid-cols-2 gap-2 print:hidden">
+        <Button onClick={() => window.print()}>Imprimir</Button>
+        <Button icon="link" onClick={() => void share()}>Compartir</Button>
+      </div>
+      {shared && <p className="text-sm text-brand-muted print:hidden" aria-live="polite">{shared}</p>}
+      <Button variant="primary" className="h-12 w-full print:hidden" onClick={onNew}>Nueva venta</Button>
     </div>
   );
 }

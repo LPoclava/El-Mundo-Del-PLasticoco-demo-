@@ -24,9 +24,8 @@ type Gate =
 export function PosGate({ children }: { children: (ctx: { db: SupabaseClient; name: string; role: "empleado" | "gerente" | "ceo" }) => ReactNode }) {
   if (!isBrowserSupabaseConfigured) {
     return (
-      <Notice tone="warn" title="Supabase no está configurado">
-        Faltan NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_ANON_KEY (ver .env.local.example). Sin ellas el punto de venta no puede
-        buscar productos ni registrar ventas.
+      <Notice tone="warn" title="Falta configurar la conexión">
+        Sin la conexión con la base de datos no se pueden buscar productos ni registrar ventas. Avisá a quien administra el sistema.
       </Notice>
     );
   }
@@ -101,8 +100,8 @@ function Connected({ children }: { children: (ctx: { db: SupabaseClient; name: s
   if (gate.state === "forbidden") {
     return (
       <div className="space-y-3">
-        <Notice tone="warn" title="Tu cuenta no puede vender">
-          {gate.email ? `${gate.email} no` : "Esta cuenta no"} tiene un perfil activo. Pedile a un responsable que lo revise.
+        <Notice tone="warn" title="Esta cuenta no está habilitada para vender">
+          {gate.email ? `${gate.email}: ` : ""}Solicitá acceso a un responsable.
         </Notice>
         <Button onClick={() => void db.auth.signOut()}>Cerrar sesión</Button>
       </div>
@@ -140,8 +139,8 @@ function SignIn({ db }: { db: SupabaseClient }) {
 
   return (
     <section className={`${CARD_CLASS} max-w-md p-5`} aria-label="Iniciar sesión">
-      <Notice title="Cuenta real, no la de demostración">
-        Las ventas se registran de verdad y descuentan stock. Ingresá con tu cuenta de Supabase.
+      <Notice title="Ingresá con tu cuenta">
+        Las ventas se registran de verdad y descuentan stock.
       </Notice>
       <form onSubmit={submit} noValidate className="mt-4 space-y-4">
         <TextInput label="Correo" type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} />

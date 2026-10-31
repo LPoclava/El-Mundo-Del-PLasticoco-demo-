@@ -87,9 +87,8 @@ export function SupabaseGate({ action, children }: { action: string; children: (
   if (gate.state === "forbidden") {
     return (
       <div className="space-y-3">
-        <Notice tone="warn" title={`Tu cuenta no puede ${action}`}>
-          {gate.email ? `${gate.email} no` : "Esta cuenta no"} tiene un perfil activo de gerente o CEO. Pedile a un responsable que
-          revise tu rol.
+        <Notice tone="warn" title={`Esta cuenta no está habilitada para ${action}`}>
+          {gate.email ? `${gate.email}: ` : ""}Solicitá acceso a un responsable.
         </Notice>
         <Button onClick={() => void db.auth.signOut()}>Cerrar sesión</Button>
       </div>
@@ -127,8 +126,8 @@ function SignIn({ db }: { db: SupabaseClient }) {
 
   return (
     <section className={`${CARD_CLASS} max-w-md p-5`} aria-label="Iniciar sesión">
-      <Notice title="Cuenta real, no la de demostración">
-        Esta sección guarda datos de verdad. Ingresá con tu cuenta de Supabase (la que tiene rol de gerente o CEO).
+      <Notice title="Ingresá con tu cuenta">
+        Esta sección guarda datos de verdad. Usá la cuenta del negocio con permiso de gerente o CEO.
       </Notice>
       <form onSubmit={submit} noValidate className="mt-4 space-y-4">
         <TextInput label="Correo" type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} />

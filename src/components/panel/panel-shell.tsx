@@ -9,9 +9,11 @@ import {
 } from "@/lib/panel-demo/roles";
 import type { Actor } from "@/lib/panel-demo/types";
 import { BrandLoader } from "@/components/brand-loader";
+import { DRAFT_KEY, hasDraft } from "@/lib/pos/draft";
+import { getBrowserSupabase, isBrowserSupabaseConfigured } from "@/lib/supabase/browser";
 import { useDemo } from "./demo-provider";
 import { Icon } from "./icons";
-import { Badge, Dialog, Notice } from "./ui";
+import { Dialog, Notice } from "./ui";
 
 /** Estructura del panel: navegación lateral, barra superior y contenido. Solo demostración. */
 
@@ -52,9 +54,9 @@ function Navigation({ role, collapsed, onNavigate }: { role: Role; collapsed: bo
                 onClick={onNavigate}
                 aria-current={active ? "page" : undefined}
                 title={collapsed ? label : undefined}
-                className={`flex h-11 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-white ${active ? "bg-white/15 text-white" : "text-white/75"} ${collapsed ? "justify-center px-0" : ""}`}
+                className={`flex h-11 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors hover:bg-brand-sand ${active ? "bg-brand-green/10 text-brand-green-ink" : "text-brand-ink/80"} ${collapsed ? "justify-center px-0" : ""}`}
               >
-                <Icon name={s.icon} className={active ? "text-brand-orange" : ""} />
+                <Icon name={s.icon} className={active ? "text-brand-green" : "text-brand-muted"} />
                 <span className={collapsed ? "sr-only" : "truncate"}>{label}</span>
               </Link>
             </li>
@@ -70,37 +72,41 @@ function SidebarBody({ actor, role, collapsed, onNavigate, onSignOut, onToggle }
 }) {
   return (
     <>
+      <div aria-hidden className="flex h-1 shrink-0">
+        <span className="w-16 bg-brand-orange" />
+        <span className="w-8 bg-brand-green" />
+      </div>
       <div className="px-3 pt-4">
-        <Link href="/panel" onClick={onNavigate} aria-label="Mundo del Plástico — Inicio del panel" className="flex min-h-12 items-center justify-center rounded-lg bg-white px-2 py-1.5">
+        <Link href="/panel" onClick={onNavigate} aria-label="Mundo del Plástico — Inicio del panel" className="flex min-h-12 items-center justify-center rounded-lg px-2 py-1.5">
           {collapsed ? (
-            <Image src="/brand/logo-icono.png" alt="" width={322} height={323} className="size-8" />
+            <Image src="/brand/logo-icono.png" alt="" width={322} height={323} sizes="32px" className="size-8" />
           ) : (
-            <Image src="/brand/logo-horizontal.png" alt="" width={900} height={329} className="h-10 w-auto" />
+            <Image src="/brand/logo-horizontal.png" alt="" width={900} height={329} sizes="110px" className="h-10 w-auto" />
           )}
         </Link>
-        {!collapsed && <p className="mt-2 px-1 text-xs text-white/70">Panel de administración</p>}
+        {!collapsed && <p className="mt-1 px-1 text-xs text-brand-muted">Panel de administración</p>}
       </div>
 
       <Navigation role={role} collapsed={collapsed} onNavigate={onNavigate} />
 
-      <div className="border-t border-white/10 p-3">
+      <div className="border-t border-brand-line p-3">
         <div className={`flex items-center gap-3 px-1 py-1 ${collapsed ? "justify-center" : ""}`} title={collapsed ? `${actor.name} · ${ROLE_LABEL[role]}` : undefined}>
           <Avatar name={actor.name} />
           {!collapsed && (
             <div className="min-w-0">
-              <p className="truncate text-sm font-medium text-white">{actor.name}</p>
-              <p className="text-xs text-white/70">{ROLE_LABEL[role]} · demo</p>
+              <p className="truncate text-sm font-medium text-brand-ink">{actor.name}</p>
+              <p className="text-xs text-brand-muted">{ROLE_LABEL[role]}</p>
             </div>
           )}
         </div>
         <button
           type="button"
           onClick={onSignOut}
-          title={collapsed ? "Cerrar demo" : undefined}
-          className={`mt-2 flex h-11 w-full items-center gap-3 rounded-lg px-3 text-sm font-medium text-white/75 hover:bg-white/10 hover:text-white focus-visible:outline-white ${collapsed ? "justify-center px-0" : ""}`}
+          title={collapsed ? "Cerrar sesión" : undefined}
+          className={`mt-2 flex h-11 w-full items-center gap-3 rounded-lg px-3 text-sm font-medium text-brand-ink/80 hover:bg-brand-sand ${collapsed ? "justify-center px-0" : ""}`}
         >
           <Icon name="logout" />
-          <span className={collapsed ? "sr-only" : ""}>Cerrar demo</span>
+          <span className={collapsed ? "sr-only" : ""}>Cerrar sesión</span>
         </button>
         {onToggle && (
           <button
@@ -108,7 +114,7 @@ function SidebarBody({ actor, role, collapsed, onNavigate, onSignOut, onToggle }
             onClick={onToggle}
             aria-label={collapsed ? "Expandir menú lateral" : "Contraer menú lateral"}
             aria-expanded={!collapsed}
-            className={`mt-1 hidden h-11 w-full items-center gap-3 rounded-lg px-3 text-sm text-white/70 hover:bg-white/10 hover:text-white focus-visible:outline-white lg:flex ${collapsed ? "justify-center px-0" : ""}`}
+            className={`mt-1 hidden h-11 w-full items-center gap-3 rounded-lg px-3 text-sm text-brand-muted hover:bg-brand-sand hover:text-brand-ink lg:flex ${collapsed ? "justify-center px-0" : ""}`}
           >
             <Icon name={collapsed ? "chevronRight" : "chevronLeft"} />
             <span className={collapsed ? "sr-only" : ""}>Contraer menú</span>
@@ -163,14 +169,14 @@ function ProfileMenu({ actor, role, onSignOut }: { actor: Actor; role: Role; onS
             <Icon name="user" className="size-4" /> Ver mi perfil
           </button>
           <button role="menuitem" type="button" className={item} onClick={() => { setOpen(false); resetData(); }}>
-            <Icon name="refresh" className="size-4" /> Restablecer datos de la demo
+            <Icon name="refresh" className="size-4" /> Restablecer datos de ejemplo
           </button>
           <button role="menuitem" type="button" className={`${item} border-t border-brand-line`} onClick={() => { setOpen(false); onSignOut(); }}>
-            <Icon name="logout" className="size-4" /> Cerrar sesión de demostración
+            <Icon name="logout" className="size-4" /> Cerrar sesión
           </button>
         </div>
       )}
-      <Dialog open={profileOpen} onClose={() => setProfileOpen(false)} title="Mi perfil" description="Perfil de demostración">
+      <Dialog open={profileOpen} onClose={() => setProfileOpen(false)} title="Mi perfil">
         <dl className="grid grid-cols-[7rem_1fr] gap-y-2 text-sm">
           <dt className="text-brand-muted">Nombre</dt><dd>{actor.name}</dd>
           <dt className="text-brand-muted">Rol</dt><dd>{ROLE_LABEL[role]}</dd>
@@ -178,7 +184,7 @@ function ProfileMenu({ actor, role, onSignOut }: { actor: Actor; role: Role; onS
           <dt className="text-brand-muted">Alcance</dt><dd>{ROLE_SUMMARY[role]}</dd>
         </dl>
         <div className="mt-4">
-          <Notice tone="demo">Es un usuario ficticio. El acceso real usará Supabase Auth y los roles de la base de datos.</Notice>
+          <Notice tone="info">Este perfil define qué secciones ves. Las ventas y los datos reales usan tu cuenta del negocio.</Notice>
         </div>
       </Dialog>
     </div>
@@ -211,7 +217,16 @@ export function PanelShell({ children }: { children: ReactNode }) {
   }
 
   const signOut = () => {
+    // Cerrar sesión con una venta armada la descartaría: se pregunta antes.
+    if (hasDraft() && !window.confirm("Tenés una venta armada sin registrar. Si cerrás sesión se pierde. ¿Cerrar sesión igual?")) return;
+    try {
+      sessionStorage.removeItem(DRAFT_KEY);
+    } catch {
+      // Sin almacenamiento no hay borrador que limpiar.
+    }
     setMobileOpen(false);
+    // Una sola acción cierra el perfil del panel y, si la hay, la sesión de la cuenta del negocio.
+    if (isBrowserSupabaseConfigured) void getBrowserSupabase().auth.signOut();
     demo.signOut();
     router.replace("/panel/login");
   };
@@ -228,7 +243,7 @@ export function PanelShell({ children }: { children: ReactNode }) {
 
       <aside
         aria-label="Menú lateral"
-        className={`sticky top-0 hidden h-dvh shrink-0 flex-col bg-brand-ink text-white transition-[width] duration-200 motion-reduce:transition-none ${immersive ? "" : "lg:flex"} ${collapsed ? "w-[4.75rem]" : "w-64"}`}
+        className={`sticky top-0 hidden h-dvh shrink-0 flex-col border-r border-brand-line bg-white text-brand-ink transition-[width] duration-200 motion-reduce:transition-none ${immersive ? "" : "lg:flex"} ${collapsed ? "w-[4.75rem]" : "w-64"}`}
       >
         <SidebarBody actor={actor} role={role} collapsed={collapsed} onNavigate={() => {}} onSignOut={signOut} onToggle={() => setCollapsed((v) => !v)} />
       </aside>
@@ -236,8 +251,8 @@ export function PanelShell({ children }: { children: ReactNode }) {
       {mobileOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <button type="button" aria-label="Cerrar menú" tabIndex={-1} onClick={() => setMobileOpen(false)} className="absolute inset-0 bg-brand-ink/50" />
-          <aside aria-label="Menú" className="relative flex h-full w-72 max-w-[85vw] flex-col bg-brand-ink text-white">
-            <button ref={closeRef} type="button" onClick={() => setMobileOpen(false)} aria-label="Cerrar menú" className="absolute right-2 top-2 inline-flex size-11 items-center justify-center rounded-lg text-white/80 hover:bg-white/10 focus-visible:outline-white">
+          <aside aria-label="Menú" className="relative flex h-full w-72 max-w-[85vw] flex-col bg-white text-brand-ink">
+            <button ref={closeRef} type="button" onClick={() => setMobileOpen(false)} aria-label="Cerrar menú" className="absolute right-2 top-2 inline-flex size-11 items-center justify-center rounded-lg text-brand-ink hover:bg-brand-sand">
               <Icon name="x" />
             </button>
             <SidebarBody actor={actor} role={role} collapsed={false} onNavigate={() => setMobileOpen(false)} onSignOut={signOut} />
@@ -248,7 +263,14 @@ export function PanelShell({ children }: { children: ReactNode }) {
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-30 flex h-16 items-center gap-2 border-b border-brand-line bg-white px-3 sm:px-6">
           {immersive ? (
-            <Link href="/panel" className="-ml-1 inline-flex h-11 items-center gap-1.5 rounded-lg px-2 text-sm font-medium hover:bg-brand-sand">
+            <Link
+              href="/panel"
+              onClick={(e) => {
+                // La venta armada se conserva en esta pestaña, pero se avisa antes de dejarla.
+                if (hasDraft() && !window.confirm("Tenés una venta armada sin registrar. Se conserva en esta pestaña hasta que la registres o cierres sesión. ¿Salir del escáner?")) e.preventDefault();
+              }}
+              className="-ml-1 inline-flex h-11 items-center gap-1.5 rounded-lg px-2 text-sm font-medium hover:bg-brand-sand"
+            >
               <Icon name="chevronLeft" className="size-4" />
               Salir<span className="hidden sm:inline">&nbsp;al panel</span>
             </Link>
@@ -258,7 +280,6 @@ export function PanelShell({ children }: { children: ReactNode }) {
             </button>
           )}
           <p className="min-w-0 flex-1 truncate text-base font-semibold">{sectionTitle(pathname)}</p>
-          <Badge tone="demo">Modo demo</Badge>
           <ProfileMenu actor={actor} role={role} onSignOut={signOut} />
         </header>
         <main id="contenido" className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
@@ -278,11 +299,9 @@ export function NotAvailable({ role }: { role: Role }) {
         </span>
         <h1 className="mt-3 text-xl font-semibold">Sección fuera de tu perfil</h1>
         <p className="mt-1 text-brand-muted">
-          El perfil de demostración «{ROLE_LABEL[role]}» no incluye esta sección. Probá con otro perfil desde el inicio de sesión.
+          El perfil «{ROLE_LABEL[role]}» no incluye esta sección. Probá con otro perfil desde el inicio de sesión.
         </p>
-        <p className="mt-3 text-xs text-brand-muted">
-          En la demo esto solo oculta pantallas. En el sistema real, los permisos los aplica la base de datos.
-        </p>
+
         <div className="mt-5">
           <Link href="/panel" className="inline-flex h-11 items-center rounded-lg bg-brand-orange px-4 text-sm font-medium text-brand-ink hover:bg-brand-orange/85">
             Ir al inicio

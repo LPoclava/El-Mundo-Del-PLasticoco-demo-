@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { resolveCatalogView } from "@/lib/catalog/query";
 import { catalogHref, type RawParams } from "@/lib/catalog/url";
+import { ContactIcon } from "@/components/contact/contact-icon";
+import { generalInquiryHref } from "@/lib/contact";
 import { GlobeMotif } from "./globe-motif";
 import { Pagination } from "./pagination";
 import { GRID_CLASS, ProductGrid } from "./product-grid";
@@ -9,20 +11,34 @@ import { GRID_CLASS, ProductGrid } from "./product-grid";
 export async function CatalogResults({ searchParams }: { searchParams: Promise<RawParams> }) {
   const { query, result } = await resolveCatalogView(searchParams);
   const hasFilters = Boolean(query.q || query.category);
+  const whatsapp = generalInquiryHref(
+    query.q ? `Hola, estoy buscando «${query.q}» y no lo encontré en el catálogo. ¿Me pueden ayudar?` : "Hola, estoy buscando un producto que no encontré en el catálogo. ¿Me pueden ayudar?",
+  );
 
   return (
     <>
       <h2 className="sr-only">Productos</h2>
       <div className="mb-4 flex items-center justify-between gap-4 text-sm">
         <p className="text-brand-muted" aria-live="polite">
-          {result.total === 1 ? "1 producto" : `${result.total} productos`}
+          {query.q ? (
+            <>
+              <span className="font-medium text-brand-ink">
+                {result.total === 0 ? "Sin resultados" : result.total === 1 ? "1 resultado" : `${result.total} resultados`}
+              </span>{" "}
+              para «{query.q}»
+            </>
+          ) : result.total === 1 ? (
+            "1 producto"
+          ) : (
+            `${result.total} productos`
+          )}
         </p>
         {hasFilters && (
           <Link
             href="/"
             className="inline-flex min-h-11 items-center font-medium underline underline-offset-4 hover:decoration-2"
           >
-            Quitar filtros
+            {query.q ? "Ver todo el catálogo" : "Quitar filtros"}
           </Link>
         )}
       </div>
@@ -33,13 +49,26 @@ export async function CatalogResults({ searchParams }: { searchParams: Promise<R
           {hasFilters ? (
             <>
               <p className="mt-4 text-lg font-semibold">No encontramos ese producto</p>
-              <p className="mt-1 text-brand-muted">Probá con otra palabra o mirá todo el catálogo.</p>
-              <Link
-                href={catalogHref({})}
-                className="mt-5 inline-flex h-11 items-center rounded-lg bg-brand-ink px-5 text-sm font-medium text-white hover:bg-brand-ink/85"
-              >
-                Ver todo el catálogo
-              </Link>
+              <p className="mt-1 text-brand-muted">¿Buscás algo en particular? Escribinos por WhatsApp y te ayudamos.</p>
+              <div className="mt-5 flex flex-wrap justify-center gap-2">
+                {whatsapp && (
+                  <a
+                    href={whatsapp}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-brand-green px-5 text-sm font-semibold text-white hover:bg-brand-green-ink"
+                  >
+                    <ContactIcon id="whatsapp" className="size-5" />
+                    Escribirnos por WhatsApp
+                  </a>
+                )}
+                <Link
+                  href={catalogHref({})}
+                  className="inline-flex min-h-11 items-center rounded-lg border border-brand-line bg-white px-5 text-sm font-medium hover:border-brand-ink"
+                >
+                  Ver todo el catálogo
+                </Link>
+              </div>
             </>
           ) : (
             <>

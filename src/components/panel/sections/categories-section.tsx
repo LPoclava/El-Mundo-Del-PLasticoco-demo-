@@ -32,7 +32,7 @@ export function CategoriesSection() {
       {isBrowserSupabaseConfigured ? (
         <SupabaseGate action="administrar categorías">{(db) => <Manager db={db} />}</SupabaseGate>
       ) : (
-        <Notice tone="warn" title="Supabase no está configurado">Faltan las variables del proyecto. Sin ellas no se pueden leer ni guardar categorías.</Notice>
+        <Notice tone="warn" title="Falta configurar la conexión">Sin la conexión con la base de datos no se pueden leer ni guardar categorías. Avisá a quien administra el sistema.</Notice>
       )}
     </div>
   );
@@ -49,7 +49,7 @@ export function EditCategoryRoute() {
     <div className="space-y-6">
       <PageHeader back={{ href: "/panel/categorias", label: "Categorías" }} title="Editar categoría" subtitle="Los cambios se ven en el catálogo en menos de dos minutos." />
       {!isBrowserSupabaseConfigured ? (
-        <Notice tone="warn" title="Supabase no está configurado">Faltan las variables del proyecto. Sin ellas no se pueden leer ni guardar categorías.</Notice>
+        <Notice tone="warn" title="Falta configurar la conexión">Sin la conexión con la base de datos no se pueden leer ni guardar categorías. Avisá a quien administra el sistema.</Notice>
       ) : !valid ? (
         <MissingCategory />
       ) : (

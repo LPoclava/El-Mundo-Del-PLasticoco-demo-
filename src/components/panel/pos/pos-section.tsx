@@ -3,6 +3,8 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { formatPrice } from "@/lib/catalog/url";
+import { loadDraft, saveDraft } from "@/lib/pos/draft";
 import {
   addToCart, applyProblems, attemptSignature, cartTotal, cartUnits, changeQuantity, describeProblem, removeLine,
   setQuantity, type Cart, type SaleProblem,
@@ -45,13 +47,19 @@ type Matches = { term: string; products: PosProduct[] } | null;
 
 function Scanner({ db, role }: { db: SupabaseClient; role: "empleado" | "gerente" | "ceo" }) {
   const canManage = role !== "empleado";
-  const [cart, setCart] = useState<Cart>([]);
-  const cartRef = useRef<Cart>([]);
+  // El borrador se recupera de sessionStorage (recarga de la pestaña). Este componente solo se dibuja en el
+  // navegador, después de verificar la sesión, así que leerlo en el estado inicial es seguro.
+  const [cart, setCart] = useState<Cart>(() => loadDraft());
+  const cartRef = useRef<Cart>(cart);
+  const restored = useRef(cart.length > 0);
   const [methods, setMethods] = useState<PaymentMethod[] | null>(null);
   const [method, setMethod] = useState<string | null>(null);
   const [result, setResult] = useState<ScanResult | null>(null);
   const resultOpen = useRef(false);
   const lookupBusy = useRef(false);
+  // Una lectura que llega mientras se resuelve otra no se pierde: queda en espera y se resuelve después.
+  const pendingLookup = useRef<{ value: string; source: "camera" | "manual" } | null>(null);
+  const shownCode = useRef<string | null>(null);
   const [term, setTerm] = useState("");
   const [matches, setMatches] = useState<Matches>(null);
   const [busy, setBusy] = useState(false);
@@ -80,6 +88,26 @@ function Scanner({ db, role }: { db: SupabaseClient; role: "empleado" | "gerente
     router.push("/panel/precios");
   };
 
+  // Aviso de que se recuperó una venta en curso (solo la primera vez).
+  useEffect(() => {
+    if (restored.current) {
+      restored.current = false;
+      push("Recuperamos la venta que estabas armando.");
+    }
+  }, [push]);
+
+  // Cerrar o recargar la pestaña con una venta armada pide confirmación (el borrador igual se conserva al recargar).
+  const hasItems = cart.length > 0;
+  useEffect(() => {
+    if (!hasItems) return;
+    const warn = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [hasItems]);
+
   useEffect(() => {
     let cancelled = false;
     listPaymentMethods(db)
@@ -93,17 +121,24 @@ function Scanner({ db, role }: { db: SupabaseClient; role: "empleado" | "gerente
   const updateCart = (next: Cart) => {
     cartRef.current = next;
     setCart(next);
+    saveDraft(next);
   };
 
   function showResult(next: ScanResult | null) {
     resultOpen.current = next !== null;
+    shownCode.current = next === null ? null : next.kind === "unknown" || next.kind === "loading" ? next.code : (next.product.barcode ?? null);
     setResult(next);
   }
 
   /** Busca un código o nombre y muestra el resultado ENSEGUIDA (primero «buscando», después el producto). */
   async function lookup(raw: string, source: "camera" | "manual" | "refresh") {
     const value = raw.trim();
-    if (value.length < 2 || lookupBusy.current) return;
+    if (value.length < 2) return;
+    if (lookupBusy.current) {
+      // Hay otra búsqueda en curso: esta queda en espera (solo la más reciente) y se resuelve al terminar.
+      if (source !== "refresh") pendingLookup.current = { value, source };
+      return;
+    }
     lookupBusy.current = true;
     if (source !== "refresh") showResult({ kind: "loading", code: value });
     try {
@@ -121,12 +156,16 @@ function Scanner({ db, role }: { db: SupabaseClient; role: "empleado" | "gerente
       push(e instanceof Error ? e.message : "No se pudo buscar.", "error");
     } finally {
       lookupBusy.current = false;
+      const next = pendingLookup.current;
+      pendingLookup.current = null;
+      if (next) void lookup(next.value, next.source);
     }
   }
 
   function onDetect(code: string) {
-    // Con el resultado de otra lectura abierto no se apilan paneles.
-    if (resultOpen.current) return;
+    // Si el mismo código ya está en pantalla no hace falta repetir la búsqueda; un código distinto REEMPLAZA al
+    // resultado anterior. Ninguna lectura se descarta sin avisar.
+    if (shownCode.current === code.trim()) return;
     setMatches(null);
     void lookup(code, "camera");
   }
@@ -300,7 +339,10 @@ function Scanner({ db, role }: { db: SupabaseClient; role: "empleado" | "gerente
           <circle cx="10" cy="20" r="1.2" />
           <circle cx="17" cy="20" r="1.2" />
         </svg>
-        <span className="min-w-6 rounded-full bg-brand-ink px-2 py-0.5 text-center text-sm font-semibold tabular-nums text-white" aria-hidden>{units}</span>
+        <span className="flex items-center gap-2" aria-hidden>
+          <span className="min-w-6 rounded-full bg-brand-ink px-2 py-0.5 text-center text-sm font-semibold tabular-nums text-white">{units}</span>
+          <span className="text-base font-semibold tabular-nums">{formatPrice(total)}</span>
+        </span>
       </button>
 
       <Toaster toasts={toasts} />

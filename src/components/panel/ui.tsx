@@ -22,7 +22,8 @@ const BUTTON_VARIANT = {
   danger: "border border-brand-danger bg-white text-brand-danger hover:bg-brand-danger hover:text-white",
 } as const;
 
-const BUTTON_SIZE = { md: "h-11 px-4", sm: "h-9 px-3" } as const;
+// «sm» sigue siendo más compacto, pero nunca por debajo del área táctil mínima de 44 px.
+const BUTTON_SIZE = { md: "h-11 px-4", sm: "h-11 px-3" } as const;
 
 export function buttonClass(variant: keyof typeof BUTTON_VARIANT = "secondary", size: keyof typeof BUTTON_SIZE = "md") {
   return `${BUTTON_BASE} ${BUTTON_VARIANT[variant]} ${BUTTON_SIZE[size]}`;

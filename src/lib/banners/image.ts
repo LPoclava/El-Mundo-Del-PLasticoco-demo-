@@ -1,6 +1,6 @@
 import {
   BANNER_MAX_OUTPUT_WIDTH, IMAGE_MAX_BYTES, PRODUCT_MAX_OUTPUT_WIDTH, validateCategoryImageSize, validateImageFile,
-  validateImageSize, validateProductImageSize,
+  productImageWarning, validateImageSize, validateProductImageSize,
 } from "./rules";
 
 /** banner = apaisada 16:7; category = tarjeta casi cuadrada; product = foto casi cuadrada. */
@@ -22,7 +22,12 @@ export type PreparedImage = {
   extension: "webp" | "png" | "jpg";
   /** URL temporal para la vista previa; liberarla con URL.revokeObjectURL. */
   previewUrl: string;
+  /** Aviso que NO bloquea la carga (por ejemplo, foto de menos de 800 px). null si no hay nada que avisar. */
+  warning: string | null;
 };
+
+/** Calidad de WebP: alta, para no degradar ilustraciones y fotos que ya vienen comprimidas. */
+const WEBP_QUALITY = 0.92;
 
 const EXTENSION: Record<string, PreparedImage["extension"]> = {
   "image/webp": "webp",
@@ -66,6 +71,7 @@ export async function prepareImage(file: File, kind: ImageKind = "banner"): Prom
     const sizeError = SIZE_CHECK[kind](decoded.width, decoded.height);
     if (sizeError) throw new Error(sizeError);
 
+    // Nunca se agranda: solo se reduce lo que supera el máximo útil.
     const scale = Math.min(1, MAX_WIDTH[kind] / decoded.width);
     const width = Math.round(decoded.width * scale);
     const height = Math.round(decoded.height * scale);
@@ -76,13 +82,18 @@ export async function prepareImage(file: File, kind: ImageKind = "banner"): Prom
     if (!ctx) throw new Error("Este navegador no puede preparar la imagen.");
     ctx.drawImage(decoded.source, 0, 0, width, height);
 
-    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/webp", 0.86));
+    // Un WebP que ya está en tamaño útil se conserva tal cual: volver a comprimirlo con pérdida solo lo degrada.
+    const keepOriginal = file.type === "image/webp" && scale === 1;
+    const blob = keepOriginal
+      ? file
+      : await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/webp", WEBP_QUALITY));
     if (!blob) throw new Error("No se pudo preparar la imagen. Probá con otro archivo.");
     if (blob.size > IMAGE_MAX_BYTES) throw new Error("La imagen pesa más de 5 MB incluso reducida. Probá con una más liviana.");
 
     const extension = EXTENSION[blob.type];
     if (!extension) throw new Error("El navegador generó un formato no admitido. Probá con otro navegador.");
-    return { blob, width, height, extension, previewUrl: URL.createObjectURL(blob) };
+    const warning = kind === "product" ? productImageWarning(decoded.width, decoded.height) : null;
+    return { blob, width, height, extension, previewUrl: URL.createObjectURL(blob), warning };
   } finally {
     decoded.close();
   }

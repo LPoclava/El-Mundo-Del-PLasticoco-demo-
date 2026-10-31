@@ -104,14 +104,26 @@ export function validateCategoryImageSize(width: number, height: number): string
 
 /** Foto de producto: se muestra cuadrada en el catálogo (object-cover), por eso se pide casi cuadrada. */
 export const PRODUCT_RECOMMENDED_SIZE = "1000 × 1000 px";
-export const PRODUCT_MIN_WIDTH = 500;
+/** Ancho mínimo recomendado: por debajo, la foto se ve borrosa en la ficha (se avisa, no se bloquea). */
+export const PRODUCT_MIN_WIDTH = 800;
+/** Ancho por debajo del cual la foto no sirve ni de excepción (se rechaza). */
+export const PRODUCT_HARD_MIN_WIDTH = 300;
 export const PRODUCT_MAX_OUTPUT_WIDTH = 1600;
 export const PRODUCT_MAX_IMAGES = 5;
 
+/**
+ * Aviso (no bloquea) para fotos de menos de PRODUCT_MIN_WIDTH: se aceptan como excepción, pero en la ficha del
+ * producto se van a ver con menos nitidez porque nadie puede recuperar el detalle que la foto no tiene.
+ */
+export function productImageWarning(width: number, height: number): string | null {
+  if (Math.max(width, height) >= PRODUCT_MIN_WIDTH) return null;
+  return `La foto es de ${width} × ${height} px, menos de los ${PRODUCT_MIN_WIDTH} px recomendados: se va a ver con menos nitidez en la ficha del producto. Si podés, subí una más grande (lo ideal es ${PRODUCT_RECOMMENDED_SIZE}).`;
+}
+
 export function validateProductImageSize(width: number, height: number): string | null {
   if (!(width > 0 && height > 0)) return "No se pudo leer el tamaño de la imagen.";
-  if (width < PRODUCT_MIN_WIDTH || height < PRODUCT_MIN_WIDTH * 0.6) {
-    return `La imagen es muy chica (${width} × ${height} px). Usá al menos ${PRODUCT_MIN_WIDTH} px de ancho; lo ideal es ${PRODUCT_RECOMMENDED_SIZE}.`;
+  if (width < PRODUCT_HARD_MIN_WIDTH || height < PRODUCT_HARD_MIN_WIDTH * 0.6) {
+    return `La imagen es muy chica (${width} × ${height} px) y no se puede usar. Usá una de al menos ${PRODUCT_MIN_WIDTH} px de ancho; lo ideal es ${PRODUCT_RECOMMENDED_SIZE}.`;
   }
   const ratio = width / height;
   if (ratio < 0.7 || ratio > 1.5) {
