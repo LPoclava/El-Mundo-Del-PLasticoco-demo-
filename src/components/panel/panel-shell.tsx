@@ -22,6 +22,9 @@ function sectionOf(pathname: string) {
     .find((s) => pathname === s.href || (s.href !== "/panel" && pathname.startsWith(`${s.href}/`)));
 }
 
+/** Pantallas en modo inmersivo (sin menú lateral). */
+const IMMERSIVE = ["/panel/precios"];
+
 function sectionTitle(pathname: string): string {
   return sectionOf(pathname)?.label ?? "Panel";
 }
@@ -213,6 +216,10 @@ export function PanelShell({ children }: { children: ReactNode }) {
     router.replace("/panel/login");
   };
 
+  // Modo inmersivo: las operaciones que piden concentración (escáner, ventas y stock) ocultan el menú y
+  // usan toda la pantalla; una salida fija lleva al inicio del panel.
+  const immersive = IMMERSIVE.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+
   return (
     <div className="min-h-dvh bg-brand-cream lg:flex">
       <a href="#contenido" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-2 focus:z-[70] focus:rounded-lg focus:bg-brand-ink focus:px-4 focus:py-2 focus:text-white">
@@ -221,7 +228,7 @@ export function PanelShell({ children }: { children: ReactNode }) {
 
       <aside
         aria-label="Menú lateral"
-        className={`sticky top-0 hidden h-dvh shrink-0 flex-col bg-brand-ink text-white transition-[width] duration-200 motion-reduce:transition-none lg:flex ${collapsed ? "w-[4.75rem]" : "w-64"}`}
+        className={`sticky top-0 hidden h-dvh shrink-0 flex-col bg-brand-ink text-white transition-[width] duration-200 motion-reduce:transition-none ${immersive ? "" : "lg:flex"} ${collapsed ? "w-[4.75rem]" : "w-64"}`}
       >
         <SidebarBody actor={actor} role={role} collapsed={collapsed} onNavigate={() => {}} onSignOut={signOut} onToggle={() => setCollapsed((v) => !v)} />
       </aside>
@@ -240,9 +247,16 @@ export function PanelShell({ children }: { children: ReactNode }) {
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-30 flex h-16 items-center gap-2 border-b border-brand-line bg-white px-3 sm:px-6">
-          <button type="button" onClick={() => setMobileOpen(true)} aria-label="Abrir menú" aria-expanded={mobileOpen} className="inline-flex size-11 items-center justify-center rounded-lg hover:bg-brand-sand lg:hidden">
-            <Icon name="menu" />
-          </button>
+          {immersive ? (
+            <Link href="/panel" className="-ml-1 inline-flex h-11 items-center gap-1.5 rounded-lg px-2 text-sm font-medium hover:bg-brand-sand">
+              <Icon name="chevronLeft" className="size-4" />
+              Salir<span className="hidden sm:inline">&nbsp;al panel</span>
+            </Link>
+          ) : (
+            <button type="button" onClick={() => setMobileOpen(true)} aria-label="Abrir menú" aria-expanded={mobileOpen} className="inline-flex size-11 items-center justify-center rounded-lg hover:bg-brand-sand lg:hidden">
+              <Icon name="menu" />
+            </button>
+          )}
           <p className="min-w-0 flex-1 truncate text-base font-semibold">{sectionTitle(pathname)}</p>
           <Badge tone="demo">Modo demo</Badge>
           <ProfileMenu actor={actor} role={role} onSignOut={signOut} />

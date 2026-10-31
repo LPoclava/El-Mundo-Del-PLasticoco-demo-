@@ -54,7 +54,7 @@ export function ContactSection() {
     <section
       id="contacto"
       aria-labelledby="contacto-titulo"
-      className="mt-14 scroll-mt-4 border-t border-brand-line pt-8"
+      className="mt-10 scroll-mt-4 border-t border-brand-line pt-6 lg:pt-8"
     >
       <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
         <div className="min-w-0">

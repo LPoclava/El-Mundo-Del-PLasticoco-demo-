@@ -5,36 +5,35 @@ import type { Category } from "@/types/product";
 import { resolveCatalogQuery } from "@/lib/catalog/query";
 import { catalogHref, type RawParams } from "@/lib/catalog/url";
 import { GlobeMotif } from "./globe-motif";
+import { LinkPending } from "./link-pending";
 import { SectionHeading } from "./section-heading";
 
 type Tone = "orange" | "green";
 
-const GRID_COLUMNS: Record<number, string> = {
-  1: "lg:grid-cols-1",
-  2: "lg:grid-cols-2",
-  3: "lg:grid-cols-3",
-  4: "lg:grid-cols-4",
-};
-
-/** Clases por tono. Escritas completas (Tailwind no detecta nombres armados con variables). */
+/** Fondo de cada tarjeta mientras carga la ilustración (y de la tarjeta sin foto). Escritas completas para Tailwind. */
 const TONE = {
-  orange: {
-    tint: "bg-brand-orange/10",
-    tile: "text-brand-orange",
-    globe: "text-brand-orange/20",
-    chip: "bg-brand-orange text-brand-ink",
-    hoverBorder: "hover:border-brand-orange/60",
-  },
-  green: {
-    tint: "bg-brand-green/10",
-    tile: "text-brand-green",
-    globe: "text-brand-green/20",
-    chip: "bg-brand-green text-white",
-    hoverBorder: "hover:border-brand-green/60",
-  },
+  orange: { tint: "bg-[#fdf1e7]", tile: "text-brand-orange", globe: "text-brand-orange/20" },
+  green: { tint: "bg-[#eaf4ec]", tile: "text-brand-green", globe: "text-brand-green/20" },
 } satisfies Record<Tone, Record<string, string>>;
 
-/** Las cuatro categorías principales como accesos grandes. Solo aparecen las que tienen productos publicados. */
+/**
+ * Columnas según el ANCHO DISPONIBLE (consulta de contenedor), no según la pantalla: en escritorio, junto
+ * al banner, quedan en 2 × 2; a todo el ancho (tablet, o sin banners) van en una fila. Con menos de cuatro
+ * categorías no quedan huecos.
+ */
+const WIDE_COLUMNS: Record<number, string> = {
+  1: "@2xl:grid-cols-1 @2xl:max-w-xs",
+  2: "@2xl:grid-cols-2 @2xl:max-w-2xl",
+  3: "@2xl:grid-cols-3",
+  4: "@2xl:grid-cols-4",
+};
+
+/**
+ * Las categorías principales como accesos visuales: la tarjeta es SOLO la ilustración (cada una ya trae su
+ * nombre dibujado), sin títulos, textos ni botones debajo. El nombre accesible es el de la categoría.
+ * Celular: dos columnas. A todo el ancho: una fila de hasta cuatro. Junto al banner (escritorio): 2 × 2.
+ * Solo aparecen las que tienen productos publicados.
+ */
 export async function MainCategories({ searchParams }: { searchParams: Promise<RawParams> }) {
   const { query, categories } = await resolveCatalogQuery(searchParams);
   const featured = categories
@@ -46,24 +45,17 @@ export async function MainCategories({ searchParams }: { searchParams: Promise<R
   const activeMain = active ? (active.parentSlug ?? active.slug) : undefined;
 
   return (
-    <section aria-labelledby="categorias-principales" className="mt-6 sm:mt-10">
-      <SectionHeading
-        id="categorias-principales"
-        title={CATALOG_COPY.categories.title}
-        subtitle={CATALOG_COPY.categories.subtitle}
-      />
-      <ul className={`grid grid-cols-2 gap-3 sm:gap-5 ${GRID_COLUMNS[featured.length] ?? GRID_COLUMNS[4]}`}>
+    <section aria-labelledby="categorias-principales" className="@container min-w-0">
+      <SectionHeading id="categorias-principales" title={CATALOG_COPY.categories.title} />
+      <ul className={`grid grid-cols-2 gap-3 ${WIDE_COLUMNS[featured.length] ?? WIDE_COLUMNS[4]}`}>
         {featured.map((category, i) => (
-          <li
-            key={category.slug}
-            className="motion-safe:animate-[rise-in_0.45s_ease-out_both]"
-            style={{ animationDelay: `${i * 70}ms` }}
-          >
+          <li key={category.slug}>
             <CategoryCard
               category={category}
               tone={CATEGORY_TONE[category.slug] ?? (i % 2 === 0 ? "orange" : "green")}
               href={`${catalogHref({ q: query.q, category: category.slug })}#catalogo`}
               current={activeMain === category.slug}
+              eager
             />
           </li>
         ))}
@@ -73,61 +65,52 @@ export async function MainCategories({ searchParams }: { searchParams: Promise<R
 }
 
 /**
- * Tarjeta de navegación. Toda la tarjeta es el enlace. Estados:
- * - reposo: sombra discreta; - hover (solo con mouse): se eleva, la imagen amplía apenas y la flecha se
- *   tiñe; - presionada: se hunde un poco (también en pantallas táctiles); - foco de teclado: contorno visible.
- * Con «reducir movimiento» no hay desplazamientos ni zoom: solo cambian sombra y color.
+ * Toda la tarjeta es el enlace. La ilustración se ve completa: la tarjeta tiene su misma proporción (4:3),
+ * así que no se recorta ni se deforma. Estados: hover (con mouse) se eleva apenas; al tocar se hunde; la
+ * elegida lleva borde y marca; mientras abre la categoría muestra un indicador. Sin zoom de la imagen: ampliar
+ * un mapa de bits la desenfoca.
  */
-function CategoryCard({ category, tone, href, current }: { category: Category; tone: Tone; href: string; current: boolean }) {
+function CategoryCard({ category, tone, href, current, eager }: {
+  category: Category; tone: Tone; href: string; current: boolean; eager: boolean;
+}) {
   const t = TONE[tone];
   return (
     <Link
       href={href}
       aria-current={current ? "page" : undefined}
-      className={`group flex h-full flex-col overflow-hidden rounded-2xl border bg-white shadow-sm outline-offset-4 [-webkit-tap-highlight-color:transparent] motion-safe:transition motion-safe:duration-200 hover:shadow-lg motion-safe:hover:-translate-y-1 active:shadow-sm active:bg-brand-sand motion-safe:active:translate-y-0 motion-safe:active:scale-[0.97] ${
-        current ? "border-brand-orange ring-2 ring-brand-orange" : `border-brand-line ${t.hoverBorder}`
+      className={`group relative block aspect-[4/3] overflow-hidden rounded-xl border-2 ${t.tint} outline-offset-4 [-webkit-tap-highlight-color:transparent] motion-safe:transition motion-safe:duration-200 motion-safe:ease-out hover:shadow-md motion-safe:hover:-translate-y-0.5 motion-safe:active:translate-y-0 motion-safe:active:scale-[0.97] active:shadow-none ${
+        current ? "border-brand-ink" : "border-transparent hover:border-brand-ink/15"
       }`}
     >
-      <div className={`relative aspect-[3/2] overflow-hidden sm:aspect-[4/3] ${t.tint}`}>
-        {category.imageUrl ? (
-          <Image
-            src={category.imageUrl}
-            alt={category.name}
-            fill
-            sizes="(min-width: 1280px) 300px, (min-width: 1024px) 25vw, 50vw"
-            className="object-cover motion-safe:transition-transform motion-safe:duration-500 motion-safe:group-hover:scale-105"
-          />
-        ) : (
-          <>
-            <GlobeMotif className={`absolute -bottom-8 -right-8 size-32 sm:size-40 ${t.globe}`} />
-            <span className="absolute inset-0 grid place-items-center">
-              <span className="grid size-20 place-items-center rounded-2xl bg-white shadow-sm ring-1 ring-brand-line motion-safe:transition-transform motion-safe:duration-300 motion-safe:group-hover:scale-105 sm:size-24">
-                <CategoryIcon slug={category.slug} className={`size-12 sm:size-14 ${t.tile}`} />
-              </span>
-            </span>
-          </>
-        )}
-        {current && (
-          <span className="absolute left-2 top-2 rounded-full bg-brand-ink px-2.5 py-1 text-xs font-medium text-white">
-            Seleccionada
+      {category.imageUrl ? (
+        <Image
+          src={category.imageUrl}
+          alt={category.name}
+          fill
+          sizes="(min-width: 1024px) 240px, (min-width: 672px) 25vw, 50vw"
+          quality={90}
+          className="object-cover"
+          {...(eager ? { loading: "eager" as const } : {})}
+        />
+      ) : (
+        // Sin ilustración cargada: ícono y nombre visibles (si no, la tarjeta quedaría sin rótulo).
+        <span className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-3 text-center">
+          <GlobeMotif className={`absolute -bottom-8 -right-8 size-32 ${t.globe}`} />
+          <span className="relative grid size-14 place-items-center rounded-xl bg-white shadow-sm ring-1 ring-brand-line sm:size-16">
+            <CategoryIcon slug={category.slug} className={`size-9 sm:size-10 ${t.tile}`} />
           </span>
-        )}
-      </div>
-
-      <div className="flex flex-1 items-center justify-between gap-2 px-3 py-2.5 sm:px-4 sm:py-4">
-        <div className="min-w-0">
-          <h3 className="text-lg font-semibold leading-tight text-balance sm:text-xl">{category.name}</h3>
-          <p className="mt-0.5 text-sm text-brand-muted">{CATALOG_COPY.categories.cta}</p>
-        </div>
-        <span
-          aria-hidden
-          className={`grid size-9 shrink-0 place-items-center rounded-full ${t.chip} motion-safe:transition motion-safe:duration-200 motion-safe:group-hover:translate-x-0.5 group-hover:shadow-md sm:size-10`}
-        >
-          <svg viewBox="0 0 24 24" className="size-4 sm:size-5" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-            <path d="M5 12h14M13 6l6 6-6 6" />
+          <span className="relative text-base font-semibold leading-tight">{category.name}</span>
+        </span>
+      )}
+      {current && (
+        <span className="absolute right-2 top-2 grid size-7 place-items-center rounded-full bg-brand-ink text-white shadow-sm">
+          <span className="sr-only">Categoría elegida</span>
+          <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="m5 12.5 4.5 4.5L19 7.5" />
           </svg>
         </span>
-      </div>
+      )}
+      <LinkPending />
     </Link>
   );
 }
@@ -188,11 +171,11 @@ function CategoryIcon({ slug, className }: { slug: string; className?: string })
 
 export function MainCategoriesSkeleton() {
   return (
-    <div aria-busy="true" aria-label="Cargando categorías" className="mt-8 sm:mt-10">
-      <div className="mb-4 h-16 w-72 max-w-full rounded bg-brand-sand motion-safe:animate-pulse sm:mb-5" />
-      <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
+    <div aria-busy="true" aria-label="Cargando categorías" className="@container">
+      <div className="mb-3 h-7 w-56 max-w-full rounded bg-brand-sand motion-safe:animate-pulse sm:mb-4" />
+      <div className="grid grid-cols-2 gap-3 @2xl:grid-cols-4">
         {Array.from({ length: 4 }, (_, i) => (
-          <div key={i} className="h-56 rounded-2xl bg-brand-sand motion-safe:animate-pulse sm:h-64" />
+          <div key={i} className="aspect-[4/3] rounded-xl bg-brand-sand motion-safe:animate-pulse" />
         ))}
       </div>
     </div>

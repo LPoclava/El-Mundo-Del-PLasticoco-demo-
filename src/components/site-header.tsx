@@ -1,29 +1,39 @@
 import Image from "next/image";
 import Link from "next/link";
+import { Suspense } from "react";
+import { HeaderSearch } from "./catalog/header-search";
+import { SearchForm } from "./catalog/search-form";
 
 /**
- * Logo real recortado de la guía de identidad (public/brand/logo-horizontal.png).
+ * Encabezado compacto: logo y buscador. En el celular el buscador va en una segunda línea a todo el ancho;
+ * desde tablet comparten una sola fila. Logo real de la guía de identidad (public/brand/logo-horizontal.png).
  * Pendiente: reemplazar por el archivo original en vector (SVG) cuando esté disponible.
  */
 export function SiteHeader() {
   return (
     <header className="border-b border-brand-line bg-white">
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-2.5">
+      <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-6 gap-y-1.5 px-4 pb-2.5 pt-1.5 sm:flex-nowrap sm:py-2.5">
         <Link
           href="/"
           aria-label="El Mundo del Plástico — inicio"
-          className="inline-flex min-h-11 shrink-0 items-center"
+          className="inline-flex min-h-11 shrink-0 items-center rounded-md"
         >
           <Image
             src="/brand/logo-horizontal.png"
             alt="El Mundo del Plástico"
             width={900}
             height={329}
-            sizes="(min-width: 640px) 156px, 120px"
+            sizes="(min-width: 640px) 131px, 98px"
             preload
-            className="h-11 w-auto sm:h-14"
+            className="h-9 w-auto sm:h-12"
           />
         </Link>
+        <div className="w-full sm:ml-auto sm:max-w-md lg:max-w-lg">
+          {/* El buscador lee la URL en el navegador; mientras tanto se ve igual pero vacío. */}
+          <Suspense fallback={<SearchForm />}>
+            <HeaderSearch />
+          </Suspense>
+        </div>
       </div>
       {/* Franja bicolor, los colores del logo: naranja y verde. */}
       <div aria-hidden className="flex h-1">

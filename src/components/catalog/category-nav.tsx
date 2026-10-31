@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Category } from "@/types/product";
 import { catalogHref } from "@/lib/catalog/url";
+import { LinkPending } from "./link-pending";
 
 type Props = {
   categories: Category[];
@@ -44,6 +45,7 @@ export function CategoryNav({ categories, active, q }: Props) {
             <li key={c.slug}>
               <Link href={catalogHref({ q, category: c.slug })} className={tabClass(false)}>
                 {c.name}
+                <LinkPending variant="bar" />
               </Link>
             </li>
           ))}
@@ -77,6 +79,7 @@ export function CategoryNav({ categories, active, q }: Props) {
                 className={tabClass(active === mainCategory.slug)}
               >
                 Todo {mainCategory.name}
+                <LinkPending variant="bar" />
               </Link>
             </li>
             {children.map((c) => (
@@ -87,6 +90,7 @@ export function CategoryNav({ categories, active, q }: Props) {
                   className={tabClass(active === c.slug)}
                 >
                   {c.name}
+                  <LinkPending variant="bar" />
                 </Link>
               </li>
             ))}

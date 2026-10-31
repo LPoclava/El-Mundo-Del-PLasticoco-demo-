@@ -25,7 +25,12 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: ["192.168.1.232"],
   cacheComponents: true,
   partialPrefetching: true,
-  images: { remotePatterns: supabaseImagePatterns() },
+  images: {
+    remotePatterns: supabaseImagePatterns(),
+    // 75 para fotos de producto; 90 para ilustraciones y banners, que ya llegan comprimidos en WebP:
+    // recomprimirlos a 75 marcaba bordes y degradados (se veían pixelados en el celular).
+    qualities: [75, 90],
+  },
   turbopack: {
     rules: {
       "*.css": {

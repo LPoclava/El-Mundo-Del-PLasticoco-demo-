@@ -9,15 +9,15 @@ export function SectionHeading({ id, title, subtitle, level = 2, compact = false
 }) {
   const Heading = level === 2 ? "h2" : "h3";
   return (
-    <div className={compact ? "sm:mb-5" : "mb-4 sm:mb-5"}>
-      <span aria-hidden className={`mb-2 items-center gap-1 ${compact ? "hidden sm:flex" : "flex"}`}>
+    <div className={compact ? "sm:mb-3" : "mb-3 sm:mb-4"}>
+      <span aria-hidden className={`mb-1.5 items-center gap-1 ${compact ? "hidden sm:flex" : "flex"}`}>
         <span className="h-1 w-8 rounded-full bg-brand-orange" />
         <span className="h-1 w-3 rounded-full bg-brand-green" />
       </span>
-      <Heading id={id} className={`${compact ? "sr-only sm:not-sr-only " : ""}text-xl font-semibold tracking-tight text-balance sm:text-2xl`}>
+      <Heading id={id} className={`${compact ? "sr-only sm:not-sr-only " : ""}text-lg font-semibold tracking-tight text-balance sm:text-xl`}>
         {title}
       </Heading>
-      {subtitle && <p className="mt-1 max-w-2xl text-brand-muted text-pretty">{subtitle}</p>}
+      {subtitle && <p className="mt-0.5 max-w-2xl text-sm text-brand-muted text-pretty">{subtitle}</p>}
     </div>
   );
 }

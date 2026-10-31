@@ -42,7 +42,7 @@ export function ProductCard({ product, eager = false }: Props) {
       </p>
       <span
         aria-hidden
-        className="mt-auto inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-lg border border-brand-line bg-white px-3 text-sm font-medium text-brand-ink group-hover:border-brand-ink motion-safe:transition-colors"
+        className="mt-auto inline-flex min-h-11 w-full lg:min-h-9 items-center justify-center gap-1.5 rounded-lg border border-brand-line bg-white px-3 text-sm font-medium text-brand-ink group-hover:border-brand-ink motion-safe:transition-colors"
       >
         Ver producto
         <svg viewBox="0 0 24 24" className="size-4 motion-safe:transition-transform motion-safe:group-hover:translate-x-0.5" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">

@@ -53,7 +53,6 @@ export function PromoCarousel({ banners, intervalMs = AUTOPLAY_MS }: Props) {
   const swiped = useRef(false);
 
   const current = Math.min(index, Math.max(count - 1, 0));
-  const withCaption = banners.some(hasCaption);
   const playing = count > 1 && !reduced && !userPaused && !hovered && !focused && !touching && !hidden;
 
   const go = useCallback((direction: 1 | -1) => setIndex((i) => stepIndex(i, count, direction)), [count]);
@@ -92,7 +91,7 @@ export function PromoCarousel({ banners, intervalMs = AUTOPLAY_MS }: Props) {
     >
       <div
         className="relative overflow-hidden rounded-xl bg-brand-sand"
-        style={{ touchAction: "pan-y" }}
+        style={{ aspectRatio: BANNER_RATIO, touchAction: "pan-y" }}
         onPointerDown={(e) => {
           swipe.current = { x: e.clientX, y: e.clientY };
           swiped.current = false;
@@ -123,7 +122,7 @@ export function PromoCarousel({ banners, intervalMs = AUTOPLAY_MS }: Props) {
         }}
       >
         <div
-          className="flex motion-safe:transition-transform motion-safe:duration-500 motion-safe:ease-out"
+          className="flex h-full motion-safe:transition-transform motion-safe:duration-500 motion-safe:ease-out"
           style={{ transform: `translateX(-${current * 100}%)` }}
           aria-live={playing ? "off" : "polite"}
         >
@@ -135,21 +134,19 @@ export function PromoCarousel({ banners, intervalMs = AUTOPLAY_MS }: Props) {
               count={count}
               active={i === current}
               eager={i === 0}
-              withCaption={withCaption}
             />
           ))}
         </div>
 
         {count > 1 && (
-          // Las flechas se centran sobre la IMAGEN (no sobre el texto de abajo) y no tapan sus bordes.
-          <div className="pointer-events-none absolute inset-x-0 top-0" style={{ aspectRatio: BANNER_RATIO }}>
-            <button type="button" onClick={() => go(-1)} aria-label="Promoción anterior" className={`${ARROW_OVERLAY} pointer-events-auto left-3`}>
+          <>
+            <button type="button" onClick={() => go(-1)} aria-label="Promoción anterior" className={`${ARROW_OVERLAY} left-3`}>
               <Chevron direction="left" />
             </button>
-            <button type="button" onClick={() => go(1)} aria-label="Promoción siguiente" className={`${ARROW_OVERLAY} pointer-events-auto right-3`}>
+            <button type="button" onClick={() => go(1)} aria-label="Promoción siguiente" className={`${ARROW_OVERLAY} right-3`}>
               <Chevron direction="right" />
             </button>
-          </div>
+          </>
         )}
       </div>
 
@@ -197,67 +194,33 @@ export function PromoCarousel({ banners, intervalMs = AUTOPLAY_MS }: Props) {
   );
 }
 
-function hasCaption(b: PromoBanner): boolean {
-  return Boolean(b.title || b.body || b.badge || (b.ctaLabel && b.linkUrl));
-}
-
 /**
- * Una diapositiva: la imagen se ve COMPLETA y sin nada encima (muchos banners ya traen su texto
- * dentro). Si el banner tiene título, etiqueta, texto o botón, van debajo, en una franja aparte.
- * El enlace toma su nombre del contenido (descripción de la imagen y textos), no de la posición.
+ * Una diapositiva: SOLO la imagen promocional, completa y sin nada encima ni debajo (los banners ya traen su
+ * texto). Con destino configurado toda la imagen es el enlace; sin destino es una imagen sin acción.
+ * El nombre accesible sale de la descripción de la imagen (o del título cargado en el panel).
  */
-function Slide({
-  banner,
-  position,
-  count,
-  active,
-  eager,
-  withCaption,
-}: {
+function Slide({ banner, position, count, active, eager }: {
   banner: PromoBanner;
   position: number;
   count: number;
   active: boolean;
   eager: boolean;
-  withCaption: boolean;
 }) {
   const alt = banner.imageAlt ?? banner.title ?? "Promoción de El Mundo del Plástico";
-
-  const content = (
-    <>
-      <span className="relative block w-full" style={{ aspectRatio: BANNER_RATIO }}>
-        <Image
-          src={banner.imageUrl}
-          alt={alt}
-          fill
-          sizes="(min-width: 1280px) 1280px, 100vw"
-          className="object-cover"
-          draggable={false}
-          preload={eager}
-        />
-      </span>
-      {withCaption && (
-        <span className="flex flex-1 flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-brand-line bg-white px-4 py-3 sm:px-5">
-          <span className="min-w-0">
-            {banner.badge && (
-              <span className="mr-2 inline-block rounded bg-brand-orange px-2 py-0.5 align-middle text-xs font-semibold text-brand-ink">
-                {banner.badge}
-              </span>
-            )}
-            {banner.title && <span className="align-middle text-base font-semibold sm:text-lg">{banner.title}</span>}
-            {banner.body && <span className="mt-0.5 block line-clamp-2 text-sm text-brand-muted">{banner.body}</span>}
-          </span>
-          {banner.ctaLabel && banner.linkUrl && (
-            <span className="inline-flex min-h-11 shrink-0 items-center rounded-lg bg-brand-ink px-4 text-sm font-semibold text-white group-hover:bg-brand-ink/85">
-              {banner.ctaLabel}
-            </span>
-          )}
-        </span>
-      )}
-    </>
+  const image = (
+    <Image
+      src={banner.imageUrl}
+      alt={alt}
+      fill
+      sizes="(min-width: 1280px) 780px, (min-width: 1024px) 62vw, 100vw"
+      quality={90}
+      className="object-cover"
+      draggable={false}
+      preload={eager}
+    />
   );
-
-  const inner = "group flex h-full w-full flex-col";
+  // El contorno de foco va hacia adentro: el contenedor recorta lo que sobresale.
+  const box = "relative block h-full w-full rounded-xl focus-visible:-outline-offset-4";
   return (
     <div
       role="group"
@@ -265,14 +228,14 @@ function Slide({
       aria-label={`Promoción ${position} de ${count}`}
       aria-hidden={!active || undefined}
       inert={!active || undefined}
-      className="flex w-full shrink-0 grow-0 basis-full flex-col"
+      className="relative h-full w-full shrink-0 grow-0 basis-full"
     >
       {!banner.linkUrl ? (
-        <div className={inner}>{content}</div>
+        <div className={box}>{image}</div>
       ) : isExternalLink(banner.linkUrl) ? (
-        <a href={banner.linkUrl} target="_blank" rel="noopener noreferrer" className={inner}>{content}</a>
+        <a href={banner.linkUrl} target="_blank" rel="noopener noreferrer" className={box}>{image}</a>
       ) : (
-        <Link href={banner.linkUrl} className={inner}>{content}</Link>
+        <Link href={banner.linkUrl} className={box}>{image}</Link>
       )}
     </div>
   );
