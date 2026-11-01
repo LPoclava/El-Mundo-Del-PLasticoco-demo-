@@ -37,6 +37,7 @@ const PATHS: Record<IconName, string> = {
   boxes: "M3 11.5h8.5V20H3zM12.5 11.5H21V20h-8.5zM7.5 3.5H16v8H7.5zM7 15.5h1.5M16.5 15.5H18",
   cart: "M3 4h2l2.4 11.2a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 1.95-1.5L21 8H6.2M10 20.2h.01M17 20.2h.01",
   receipt: "M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6",
+  camera: "M4 8h3l1.5-2.5h7L17 8h3v11H4zM12 17a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z",
 };
 
 export function Icon({ name, className = "" }: { name: IconName; className?: string }) {

@@ -15,6 +15,7 @@ import {
 } from "@/lib/products/rules";
 import { productImageUrl } from "@/lib/supabase/public";
 import { Icon } from "../icons";
+import { PhotoCapture } from "../photo-capture";
 import { BrandLoader } from "@/components/brand-loader";
 import { withTimeout } from "@/lib/async";
 import { isBrowserSupabaseConfigured } from "@/lib/supabase/browser";
@@ -181,6 +182,10 @@ function FormBody({ db, initial, categories, onClose, onChanged, notify, presetB
   const [errors, setErrors] = useState<ProductFormErrors>({ variants: {} });
   const [photoErrors, setPhotoErrors] = useState<string[]>([]);
   const [photoWarnings, setPhotoWarnings] = useState<string[]>([]);
+  const [cameraOpen, setCameraOpen] = useState(false);
+  // Clave de la foto que se va a reemplazar (null = se agrega una nueva).
+  const [replacing, setReplacing] = useState<string | null>(null);
+  const galleryRef = useRef<HTMLInputElement>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [processing, setProcessing] = useState(false);
@@ -198,9 +203,12 @@ function FormBody({ db, initial, categories, onClose, onChanged, notify, presetB
   const canPublish = blockers.length === 0;
   const publishChecked = wantPublished && canPublish;
 
-  async function addFiles(files: FileList | null) {
+  async function addFiles(files: FileList | File[] | null) {
     if (!files || files.length === 0) return;
-    const room = PRODUCT_MAX_IMAGES - images.length;
+    const target = replacing;
+    setReplacing(null);
+    // Reemplazar saca una y pone una: el cupo no cambia. Agregar usa el cupo que queda.
+    const room = target ? 1 : PRODUCT_MAX_IMAGES - images.length;
     const list = Array.from(files);
     const problems: string[] = [];
     const warnings: string[] = [];
@@ -220,7 +228,30 @@ function FormBody({ db, initial, categories, onClose, onChanged, notify, presetB
     setProcessing(false);
     setPhotoErrors(problems);
     setPhotoWarnings(warnings);
-    if (added.length > 0) setImages((cur) => ensureSinglePrimary([...cur, ...added]));
+    if (added.length > 0) {
+      setImages((cur) => {
+        if (target) {
+          // Misma posición y mismo estado de «principal»; la foto vieja deja de estar y se borra al guardar bien.
+          const at = cur.findIndex((d) => d.key === target);
+          if (at >= 0) {
+            const next = [...cur];
+            next[at] = { ...added[0], isPrimary: cur[at].isPrimary };
+            return ensureSinglePrimary(next);
+          }
+        }
+        return ensureSinglePrimary([...cur, ...added]);
+      });
+    }
+  }
+
+  /** Abre la cámara (para agregar una foto nueva o reemplazar una). */
+  function openCamera(replaceKey: string | null = null) {
+    setReplacing(replaceKey);
+    setCameraOpen(true);
+  }
+  function openGallery(replaceKey: string | null = null) {
+    setReplacing(replaceKey);
+    galleryRef.current?.click();
   }
 
   function removeImage(key: string) {
@@ -400,13 +431,16 @@ function FormBody({ db, initial, categories, onClose, onChanged, notify, presetB
                     <Button size="sm" className="w-full" variant={d.isPrimary ? "primary" : "secondary"} aria-pressed={d.isPrimary} aria-label={d.isPrimary ? `Foto ${i + 1}: es la principal` : `Hacer principal la foto ${i + 1}`} onClick={() => setPrimary(d.key)}>
                       {d.isPrimary ? <><Icon name="check" className="size-4" />Principal</> : "Principal"}
                     </Button>
-                    <Button size="sm" className="w-9 px-0" disabled={i === 0} aria-label={`Mover la foto ${i + 1} a la izquierda`} onClick={() => moveImage(i, -1)}>
+                    <Button size="sm" className="w-11 px-0" disabled={i === 0} aria-label={`Mover la foto ${i + 1} a la izquierda`} onClick={() => moveImage(i, -1)}>
                       <Icon name="chevronLeft" className="size-4" />
                     </Button>
-                    <Button size="sm" className="w-9 px-0" disabled={i === images.length - 1} aria-label={`Mover la foto ${i + 1} a la derecha`} onClick={() => moveImage(i, 1)}>
+                    <Button size="sm" className="w-11 px-0" disabled={i === images.length - 1} aria-label={`Mover la foto ${i + 1} a la derecha`} onClick={() => moveImage(i, 1)}>
                       <Icon name="chevronRight" className="size-4" />
                     </Button>
-                    <Button size="sm" className="w-9 px-0" aria-label={`Quitar la foto ${i + 1}`} title="Quitar foto" onClick={() => removeImage(d.key)}>
+                    <Button size="sm" className="w-11 px-0" aria-label={`Reemplazar la foto ${i + 1} con una nueva`} title="Reemplazar con una foto nueva" disabled={processing || busy} onClick={() => openCamera(d.key)}>
+                      <Icon name="camera" className="size-4" />
+                    </Button>
+                    <Button size="sm" className="w-11 px-0" aria-label={`Quitar la foto ${i + 1}`} title="Quitar foto" onClick={() => removeImage(d.key)}>
                       <Icon name="trash" className="size-4" />
                     </Button>
                   </div>
@@ -415,23 +449,36 @@ function FormBody({ db, initial, categories, onClose, onChanged, notify, presetB
             })}
           </ul>
         )}
-        {images.length < PRODUCT_MAX_IMAGES && (
-          <label className={`inline-flex h-11 cursor-pointer items-center gap-2 rounded-lg border border-brand-line bg-white px-4 text-sm font-medium hover:border-brand-ink ${processing || busy ? "pointer-events-none opacity-50" : ""}`}>
-            <Icon name="plus" className="size-4" />
-            {processing ? "Preparando fotos…" : "Agregar fotos"}
-            <input
-              type="file"
-              multiple
-              accept="image/jpeg,image/png,image/webp"
-              className="sr-only"
-              disabled={processing || busy}
-              onChange={(e) => {
-                void addFiles(e.target.files);
-                e.target.value = "";
-              }}
-            />
-          </label>
+        {images.length < PRODUCT_MAX_IMAGES ? (
+          <div className="grid gap-2 sm:grid-cols-2">
+            <Button variant="primary" icon="camera" className="h-12 text-base" disabled={processing || busy} onClick={() => openCamera(null)}>
+              {processing ? "Preparando foto…" : "Sacar foto"}
+            </Button>
+            <Button icon="image" className="h-12" disabled={processing || busy} onClick={() => openGallery(null)}>Elegir de galería</Button>
+          </div>
+        ) : (
+          <p className="rounded-lg bg-brand-sand px-3 py-2 text-sm text-brand-muted">Llegaste al máximo de {PRODUCT_MAX_IMAGES} fotos. Quitá una para sumar otra, o usá el ícono de la cámara de una foto para reemplazarla.</p>
         )}
+        {/* Galería (varias a la vez): el mismo selector de siempre, ahora detrás del botón «Elegir de galería». */}
+        <input
+          ref={galleryRef}
+          type="file"
+          multiple={replacing === null}
+          accept="image/jpeg,image/png,image/webp"
+          className="sr-only"
+          tabIndex={-1}
+          aria-hidden
+          disabled={processing || busy}
+          onChange={(e) => {
+            void addFiles(e.target.files);
+            e.target.value = "";
+          }}
+        />
+        <PhotoCapture
+          open={cameraOpen}
+          onClose={() => setCameraOpen(false)}
+          onAccept={(file) => void addFiles([file])}
+        />
         {errors.images && <p className="text-sm text-brand-danger">{errors.images}</p>}
         {photoErrors.length > 0 && (
           <ul role="alert" className="space-y-1 text-sm text-brand-danger">

@@ -40,7 +40,7 @@ export type IconName =
   | "home" | "barcode" | "box" | "tag" | "image" | "chart" | "history" | "users" | "settings"
   | "search" | "plus" | "edit" | "archive" | "eye" | "eyeOff" | "check" | "x" | "menu"
   | "logout" | "chevronLeft" | "chevronRight" | "chevronDown" | "alert" | "info" | "link"
-  | "sort" | "lock" | "refresh" | "user" | "trash" | "dashboard" | "scan" | "boxes" | "cart" | "receipt";
+  | "sort" | "lock" | "refresh" | "user" | "trash" | "dashboard" | "scan" | "boxes" | "cart" | "receipt" | "camera";
 
 export type Section = {
   id: SectionId;
