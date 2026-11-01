@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { Icon } from "./icons";
 import type { IconName } from "@/lib/panel-demo/roles";
 
@@ -28,6 +28,9 @@ export function Drawer({ open, onClose, title, meta, icon, footer, locked = fals
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
   const closeTimer = useRef<number | undefined>(undefined);
+  // El contenido sigue dibujado mientras dura la animación de salida (si no, el panel se vaciaría antes de irse).
+  const [mounted, setMounted] = useState(open);
+  if (open && !mounted) setMounted(true);
 
   // Abrir: showModal() y, en el cuadro siguiente, el estado «open» (así el CSS anima desde afuera de la pantalla).
   // Cerrar: el estado «closed» anima la salida y recién después se cierra el <dialog>.
@@ -43,7 +46,10 @@ export function Drawer({ open, onClose, title, meta, icon, footer, locked = fals
     if (el.open) {
       el.setAttribute("data-state", "closed");
       const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      closeTimer.current = window.setTimeout(() => el.close(), reduced ? 0 : 200);
+      closeTimer.current = window.setTimeout(() => {
+        el.close();
+        setMounted(false);
+      }, reduced ? 0 : 200);
     }
     return () => window.clearTimeout(closeTimer.current);
   }, [open]);
@@ -64,7 +70,7 @@ export function Drawer({ open, onClose, title, meta, icon, footer, locked = fals
       }}
       className="drawer m-0 ml-auto h-dvh max-h-none w-[90vw] max-w-none border-0 bg-white p-0 text-brand-ink shadow-xl md:w-[45vw] md:min-w-[26rem]"
     >
-      {open && (
+      {(open || mounted) && (
         <div className="flex h-full flex-col">
           <header className="flex shrink-0 items-center gap-3 border-b border-brand-line px-4 py-3">
             {icon && (

@@ -13,6 +13,7 @@ import {
   type PaymentMethod, type PosProduct, type PosVariant, type Receipt,
 } from "@/lib/pos/api";
 import { BarcodeScanner } from "../barcode-scanner";
+import { takeFlash } from "../flash";
 import { Icon } from "../icons";
 import { Button, CARD_CLASS, INPUT_CLASS, Toaster, type Toast } from "../ui";
 import { CartDrawer } from "./pos-cart-drawer";
@@ -65,6 +66,8 @@ function Scanner({ db, role }: { db: SupabaseClient; role: "empleado" | "gerente
   const [failure, setFailure] = useState<{ message: string; details: string[] } | null>(null);
   const [receipt, setReceipt] = useState<Receipt | null>(null);
   const [salesVersion, setSalesVersion] = useState(0);
+  // Cada alta incrementa «bump»: reinicia la animación del contador del carrito.
+  const [bump, setBump] = useState(0);
   const sendingRef = useRef(false);
   const attemptRef = useRef<{ sig: string; key: string } | null>(null);
   const manualRef = useRef<HTMLInputElement>(null);
@@ -87,8 +90,10 @@ function Scanner({ db, role }: { db: SupabaseClient; role: "empleado" | "gerente
     setReceipt(null);
   };
 
-  // Aviso de que se recuperó una venta en curso (solo la primera vez).
+  // Avisos al entrar: producto recién creado (viene del formulario completo) y venta recuperada.
   useEffect(() => {
+    const flash = takeFlash();
+    if (flash) push(flash.message, flash.tone);
     if (restored.current) {
       restored.current = false;
       push("Recuperamos la venta que estabas armando.");
@@ -176,12 +181,16 @@ function Scanner({ db, role }: { db: SupabaseClient; role: "empleado" | "gerente
   }
 
   function add(product: PosProduct, variant: PosVariant, quantity: number) {
+    const already = cartRef.current.find((l) => l.variantId === variant.id);
     const r = addToCart(cartRef.current, toCartLine(product, variant), quantity);
     updateCart(r.cart);
     if (r.added) {
       setReceipt(null);
       showResult(null);
-      push(`Agregado: ${product.name}${variantLabel(variant) ? ` (${variantLabel(variant)})` : ""}`);
+      setBump((n) => n + 1);
+      const label = `${product.name}${variantLabel(variant) ? ` (${variantLabel(variant)})` : ""}`;
+      const now = r.cart.find((l) => l.variantId === variant.id)?.quantity ?? quantity;
+      push(already ? `${label}: ahora ${now} en el carrito` : `Producto agregado: ${label}`);
     } else if (r.reason === "no-stock") push(`«${product.name}» no tiene stock.`, "error");
     else push(`No hay más stock de «${product.name}».`, "error");
   }
@@ -307,7 +316,7 @@ function Scanner({ db, role }: { db: SupabaseClient; role: "empleado" | "gerente
         type="button"
         onClick={openSale}
         aria-haspopup="dialog" aria-label={`Abrir el carrito: ${units} ${units === 1 ? "unidad" : "unidades"}${units > 0 ? `, total ${total.toLocaleString("es-AR")} pesos` : ""}`}
-        className={`fixed bottom-4 right-4 z-30 flex h-14 items-center gap-2 rounded-full px-4 shadow-lg ring-1 ring-black/5 motion-safe:transition motion-safe:active:scale-95 sm:bottom-6 sm:right-6 ${
+        className={`group fixed bottom-4 right-4 z-30 flex h-14 items-center gap-2 rounded-full px-4 shadow-lg ring-1 ring-black/5 motion-safe:transition motion-safe:active:scale-95 sm:bottom-6 sm:right-6 ${
           units > 0 ? "bg-brand-orange text-brand-ink hover:bg-brand-orange/90" : "bg-white text-brand-ink hover:bg-brand-sand"
         }`}
       >
@@ -316,9 +325,11 @@ function Scanner({ db, role }: { db: SupabaseClient; role: "empleado" | "gerente
           <circle cx="10" cy="20" r="1.2" />
           <circle cx="17" cy="20" r="1.2" />
         </svg>
-        <span className="flex items-center gap-2" aria-hidden>
-          <span className="min-w-6 rounded-full bg-brand-ink px-2 py-0.5 text-center text-sm font-semibold tabular-nums text-white">{units}</span>
-          <span className="text-base font-semibold tabular-nums">{formatPrice(total)}</span>
+        <span className="flex items-center" aria-hidden>
+          {/* El contador «salta» con cada alta (la clave reinicia la animación). */}
+          <span key={bump} className={`min-w-6 rounded-full bg-brand-ink px-2 py-0.5 text-center text-sm font-semibold tabular-nums text-white ${bump > 0 ? "cart-bump" : ""}`}>{units}</span>
+          {/* El total no queda a la vista mientras se escanea: aparece al pasar el cursor o enfocar el botón, y siempre dentro del carrito. */}
+          <span className="max-w-0 overflow-hidden whitespace-nowrap text-base font-semibold tabular-nums opacity-0 motion-safe:transition-all motion-safe:duration-200 group-hover:ml-2 group-hover:max-w-32 group-hover:opacity-100 group-focus-visible:ml-2 group-focus-visible:max-w-32 group-focus-visible:opacity-100">{formatPrice(total)}</span>
         </span>
       </button>
 

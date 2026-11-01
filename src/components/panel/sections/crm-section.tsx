@@ -60,7 +60,7 @@ export function CrmSection() {
   const total = SALES_SERIES[period].values.reduce((a, b) => a + b, 0);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <PageHeader
         title="CRM e informes"
         subtitle="Resumen comercial para decidir qué reponer, qué promocionar y cómo viene el mes."

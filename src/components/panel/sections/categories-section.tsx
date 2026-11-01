@@ -27,7 +27,7 @@ import { Badge, Button, CARD_CLASS, Dialog, Field, LinkButton, Notice, PageHeade
  */
 export function CategoriesSection() {
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <PageHeader title="Categorías" subtitle="Las cuatro categorías principales del catálogo: nombre, descripción, foto, orden y visibilidad." />
       {isBrowserSupabaseConfigured ? (
         <SupabaseGate action="administrar categorías">{(db) => <Manager db={db} />}</SupabaseGate>
@@ -46,7 +46,7 @@ export function EditCategoryRoute() {
   const { id } = useParams<{ id: string }>();
   const valid = UUID.test(id ?? "");
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <PageHeader back={{ href: "/panel/categorias", label: "Categorías" }} title="Editar categoría" subtitle="Los cambios se ven en el catálogo en menos de dos minutos." />
       {!isBrowserSupabaseConfigured ? (
         <Notice tone="warn" title="Falta configurar la conexión">Sin la conexión con la base de datos no se pueden leer ni guardar categorías. Avisá a quien administra el sistema.</Notice>

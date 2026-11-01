@@ -18,7 +18,7 @@ export function SettingsSection() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <PageHeader title="Configuración" subtitle="Ajustes generales del negocio y del catálogo. Solo el CEO puede cambiarlos." actions={<DemoBadge>Simulación</DemoBadge>} />
 
       <section className={`${CARD_CLASS} p-5`} aria-labelledby="negocio-titulo">

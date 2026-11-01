@@ -96,8 +96,8 @@ export function SupabaseGate({ action, children }: { action: string; children: (
   }
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-brand-muted">
-        <p>Sesión iniciada como <strong className="font-medium text-brand-ink">{gate.name}</strong></p>
+      <div className="flex items-center justify-between gap-2 text-sm text-brand-muted">
+        <p className="min-w-0 truncate"><span className="hidden sm:inline">Sesión iniciada como </span><strong className="font-medium text-brand-ink">{gate.name}</strong></p>
         <Button size="sm" variant="ghost" icon="logout" onClick={() => void db.auth.signOut()}>Cerrar sesión</Button>
       </div>
       {children(db)}

@@ -35,7 +35,7 @@ import {
  */
 export function BannersSection() {
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <PageHeader
         title="Banners promocionales"
         subtitle="Las imágenes del carrusel «Promociones y combos» del catálogo. Cargalas, ordenalas y programá cuándo se muestran."
@@ -62,7 +62,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
  */
 export function BannerEditor({ bannerId }: { bannerId: string | null }) {
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <PageHeader
         back={{ href: "/panel/banners", label: "Banners promocionales" }}
         title={bannerId ? "Editar banner" : "Nuevo banner"}

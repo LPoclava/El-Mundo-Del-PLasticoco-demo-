@@ -208,7 +208,18 @@ function UnknownProduct({ db, code, canManage, onClose, onNotify }: Props & { co
           <p className="mt-0.5 text-sm text-brand-muted">No hay ningún producto con el código <strong className="tabular-nums text-brand-ink">{code}</strong>. No se agregó nada al carrito.</p>
         </div>
       </div>
-      <Button variant="primary" icon="plus" className="h-12 w-full text-base" onClick={() => setMode("registro")}>Registrar producto</Button>
+      {canManage ? (
+        // Gerente o CEO: el formulario completo de Productos, con el código ya cargado y regreso al escáner al guardar.
+        <Link
+          href={`/panel/productos/nuevo?codigo=${encodeURIComponent(code)}&volver=${encodeURIComponent("/panel/precios")}`}
+          className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-brand-orange text-base font-medium text-brand-ink hover:bg-brand-orange/85"
+        >
+          <Icon name="plus" className="size-4" />Registrar producto
+        </Link>
+      ) : (
+        // Empleado: no puede abrir Productos; deja un borrador mínimo para que un gerente lo complete.
+        <Button variant="primary" icon="plus" className="h-12 w-full text-base" onClick={() => setMode("registro")}>Registrar producto</Button>
+      )}
       <Button variant="ghost" className="w-full" onClick={onClose}>Cerrar y seguir escaneando</Button>
     </div>
   );

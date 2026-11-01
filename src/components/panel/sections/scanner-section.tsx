@@ -6,7 +6,7 @@ import { PageHeader } from "../ui";
 /** Sección del escáner: consulta, alta rápida, venta y stock en una sola pantalla (prueba piloto). */
 export function ScannerSection() {
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <PageHeader title="Escáner y ventas" subtitle="Consulta de productos y registro de operaciones." />
       <PosSection />
     </div>

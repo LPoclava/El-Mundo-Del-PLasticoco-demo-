@@ -170,9 +170,9 @@ export function PageHeader({ title, subtitle, actions, back, icon }: {
   const pathname = usePathname();
   const iconName = icon ?? sectionOf(pathname)?.icon;
   return (
-    <header className="border-b border-brand-line pb-4">
+    <header className="border-b border-brand-line pb-3 sm:pb-4">
       {back && (
-        <nav aria-label="Ubicación" className="mb-1 flex flex-wrap items-center text-sm text-brand-muted">
+        <nav aria-label="Ubicación" className="-mt-1 flex flex-wrap items-center text-sm text-brand-muted sm:mb-1 sm:mt-0">
           <Link href={back.href} className="-ml-1 inline-flex min-h-11 items-center gap-1 rounded-lg px-1 font-medium hover:text-brand-ink">
             <Icon name="chevronLeft" className="size-4" />
             {back.label}
@@ -181,16 +181,16 @@ export function PageHeader({ title, subtitle, actions, back, icon }: {
           <span aria-current="page" className="text-brand-ink">{title}</span>
         </nav>
       )}
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
-        <div className="flex min-w-0 items-center gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 sm:gap-y-3">
+        <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
           {iconName && (
-            <span aria-hidden className="grid size-11 shrink-0 place-items-center rounded-xl bg-brand-green/10 text-brand-green-ink">
-              <Icon name={iconName} className="size-6" />
+            <span aria-hidden className="grid size-10 shrink-0 place-items-center rounded-xl bg-brand-green/10 text-brand-green-ink sm:size-11">
+              <Icon name={iconName} className="size-5 sm:size-6" />
             </span>
           )}
           <div className="min-w-0">
-            <h1 className="text-xl font-semibold tracking-tight text-balance sm:text-2xl">{title}</h1>
-            {subtitle && <p className="mt-0.5 max-w-2xl text-sm text-brand-muted">{subtitle}</p>}
+            <h1 className="text-lg font-semibold leading-tight tracking-tight text-balance sm:text-2xl">{title}</h1>
+            {subtitle && <p className="max-w-2xl text-sm leading-snug text-brand-muted sm:mt-0.5">{subtitle}</p>}
           </div>
         </div>
         {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}

@@ -30,7 +30,7 @@ const STATUS_OPTIONS: [StatusFilter, string][] = [
  */
 export function ProductsSection() {
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <PageHeader title="Productos" subtitle="Creá, editá, publicá y archivá productos. Archivar no los elimina." />
       {isBrowserSupabaseConfigured ? (
         <SupabaseGate action="administrar productos">{(db) => <Manager db={db} />}</SupabaseGate>

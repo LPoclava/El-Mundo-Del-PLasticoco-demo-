@@ -28,7 +28,7 @@ export function UsersSection() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <PageHeader
         title="Usuarios y permisos"
         subtitle="Quién puede entrar y qué puede hacer. Solo el CEO administra usuarios y roles."
@@ -128,7 +128,7 @@ export function UsersSection() {
 export function NewUserScreen() {
   const router = useRouter();
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <PageHeader back={{ href: "/panel/usuarios", label: "Usuarios y permisos" }} title="Nuevo usuario" subtitle="Simulación: no se crea ninguna cuenta real." />
       <div className={`${CARD_CLASS} max-w-xl p-4 sm:p-6`}>
         <NewUserForm onClose={() => router.push("/panel/usuarios")} />

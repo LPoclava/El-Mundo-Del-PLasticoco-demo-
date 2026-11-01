@@ -296,7 +296,7 @@ export function PanelShell({ children }: { children: ReactNode }) {
       )}
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex h-16 items-center gap-2 border-b border-brand-line bg-white px-3 sm:px-6">
+        <header className="sticky top-0 z-30 flex h-14 items-center sm:h-16 gap-2 border-b border-brand-line bg-white px-3 sm:px-6">
           {immersive ? (
             <Link
               href="/panel"
@@ -317,7 +317,7 @@ export function PanelShell({ children }: { children: ReactNode }) {
           <p className="min-w-0 flex-1 truncate text-base font-semibold">{sectionTitle(pathname)}</p>
           <ProfileMenu actor={actor} role={role} onSignOut={signOut} />
         </header>
-        <main id="contenido" className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+        <main id="contenido" className="mx-auto w-full max-w-7xl flex-1 px-4 py-3 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
           {children}
         </main>
       </div>

@@ -32,7 +32,7 @@ const SHORTCUTS: Shortcut[] = [
 /** Inicio del panel: actividad comercial REAL del día. Sin datos, no se inventan cifras. */
 export function HomeSection() {
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <PageHeader title="Dashboard" subtitle="Resumen general del negocio: ventas, unidades y stock del día." />
       <PosGate>{({ db, role }) => <Dashboard db={db} role={role} />}</PosGate>
     </div>
@@ -82,7 +82,7 @@ function Dashboard({ db, role }: { db: SupabaseClient; role: Role }) {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <section aria-label="Indicadores del día" className={`${CARD_CLASS} grid grid-cols-2 md:grid-cols-4`}>
         {kpis.map((k, i) => (
           <div key={k.label} className={`px-5 py-4 ${i > 1 ? "border-t border-brand-line md:border-t-0" : ""} ${i % 2 === 1 ? "border-l border-brand-line" : ""} ${i > 0 ? "md:border-l md:border-brand-line" : ""}`}>

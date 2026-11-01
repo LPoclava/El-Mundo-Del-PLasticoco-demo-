@@ -171,3 +171,14 @@ body {
   .sale-done-cart { animation: none; opacity: 0; }
   .sale-done-check { animation: none; stroke-dasharray: none; }
 }
+
+/* Alta en el carrito de ventas: el contador salta una vez y el botón emite un aro suave. */
+@keyframes cart-bump {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.35); }
+  100% { transform: scale(1); }
+}
+.cart-bump { animation: cart-bump 0.35s cubic-bezier(0.2, 0.8, 0.2, 1); }
+@media (prefers-reduced-motion: reduce) {
+  .cart-bump { animation: none; }
+}

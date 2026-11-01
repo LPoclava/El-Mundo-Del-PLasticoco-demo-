@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { prepareImage } from "@/lib/banners/image";
@@ -21,7 +21,7 @@ import { isBrowserSupabaseConfigured } from "@/lib/supabase/browser";
 import { setFlash } from "../flash";
 import { SupabaseGate } from "../supabase-gate";
 import { useToasts } from "../use-toasts";
-import { Button, CARD_CLASS, Field, INPUT_CLASS, LinkButton, Notice, PageHeader, TextInput, Toaster } from "../ui";
+import { Button, Field, INPUT_CLASS, LinkButton, Notice, PageHeader, TextInput, Toaster } from "../ui";
 
 let seq = 0;
 const nextKey = () => `k${++seq}`;
@@ -31,7 +31,7 @@ const clean = (v: string) => v.trim() || null;
 type FormProps = {
   db: SupabaseClient;
   categories: CategoryOption[];
-  /** Vuelve al listado (al guardar o al cancelar). */
+  /** Vuelve de donde se vino (al guardar o al cancelar). */
   onClose: () => void;
   /** Se llama tras guardar (o tras un guardado parcial). */
   onChanged: () => void;
@@ -42,16 +42,24 @@ type FormProps = {
  * Pantalla completa de alta y edición de un producto REAL (Supabase): datos, variantes con precio y hasta 5
  * fotos. Vive en /panel/productos/nuevo y /panel/productos/[id]: se puede recargar, compartir y volver atrás.
  */
+/** Destinos a los que se puede volver (lista cerrada: la dirección no puede mandar a cualquier lado). */
+const RETURN_TO: Record<string, string> = { "/panel/precios": "Escáner y ventas", "/panel/stock": "Control de stock" };
+
 export function ProductEditor({ productId }: { productId: string | null }) {
+  const params = useSearchParams();
+  const volver = params.get("volver") ?? "";
+  const returnTo = RETURN_TO[volver] ? volver : null;
+  const codigo = params.get("codigo") ?? "";
+  const presetBarcode = !productId && /^\d{8,14}$/.test(codigo) ? codigo : undefined;
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <PageHeader
-        back={{ href: "/panel/productos", label: "Productos" }}
+        back={returnTo ? { href: returnTo, label: RETURN_TO[returnTo] } : { href: "/panel/productos", label: "Productos" }}
         title={productId ? "Editar producto" : "Crear producto"}
         subtitle="Los cambios se guardan en la base real."
       />
       {isBrowserSupabaseConfigured ? (
-        <SupabaseGate action="administrar productos">{(db) => <EditorData key={productId ?? "nuevo"} db={db} productId={productId} />}</SupabaseGate>
+        <SupabaseGate action="administrar productos">{(db) => <EditorData key={productId ?? "nuevo"} db={db} productId={productId} returnTo={returnTo} presetBarcode={presetBarcode} />}</SupabaseGate>
       ) : (
         <Notice tone="warn" title="Falta configurar la conexión">
           Sin la conexión con la base de datos no se puede leer ni guardar nada acá. Avisá a quien administra el sistema.
@@ -68,7 +76,7 @@ type Loaded =
   | { state: "error"; message: string }
   | { state: "ready"; product: AdminProduct | null; categories: CategoryOption[] };
 
-function EditorData({ db, productId }: { db: SupabaseClient; productId: string | null }) {
+function EditorData({ db, productId, returnTo, presetBarcode }: { db: SupabaseClient; productId: string | null; returnTo: string | null; presetBarcode?: string }) {
   const router = useRouter();
   const { toasts, push } = useToasts();
   const [loaded, setLoaded] = useState<Loaded>({ state: "loading" });
@@ -111,7 +119,8 @@ function EditorData({ db, productId }: { db: SupabaseClient; productId: string |
         db={db}
         initial={loaded.product}
         categories={loaded.categories}
-        onClose={() => router.push("/panel/productos")}
+        presetBarcode={presetBarcode}
+        onClose={() => router.push(returnTo ?? "/panel/productos")}
         onChanged={() => undefined}
         // Los avisos de éxito se muestran en el listado, que es adonde se vuelve al guardar.
         notify={(message, tone = "ok") => (tone === "ok" ? setFlash({ message, tone }) : push(message, tone))}
@@ -130,19 +139,33 @@ const imagesOf = (p: AdminProduct | null): ImageDraft[] =>
 const emptyVariant = (): VariantDraft => ({ key: nextKey(), id: null, size: "", color: "", price: "" });
 const isEmptyVariant = (v: VariantDraft) => !v.size.trim() && !v.color.trim() && !v.price.trim();
 
+/** Bloque del formulario: un tema por tarjeta, con título y una línea de ayuda. */
+function FormBlock({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
+  return (
+    <section className="space-y-4 rounded-xl border border-brand-line bg-white p-4 sm:p-5">
+      <header>
+        <h2 className="text-base font-semibold">{title}</h2>
+        {description && <p className="text-sm text-brand-muted">{description}</p>}
+      </header>
+      {children}
+    </section>
+  );
+}
+
 function previewOf(d: ImageDraft): string | null {
   return d.image?.previewUrl ?? (d.path ? productImageUrl(d.path) : null);
 }
 
-function FormBody({ db, initial, categories, onClose, onChanged, notify }: FormProps & { initial: AdminProduct | null }) {
+function FormBody({ db, initial, categories, onClose, onChanged, notify, presetBarcode }: FormProps & { initial: AdminProduct | null; presetBarcode?: string }) {
   const [baseline, setBaseline] = useState<AdminProduct | null>(initial);
   const [productId, setProductId] = useState<string | null>(initial?.id ?? null);
   const [name, setName] = useState(initial?.name ?? "");
   const [brand, setBrand] = useState(initial?.brand ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
   const [categoryId, setCategoryId] = useState(initial?.categoryId ?? "");
-  const [barcode, setBarcode] = useState(initial?.barcode ?? "");
-  const [sku, setSku] = useState(initial?.sku ?? "");
+  const [barcode, setBarcode] = useState(initial?.barcode ?? presetBarcode ?? "");
+  // El SKU interno ya no se muestra ni se edita. Se conserva lo que tuviera cargado: no se borra ningún dato.
+  const sku = initial?.sku ?? "";
   const [variants, setVariants] = useState<VariantDraft[]>(() => {
     const list = draftsOf(initial);
     return list.length > 0 ? list : [emptyVariant()];
@@ -212,7 +235,7 @@ function FormBody({ db, initial, categories, onClose, onChanged, notify }: FormP
   }
 
   /** Al corregir un campo se retira su aviso de error; el siguiente envío vuelve a validar todo. */
-  const clearError = (field: "name" | "brand" | "description" | "categoryId" | "barcode" | "sku") =>
+  const clearError = (field: "name" | "brand" | "description" | "categoryId" | "barcode") =>
     setErrors((e) => (e[field] ? { ...e, [field]: undefined } : e));
 
   const setPrimary = (key: string) => setImages((cur) => cur.map((i) => ({ ...i, isPrimary: i.key === key })));
@@ -276,7 +299,7 @@ function FormBody({ db, initial, categories, onClose, onChanged, notify }: FormP
   }
 
   return (
-    <form onSubmit={submit} noValidate className={`${CARD_CLASS} max-w-4xl space-y-5 p-4 sm:p-6`} aria-busy={busy}>
+    <form onSubmit={submit} noValidate className="max-w-4xl space-y-4" aria-busy={busy}>
       {formError && (
         <Notice tone="warn" title="No se pudo guardar todo">
           {formError}
@@ -284,6 +307,7 @@ function FormBody({ db, initial, categories, onClose, onChanged, notify }: FormP
         </Notice>
       )}
 
+      <FormBlock title="Información general" description="Lo que ve el cliente en el catálogo.">
       <TextInput label="Nombre" value={name} maxLength={PRODUCT_LIMITS.name} error={errors.name} onChange={(e) => { setName(e.target.value); clearError("name"); }} autoFocus />
       <div className="grid gap-4 sm:grid-cols-2">
         <TextInput label="Marca (opcional)" value={brand} maxLength={PRODUCT_LIMITS.brand} error={errors.brand} onChange={(e) => { setBrand(e.target.value); clearError("brand"); }} />
@@ -296,9 +320,27 @@ function FormBody({ db, initial, categories, onClose, onChanged, notify }: FormP
           )}
         </Field>
       </div>
+      <Field label="Descripción (opcional)" error={errors.description} hint="Se usa también en el buscador del catálogo.">
+        {({ id, describedBy, invalid }) => (
+          <textarea id={id} aria-describedby={describedBy} aria-invalid={invalid} rows={3} maxLength={PRODUCT_LIMITS.description} value={description}
+            onChange={(e) => { setDescription(e.target.value); clearError("description"); }}
+            className="w-full rounded-lg border border-brand-line bg-white px-3 py-2 text-sm placeholder:text-brand-muted focus-visible:border-brand-ink aria-[invalid=true]:border-brand-danger" />
+        )}
+      </Field>
+      </FormBlock>
+
+      <FormBlock title="Identificación" description="Con el código de barras el producto se encuentra al escanear.">
+      <TextInput
+        label="Código de barras" inputMode="numeric" value={barcode} error={errors.barcode}
+        onChange={(e) => { setBarcode(e.target.value); clearError("barcode"); }}
+        hint={presetBarcode && barcode === presetBarcode ? "Se cargó el código que leyó el escáner. De 8 a 14 dígitos; no puede repetirse." : "De 8 a 14 dígitos. No puede repetirse. Es lo que se escanea en el mostrador."}
+      />
+      </FormBlock>
+
+      <FormBlock title="Precio y variantes" description="Pesos enteros, sin centavos.">
       {!multi ? (
-        <fieldset className="space-y-3 rounded-lg border border-brand-line p-4">
-          <legend className="px-1 text-sm font-medium">Precio</legend>
+        <fieldset className="space-y-3">
+          <legend className="sr-only">Precio</legend>
           <TextInput
             label="Precio del producto (en pesos)" inputMode="numeric" value={variants[0].price}
             error={(errors.variants[variants[0].key] ?? {}).price}
@@ -309,8 +351,8 @@ function FormBody({ db, initial, categories, onClose, onChanged, notify }: FormP
           <Button size="sm" variant="ghost" icon="plus" onClick={() => setMulti(true)}>Tiene tamaños o colores con precios distintos</Button>
         </fieldset>
       ) : (
-      <fieldset className="space-y-3 rounded-lg border border-brand-line p-4">
-        <legend className="px-1 text-sm font-medium">Precios por tamaño o color</legend>
+      <fieldset className="space-y-3">
+        <legend className="sr-only">Precios por tamaño o color</legend>
         <p className="text-xs text-brand-muted">Pesos enteros, sin centavos. Una variante sin precio no cuenta para publicar. Cada tamaño o color lleva su propio precio.</p>
         {variants.map((v, i) => {
           const e = errors.variants[v.key] ?? {};
@@ -336,20 +378,11 @@ function FormBody({ db, initial, categories, onClose, onChanged, notify }: FormP
 
       )}
 
-      <Field label="Descripción (opcional)" error={errors.description} hint="Se usa también en el buscador del catálogo.">
-        {({ id, describedBy, invalid }) => (
-          <textarea id={id} aria-describedby={describedBy} aria-invalid={invalid} rows={3} maxLength={PRODUCT_LIMITS.description} value={description}
-            onChange={(e) => { setDescription(e.target.value); clearError("description"); }}
-            className="w-full rounded-lg border border-brand-line bg-white px-3 py-2 text-sm placeholder:text-brand-muted focus-visible:border-brand-ink aria-[invalid=true]:border-brand-danger" />
-        )}
-      </Field>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <TextInput label="Código de barras (opcional)" inputMode="numeric" value={barcode} error={errors.barcode} onChange={(e) => { setBarcode(e.target.value); clearError("barcode"); }} hint="De 8 a 14 dígitos. No puede repetirse." />
-        <TextInput label="SKU interno (opcional)" value={sku} maxLength={PRODUCT_LIMITS.sku} error={errors.sku} onChange={(e) => { setSku(e.target.value); clearError("sku"); }} hint="No puede repetirse." />
-      </div>
+      </FormBlock>
 
-      <fieldset className="space-y-3 rounded-lg border border-brand-line p-4">
-        <legend className="px-1 text-sm font-medium">Fotos ({images.length} de {PRODUCT_MAX_IMAGES})</legend>
+      <FormBlock title="Fotografías" description="La principal es la que se ve en las tarjetas del catálogo.">
+      <fieldset className="space-y-3">
+        <legend className="sr-only">Fotos ({images.length} de {PRODUCT_MAX_IMAGES})</legend>
         <p className="text-xs text-brand-muted">
           JPG, PNG o WebP, hasta 5 MB cada una. Casi cuadradas, de unos {PRODUCT_RECOMMENDED_SIZE}. La principal es la que se ve en el catálogo.
         </p>
@@ -413,7 +446,10 @@ function FormBody({ db, initial, categories, onClose, onChanged, notify }: FormP
         <p className="text-xs text-brand-muted">Las fotos nuevas se suben al guardar; las que quitás se borran de Storage recién cuando el guardado termina bien.</p>
       </fieldset>
 
-      <div className="rounded-lg border border-brand-line p-4">
+      </FormBlock>
+
+      <FormBlock title="Publicación">
+      <div>
         <label className="flex min-h-11 items-center gap-3 text-sm font-medium">
           <input type="checkbox" checked={publishChecked} disabled={!canPublish} onChange={(e) => setWantPublished(e.target.checked)} className="size-5 accent-brand-green" />
           Publicar en el catálogo
@@ -426,8 +462,10 @@ function FormBody({ db, initial, categories, onClose, onChanged, notify }: FormP
         {canPublish && <p className="mt-1 pl-9 text-xs text-brand-muted">Con foto principal y precio válido el producto aparece en el catálogo al guardar.</p>}
       </div>
 
+      </FormBlock>
+
       {/* Acciones siempre a mano en formularios largos (sobre todo en el celular). */}
-      <div className="sticky bottom-0 z-10 -mx-4 -mb-4 flex justify-end gap-2 rounded-b-xl border-t border-brand-line bg-white px-4 py-3 sm:-mx-6 sm:-mb-6 sm:px-6">
+      <div className="sticky bottom-0 z-10 flex justify-end gap-2 rounded-xl border border-brand-line bg-white px-4 py-3 shadow-[0_-4px_12px_-8px_rgba(0,0,0,0.25)]">
         <Button variant="ghost" onClick={onClose} disabled={busy}>Cancelar</Button>
         <Button type="submit" variant="primary" disabled={busy || processing}>{busy ? "Guardando…" : productId ? "Guardar cambios" : "Crear producto"}</Button>
       </div>
