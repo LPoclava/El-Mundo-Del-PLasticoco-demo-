@@ -25,9 +25,9 @@ function subscribeVisibility(callback: () => void) {
   return () => document.removeEventListener("visibilitychange", callback);
 }
 
-/** Flechas sobre la imagen en todos los tamaños: no ocupan lugar fuera del banner. Discretas, con área táctil de 44 px. */
+/** Flechas sobre la imagen solo desde 768 px (escritorio y tablet ancha); en celular se cambia deslizando. Discretas, de 44 px. */
 const ARROW_OVERLAY =
-  "absolute top-1/2 z-10 grid size-11 -translate-y-1/2 place-items-center rounded-full bg-white/80 text-brand-ink shadow-sm backdrop-blur-sm hover:bg-white motion-safe:transition-colors";
+  "absolute top-1/2 z-10 hidden size-11 -translate-y-1/2 place-items-center rounded-full bg-white/80 text-brand-ink shadow-sm backdrop-blur-sm hover:bg-white motion-safe:transition-colors md:grid";
 
 /**
  * Carrusel «Promociones y combos»: solo la imagen, con flechas encima. Avanza solo cada 10 s y vuelve al primero
