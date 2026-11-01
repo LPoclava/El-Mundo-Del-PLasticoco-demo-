@@ -92,10 +92,13 @@ export function CatalogResultsSkeleton() {
       <div className="mb-4 h-6 w-24 rounded bg-brand-sand" />
       <div className={GRID_CLASS}>
         {Array.from({ length: 12 }, (_, i) => (
-          <div key={i}>
-            <div className="aspect-square rounded-lg bg-brand-sand" />
-            <div className="mt-2 h-4 w-3/4 rounded bg-brand-sand" />
-            <div className="mt-2 h-4 w-1/3 rounded bg-brand-sand" />
+          <div key={i} className="overflow-hidden rounded-xl border border-brand-green/15 bg-white">
+            <div className="aspect-square bg-brand-sand" />
+            <div className="space-y-2 p-3">
+              <div className="h-4 w-3/4 rounded bg-brand-sand" />
+              <div className="h-5 w-1/3 rounded bg-brand-sand" />
+              <div className="h-9 rounded-lg bg-brand-sand" />
+            </div>
           </div>
         ))}
       </div>
