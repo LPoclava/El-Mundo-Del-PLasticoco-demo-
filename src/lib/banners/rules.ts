@@ -26,7 +26,7 @@ export const BANNER_MAX_OUTPUT_WIDTH = 1920;
 export const IMAGE_MAX_BYTES = 5 * 1024 * 1024;
 export const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
 
-export const AUTOPLAY_MS = 5000;
+export const AUTOPLAY_MS = 10_000;
 
 /** Ruta interna ("/", "/?categoria=cocina") o https. Descarta javascript:, http:, "//dominio" y espacios. */
 export function isSafeBannerLink(value: string): boolean {

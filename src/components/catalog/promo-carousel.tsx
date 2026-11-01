@@ -25,16 +25,17 @@ function subscribeVisibility(callback: () => void) {
   return () => document.removeEventListener("visibilitychange", callback);
 }
 
-/** En pantallas anchas las flechas van sobre la imagen; en celular, en la barra de abajo, para no tapar el banner. */
+/** Flechas sobre la imagen en todos los tamaños: no ocupan lugar fuera del banner. Discretas, con área táctil de 44 px. */
 const ARROW_OVERLAY =
-  "absolute top-1/2 z-10 hidden size-11 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-brand-ink shadow-md hover:bg-white sm:grid";
-const ARROW_BAR = "grid size-11 place-items-center rounded-full text-brand-ink hover:bg-brand-sand sm:hidden";
+  "absolute top-1/2 z-10 grid size-11 -translate-y-1/2 place-items-center rounded-full bg-white/80 text-brand-ink shadow-sm backdrop-blur-sm hover:bg-white motion-safe:transition-colors";
 
 /**
- * Carrusel «Promociones y combos». Avanza solo cada 5 s y se detiene cuando el usuario lo está
- * usando (cursor encima, foco dentro, dedo apoyado, botón de pausa), cuando la pestaña no está
- * visible y siempre que el sistema pida movimiento reducido. Todo temporizador se limpia al
- * cambiar de estado o desmontar. La proporción es fija: cambiar de banner no mueve la página.
+ * Carrusel «Promociones y combos»: solo la imagen, con flechas encima. Avanza solo cada 10 s y vuelve al primero
+ * al llegar al último. La cuenta se reinicia al cambiar a mano y se detiene cuando el usuario lo está usando
+ * (cursor encima, foco dentro, dedo apoyado), cuando el carrusel no está en pantalla, cuando la pestaña está
+ * oculta y siempre que el sistema pida movimiento reducido (en ese caso solo se cambia con las flechas o
+ * deslizando). Con un solo banner no hay flechas ni rotación. Todo temporizador se limpia al cambiar de estado
+ * o desmontar. La proporción es fija: cambiar de banner no mueve la página.
  */
 export function PromoCarousel({ banners, intervalMs = AUTOPLAY_MS }: Props) {
   const count = banners.length;
@@ -42,7 +43,9 @@ export function PromoCarousel({ banners, intervalMs = AUTOPLAY_MS }: Props) {
   const [hovered, setHovered] = useState(false);
   const [focused, setFocused] = useState(false);
   const [touching, setTouching] = useState(false);
-  const [userPaused, setUserPaused] = useState(false);
+  // Visible en pantalla (IntersectionObserver): fuera de la vista no corre ningún temporizador.
+  const [inView, setInView] = useState(true);
+  const rootRef = useRef<HTMLDivElement>(null);
   const reduced = useSyncExternalStore(subscribeReducedMotion, reducedMotionNow, () => false);
   const hidden = useSyncExternalStore(
     subscribeVisibility,
@@ -53,11 +56,19 @@ export function PromoCarousel({ banners, intervalMs = AUTOPLAY_MS }: Props) {
   const swiped = useRef(false);
 
   const current = Math.min(index, Math.max(count - 1, 0));
-  const playing = count > 1 && !reduced && !userPaused && !hovered && !focused && !touching && !hidden;
+  const playing = count > 1 && !reduced && inView && !hovered && !focused && !touching && !hidden;
 
   const go = useCallback((direction: 1 | -1) => setIndex((i) => stepIndex(i, count, direction)), [count]);
 
-  // Un temporizador por banner: si el usuario cambia a mano, la cuenta de 5 s vuelve a empezar.
+  useEffect(() => {
+    const el = rootRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const observer = new IntersectionObserver(([entry]) => setInView(entry.isIntersecting), { threshold: 0.25 });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  // Un temporizador por banner: si el usuario cambia a mano, la cuenta de 10 s vuelve a empezar.
   useEffect(() => {
     if (!playing) return;
     const timer = window.setTimeout(() => go(1), intervalMs);
@@ -78,6 +89,7 @@ export function PromoCarousel({ banners, intervalMs = AUTOPLAY_MS }: Props) {
 
   return (
     <div
+      ref={rootRef}
       role="region"
       aria-roledescription="carrusel"
       aria-label={CATALOG_COPY.promotions.title}
@@ -150,46 +162,6 @@ export function PromoCarousel({ banners, intervalMs = AUTOPLAY_MS }: Props) {
         )}
       </div>
 
-      {count > 1 && (
-        <div className="mt-2 flex items-center justify-center gap-1">
-          <button type="button" onClick={() => go(-1)} aria-label="Promoción anterior" className={ARROW_BAR}>
-            <Chevron direction="left" />
-          </button>
-          {!reduced && (
-            <button
-              type="button"
-              onClick={() => setUserPaused((p) => !p)}
-              aria-label={userPaused ? "Reanudar el avance automático" : "Pausar el avance automático"}
-              className="grid size-11 place-items-center rounded-full text-brand-ink hover:bg-brand-sand"
-            >
-              {userPaused ? <PlayIcon /> : <PauseIcon />}
-            </button>
-          )}
-          <ul className="flex items-center">
-            {banners.map((banner, i) => (
-              <li key={banner.id}>
-                <button
-                  type="button"
-                  onClick={() => setIndex(i)}
-                  aria-label={`Ir a la promoción ${i + 1} de ${count}`}
-                  aria-current={i === current ? "true" : undefined}
-                  className="grid h-11 min-w-11 place-items-center"
-                >
-                  <span
-                    aria-hidden
-                    className={`block h-2.5 rounded-full motion-safe:transition-all ${
-                      i === current ? "w-6 bg-brand-orange" : "w-2.5 bg-brand-ink/30"
-                    }`}
-                  />
-                </button>
-              </li>
-            ))}
-          </ul>
-          <button type="button" onClick={() => go(1)} aria-label="Promoción siguiente" className={ARROW_BAR}>
-            <Chevron direction="right" />
-          </button>
-        </div>
-      )}
     </div>
   );
 }
@@ -249,19 +221,3 @@ function Chevron({ direction }: { direction: "left" | "right" }) {
   );
 }
 
-function PauseIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="size-4" fill="currentColor" aria-hidden>
-      <rect x="6" y="5" width="4" height="14" rx="1" />
-      <rect x="14" y="5" width="4" height="14" rx="1" />
-    </svg>
-  );
-}
-
-function PlayIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="size-4" fill="currentColor" aria-hidden>
-      <path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5Z" />
-    </svg>
-  );
-}
