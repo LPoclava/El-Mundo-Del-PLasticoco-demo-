@@ -5,7 +5,8 @@ import {
   type SelectHTMLAttributes,
 } from "react";
 import Link from "next/link";
-import type { IconName } from "@/lib/panel-demo/roles";
+import { usePathname } from "next/navigation";
+import { sectionOf, type IconName } from "@/lib/panel-demo/roles";
 import { Icon } from "./icons";
 
 /** Piezas de interfaz del panel: botones, campos, insignias, diálogos y avisos. */
@@ -162,23 +163,39 @@ export function EmptyState({ title, children, action }: { title: string; childre
  * Encabezado de una pantalla del panel. `back` es para las pantallas internas (crear, editar): lleva a la
  * pantalla de la que se vino, así cada operación completa tiene su propia página y no un modal.
  */
-export function PageHeader({ title, subtitle, actions, back }: {
-  title: string; subtitle?: string; actions?: ReactNode; back?: { href: string; label: string };
+export function PageHeader({ title, subtitle, actions, back, icon }: {
+  title: string; subtitle?: string; actions?: ReactNode; back?: { href: string; label: string }; icon?: IconName;
 }) {
+  // Sin ícono explícito se toma el de la sección a la que pertenece la dirección (también en pantallas internas).
+  const pathname = usePathname();
+  const iconName = icon ?? sectionOf(pathname)?.icon;
   return (
-    <div className="flex flex-wrap items-end justify-between gap-4">
-      <div className="min-w-0">
-        {back && (
-          <Link href={back.href} className="-ml-1 mb-1 inline-flex min-h-11 items-center gap-1 rounded-lg px-1 text-sm font-medium text-brand-muted hover:text-brand-ink">
+    <header className="border-b border-brand-line pb-4">
+      {back && (
+        <nav aria-label="Ubicación" className="mb-1 flex flex-wrap items-center text-sm text-brand-muted">
+          <Link href={back.href} className="-ml-1 inline-flex min-h-11 items-center gap-1 rounded-lg px-1 font-medium hover:text-brand-ink">
             <Icon name="chevronLeft" className="size-4" />
             {back.label}
           </Link>
-        )}
-        <h1 className="text-2xl font-semibold tracking-tight text-balance">{title}</h1>
-        {subtitle && <p className="mt-1 max-w-2xl text-brand-muted">{subtitle}</p>}
+          <span aria-hidden className="px-1">/</span>
+          <span aria-current="page" className="text-brand-ink">{title}</span>
+        </nav>
+      )}
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+        <div className="flex min-w-0 items-center gap-3">
+          {iconName && (
+            <span aria-hidden className="grid size-11 shrink-0 place-items-center rounded-xl bg-brand-green/10 text-brand-green-ink">
+              <Icon name={iconName} className="size-6" />
+            </span>
+          )}
+          <div className="min-w-0">
+            <h1 className="text-xl font-semibold tracking-tight text-balance sm:text-2xl">{title}</h1>
+            {subtitle && <p className="mt-0.5 max-w-2xl text-sm text-brand-muted">{subtitle}</p>}
+          </div>
+        </div>
+        {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
       </div>
-      {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
-    </div>
+    </header>
   );
 }
 

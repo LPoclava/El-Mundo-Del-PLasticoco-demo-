@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { formatPrice } from "@/lib/catalog/url";
@@ -16,7 +15,7 @@ import {
 import { BarcodeScanner } from "../barcode-scanner";
 import { Icon } from "../icons";
 import { Button, CARD_CLASS, INPUT_CLASS, Toaster, type Toast } from "../ui";
-import { CartScreen } from "./pos-cart-screen";
+import { CartDrawer } from "./pos-cart-drawer";
 import { PosGate } from "./pos-gate";
 import { RecentSales } from "./pos-recent-sales";
 import { ResultPanel, resultTitle, type ScanResult } from "./pos-result-panel";
@@ -24,8 +23,8 @@ import { ResultPanel, resultTitle, type ScanResult } from "./pos-result-panel";
 /**
  * Escáner como centro de operaciones (prueba piloto): consultar un producto, registrar uno nuevo,
  * agregar a la venta y actualizar stock. El resultado de cada lectura aparece en la parte de arriba de la
- * página (no en un modal) y la venta tiene su propia pantalla (?vista=venta), con la que funciona el botón
- * «atrás» del navegador. La venta real la valida y registra confirm_sale() en PostgreSQL
+ * página (no en un modal) y la venta se arma en un carrito lateral que entra desde la derecha sin tapar el
+ * escáner del todo. La venta real la valida y registra confirm_sale() en PostgreSQL
  * (permisos, precios, stock, total, idempotencia): esta pantalla es solo la interfaz.
  */
 export function PosSection() {
@@ -70,9 +69,7 @@ function Scanner({ db, role }: { db: SupabaseClient; role: "empleado" | "gerente
   const attemptRef = useRef<{ sig: string; key: string } | null>(null);
   const manualRef = useRef<HTMLInputElement>(null);
   const { toasts, push } = useToasts();
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const onSale = searchParams.get("vista") === "venta";
+  const [cartOpen, setCartOpen] = useState(false);
   const resultRef = useRef<HTMLElement>(null);
 
   // El resultado aparece arriba de la página: se lleva a la vista y se anuncia sin mover el foco del lector.
@@ -81,11 +78,13 @@ function Scanner({ db, role }: { db: SupabaseClient; role: "empleado" | "gerente
     if (hasResult) resultRef.current?.scrollIntoView({ block: "start", behavior: "smooth" });
   }, [hasResult]);
 
-  const openSale = () => router.push("/panel/precios?vista=venta");
-  const backToScanner = () => {
+  const openSale = () => setCartOpen(true);
+  // Cerrar el carrito vuelve al escáner tal cual estaba: los artículos y las cantidades se conservan. Si lo último
+  // que se veía era una venta ya concretada, se la da por vista.
+  const closeSale = () => {
+    setCartOpen(false);
     setFailure(null);
-    if (cartRef.current.length === 0) setReceipt(null);
-    router.push("/panel/precios");
+    setReceipt(null);
   };
 
   // Aviso de que se recuperó una venta en curso (solo la primera vez).
@@ -228,28 +227,6 @@ function Scanner({ db, role }: { db: SupabaseClient; role: "empleado" | "gerente
     clear: () => { updateCart([]); setMethod(null); attemptRef.current = null; setFailure(null); },
   };
 
-  if (onSale) {
-    return (
-      <div className="space-y-4">
-        <Button variant="ghost" icon="chevronLeft" onClick={backToScanner} className="-ml-2">Volver al escáner</Button>
-        <CartScreen
-          onBack={backToScanner}
-          cart={cart}
-          actions={cartActions}
-          methods={methods}
-          method={method}
-          onMethod={setMethod}
-          busy={busy}
-          failure={failure}
-          receipt={receipt}
-          onConfirm={() => void confirm()}
-          onNewSale={() => { setReceipt(null); router.push("/panel/precios"); }}
-        />
-        <Toaster toasts={toasts} />
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-5 pb-28">
       {/* Resultado de la última lectura: arriba de la página, en línea (no es un modal). */}
@@ -329,7 +306,7 @@ function Scanner({ db, role }: { db: SupabaseClient; role: "empleado" | "gerente
       <button
         type="button"
         onClick={openSale}
-        aria-label={`Ir a la venta: ${units} ${units === 1 ? "unidad" : "unidades"}${units > 0 ? `, total ${total.toLocaleString("es-AR")} pesos` : ""}`}
+        aria-haspopup="dialog" aria-label={`Abrir el carrito: ${units} ${units === 1 ? "unidad" : "unidades"}${units > 0 ? `, total ${total.toLocaleString("es-AR")} pesos` : ""}`}
         className={`fixed bottom-4 right-4 z-30 flex h-14 items-center gap-2 rounded-full px-4 shadow-lg ring-1 ring-black/5 motion-safe:transition motion-safe:active:scale-95 sm:bottom-6 sm:right-6 ${
           units > 0 ? "bg-brand-orange text-brand-ink hover:bg-brand-orange/90" : "bg-white text-brand-ink hover:bg-brand-sand"
         }`}
@@ -344,6 +321,21 @@ function Scanner({ db, role }: { db: SupabaseClient; role: "empleado" | "gerente
           <span className="text-base font-semibold tabular-nums">{formatPrice(total)}</span>
         </span>
       </button>
+
+      <CartDrawer
+        open={cartOpen}
+        onClose={closeSale}
+        cart={cart}
+        actions={cartActions}
+        methods={methods}
+        method={method}
+        onMethod={setMethod}
+        busy={busy}
+        failure={failure}
+        receipt={receipt}
+        onConfirm={() => void confirm()}
+        onNewSale={closeSale}
+      />
 
       <Toaster toasts={toasts} />
     </div>

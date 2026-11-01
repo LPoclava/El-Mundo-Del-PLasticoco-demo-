@@ -71,3 +71,45 @@ export async function recentMovements(db: SupabaseClient, limit = 8): Promise<Mo
     variant: [m.product_variants?.size, m.product_variants?.color].filter(Boolean).join(" · ") || null,
   }));
 }
+
+export type MovementRow2 = MovementItem & { userName: string | null };
+
+/**
+ * Historial de movimientos de inventario (solo lectura; solo gerente o superior por RLS). Antes de aplicar la
+ * migración 20261101 la columna stock_before no existe: se calcula como stock_after - delta (es lo mismo).
+ */
+export async function listMovements(db: SupabaseClient, limit = 30): Promise<MovementRow2[]> {
+  const select = (cols: string) =>
+    db.from("stock_movements").select(cols).order("created_at", { ascending: false }).limit(limit);
+  const base = "id,created_at,reason,delta,stock_after,note,user_id,product_variants(size,color,products(name))";
+  let res = await select(`${base},stock_before`);
+  let withBefore = true;
+  if (res.error) {
+    withBefore = false;
+    res = await select(base);
+  }
+  if (res.error) throw new Error("No se pudo leer el historial de movimientos.");
+  type Row = {
+    id: number; created_at: string; reason: MovementItem["reason"]; delta: number; stock_after: number; stock_before?: number; note: string | null;
+    user_id: string | null; product_variants: { size: string | null; color: string | null; products: { name: string } | null } | null;
+  };
+  const rows = (res.data ?? []) as unknown as Row[];
+
+  // Nombres de quienes hicieron los movimientos (si el perfil no se puede leer, se muestra sin nombre).
+  const ids = [...new Set(rows.map((r) => r.user_id).filter((x): x is string => Boolean(x)))];
+  const names = new Map<string, string>();
+  if (ids.length > 0) {
+    const profiles = await db.from("profiles").select("user_id,display_name").in("user_id", ids);
+    for (const p of (profiles.data ?? []) as { user_id: string; display_name: string | null }[]) {
+      if (p.display_name) names.set(p.user_id, p.display_name);
+    }
+  }
+  return rows.map((m) => ({
+    id: m.id, createdAt: m.created_at, reason: m.reason, delta: m.delta,
+    stockBefore: withBefore && typeof m.stock_before === "number" ? m.stock_before : m.stock_after - m.delta,
+    stockAfter: m.stock_after, note: m.note,
+    productName: m.product_variants?.products?.name ?? null,
+    variant: [m.product_variants?.size, m.product_variants?.color].filter(Boolean).join(" · ") || null,
+    userName: m.user_id ? (names.get(m.user_id) ?? null) : null,
+  }));
+}

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
-  ROLE_LABEL, ROLE_SUMMARY, SECTIONS, demoEmail, sectionsFor, type Role,
+  GROUPS, ROLE_LABEL, ROLE_SUMMARY, demoEmail, sectionOf, sectionsFor, type GroupId, type Role,
 } from "@/lib/panel-demo/roles";
 import type { Actor } from "@/lib/panel-demo/types";
 import { BrandLoader } from "@/components/brand-loader";
@@ -18,14 +18,8 @@ import { Dialog, Notice } from "./ui";
 /** Estructura del panel: navegación lateral, barra superior y contenido. Solo demostración. */
 
 /** Sección a la que pertenece una dirección; las pantallas internas (/panel/productos/nuevo) cuentan como su sección. */
-function sectionOf(pathname: string) {
-  return [...SECTIONS]
-    .sort((a, b) => b.href.length - a.href.length)
-    .find((s) => pathname === s.href || (s.href !== "/panel" && pathname.startsWith(`${s.href}/`)));
-}
-
 /** Pantallas en modo inmersivo (sin menú lateral). */
-const IMMERSIVE = ["/panel/precios"];
+const IMMERSIVE = ["/panel/precios", "/panel/stock"];
 
 function sectionTitle(pathname: string): string {
   return sectionOf(pathname)?.label ?? "Panel";
@@ -39,30 +33,71 @@ function Avatar({ name }: { name: string }) {
   );
 }
 
+/**
+ * Menú por grupos desplegables. El grupo de la sección actual se abre solo y queda resaltado; abrir o cerrar
+ * anima la altura (filas de grilla 0fr → 1fr, sin medir nada) y gira la flecha. Con el menú contraído (solo
+ * íconos) no hay encabezados de grupo: se ve la lista plana.
+ */
 function Navigation({ role, collapsed, onNavigate }: { role: Role; collapsed: boolean; onNavigate: () => void }) {
   const pathname = usePathname();
+  const current = sectionOf(pathname);
+  const sections = sectionsFor(role);
+  const groups = GROUPS.map((g) => ({ ...g, items: sections.filter((s) => s.group === g.id) })).filter((g) => g.items.length > 0);
+  // El usuario puede abrir o cerrar a mano; el grupo de la página actual siempre está abierto.
+  const [manual, setManual] = useState<Partial<Record<GroupId, boolean>>>({});
+
   return (
     <nav aria-label="Secciones del panel" className="flex-1 overflow-y-auto px-3 py-2">
-      <ul className="flex flex-col gap-1">
-        {sectionsFor(role).map((s) => {
-          const active = sectionOf(pathname)?.id === s.id;
-          const label = s.label;
+      <div className="flex flex-col gap-1">
+        {groups.map((g) => {
+          const holdsCurrent = g.items.some((s) => s.id === current?.id);
+          const open = collapsed || holdsCurrent || (manual[g.id] ?? true);
+          const panelId = `menu-${g.id}`;
           return (
-            <li key={s.id}>
-              <Link
-                href={s.href}
-                onClick={onNavigate}
-                aria-current={active ? "page" : undefined}
-                title={collapsed ? label : undefined}
-                className={`flex h-11 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors hover:bg-brand-sand ${active ? "bg-brand-green/10 text-brand-green-ink" : "text-brand-ink/80"} ${collapsed ? "justify-center px-0" : ""}`}
+            <div key={g.id}>
+              {!collapsed && (
+                <button
+                  type="button"
+                  aria-expanded={open}
+                  aria-controls={panelId}
+                  disabled={holdsCurrent}
+                  onClick={() => setManual((m) => ({ ...m, [g.id]: !open }))}
+                  className={`flex h-11 w-full items-center justify-between rounded-lg px-3 text-xs font-semibold uppercase tracking-wide transition-colors hover:bg-brand-sand disabled:cursor-default disabled:hover:bg-transparent ${holdsCurrent ? "text-brand-green-ink" : "text-brand-muted"}`}
+                >
+                  {g.label}
+                  <Icon name="chevronDown" className={`size-4 motion-safe:transition-transform motion-safe:duration-200 ${open ? "rotate-0" : "-rotate-90"} ${holdsCurrent ? "opacity-40" : ""}`} />
+                </button>
+              )}
+              <div
+                id={panelId}
+                className={`grid motion-safe:transition-[grid-template-rows] motion-safe:duration-200 motion-safe:ease-out ${open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
               >
-                <Icon name={s.icon} className={active ? "text-brand-green" : "text-brand-muted"} />
-                <span className={collapsed ? "sr-only" : "truncate"}>{label}</span>
-              </Link>
-            </li>
+                <ul className="overflow-hidden" inert={!open || undefined}>
+                  {g.items.map((s) => {
+                    const active = current?.id === s.id;
+                    return (
+                      <li key={s.id} className="py-0.5">
+                        <Link
+                          href={s.href}
+                          onClick={onNavigate}
+                          aria-current={active ? "page" : undefined}
+                          title={collapsed ? s.label : undefined}
+                          className={`relative flex h-11 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors hover:bg-brand-sand active:bg-brand-green/15 ${active ? "bg-brand-green/10 text-brand-green-ink" : "text-brand-ink/80"} ${collapsed ? "justify-center px-0" : "pl-4"}`}
+                        >
+                          {/* Indicador discreto de la sección actual. */}
+                          {active && <span aria-hidden className="absolute left-0 top-2.5 h-6 w-1 rounded-full bg-brand-green" />}
+                          <Icon name={s.icon} className={active ? "text-brand-green" : "text-brand-muted"} />
+                          <span className={collapsed ? "sr-only" : "truncate"}>{s.label}</span>
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            </div>
           );
         })}
-      </ul>
+      </div>
     </nav>
   );
 }

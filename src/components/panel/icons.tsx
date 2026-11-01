@@ -32,6 +32,11 @@ const PATHS: Record<IconName, string> = {
   refresh: "M20 11a8 8 0 0 0-14.5-4M4 4v3.5h3.5M4 13a8 8 0 0 0 14.5 4M20 20v-3.5h-3.5",
   user: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM4.5 20a7.5 7.5 0 0 1 15 0",
   trash: "M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13M10 11v5M14 11v5",
+  dashboard: "M4 4h7v8H4zM13 4h7v4h-7zM13 10h7v10h-7zM4 14h7v6H4z",
+  scan: "M4 8V5.5A1.5 1.5 0 0 1 5.5 4H8M16 4h2.5A1.5 1.5 0 0 1 20 5.5V8M20 16v2.5a1.5 1.5 0 0 1-1.5 1.5H16M8 20H5.5A1.5 1.5 0 0 1 4 18.5V16M8 9v6M11 9v6M14 9v6M17 9v6",
+  boxes: "M3 11.5h8.5V20H3zM12.5 11.5H21V20h-8.5zM7.5 3.5H16v8H7.5zM7 15.5h1.5M16.5 15.5H18",
+  cart: "M3 4h2l2.4 11.2a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 1.95-1.5L21 8H6.2M10 20.2h.01M17 20.2h.01",
+  receipt: "M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6",
 };
 
 export function Icon({ name, className = "" }: { name: IconName; className?: string }) {

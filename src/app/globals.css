@@ -122,3 +122,52 @@ body {
   #comprobante, #comprobante * { visibility: visible; }
   #comprobante { position: absolute; inset: 0 auto auto 0; width: 100%; padding: 16px; background: #fff; }
 }
+
+/* Panel lateral (src/components/panel/drawer.tsx): entra desde la derecha; el fondo se oscurece de a poco. */
+.drawer {
+  transform: translateX(100%);
+  transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.drawer[data-state="open"] {
+  transform: none;
+}
+.drawer::backdrop {
+  background: rgb(32 32 32 / 0);
+  transition: background 0.2s ease-out;
+}
+.drawer[data-state="open"]::backdrop {
+  background: rgb(32 32 32 / 0.4);
+}
+@media (prefers-reduced-motion: reduce) {
+  .drawer,
+  .drawer::backdrop {
+    transition: none;
+  }
+}
+
+/* Registro de venta: carrito que rueda mientras se procesa y se vuelve check al confirmarse. */
+@keyframes sale-roll {
+  0%, 100% { transform: translateX(-2px); }
+  50% { transform: translateX(3px); }
+}
+@keyframes sale-cart-out {
+  to { opacity: 0; transform: scale(0.6); }
+}
+@keyframes sale-ring {
+  from { transform: scale(0.7); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+@keyframes sale-check {
+  from { stroke-dashoffset: 24; }
+  to { stroke-dashoffset: 0; }
+}
+.sale-roll { animation: sale-roll 0.7s ease-in-out infinite; }
+.sale-done-ring { animation: sale-ring 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.sale-done-cart { animation: sale-cart-out 0.25s ease-in forwards; }
+.sale-done-check { stroke-dasharray: 24; animation: sale-check 0.35s ease-out 0.22s both; }
+@media (prefers-reduced-motion: reduce) {
+  .sale-roll { animation: none; }
+  .sale-done-ring { animation: none; }
+  .sale-done-cart { animation: none; opacity: 0; }
+  .sale-done-check { animation: none; stroke-dasharray: none; }
+}

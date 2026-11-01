@@ -42,10 +42,10 @@ export function QuantityStepper({ name, value, max, onChange, onStep }: {
             }
           }}
           onBlur={() => setDraft(null)}
-          className={`${INPUT_CLASS} h-11 w-14 px-1 text-center tabular-nums`}
+          className={`${INPUT_CLASS} h-11 w-14! px-1 text-center tabular-nums`}
         />
         <Button size="sm" className="size-11 px-0" onClick={() => onStep(1)} disabled={value >= max} aria-label={`Una unidad más de ${name}`}>+</Button>
-        <span className="ml-1 hidden text-xs text-brand-muted min-[400px]:inline">de {max}</span>
+        <span className="ml-1 hidden whitespace-nowrap text-xs text-brand-muted min-[400px]:inline">de {max}</span>
       </div>
       {invalidDraft && <p role="alert" className="mt-1 text-xs text-brand-danger">Escribí un número entero de 1 en adelante.</p>}
     </div>

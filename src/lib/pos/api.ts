@@ -1,4 +1,4 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+﻿import type { SupabaseClient } from "@supabase/supabase-js";
 import type { CartLine, SaleProblem } from "./cart";
 import { describeStockError } from "./stock";
 
@@ -94,7 +94,7 @@ export function describeSaleError(error: DbError): SaleFailure {
   }
   return {
     kind: "unknown",
-    message: "No pudimos confirmar si la venta se registró (¿se cortó la conexión?). Tocá «Confirmar venta» de nuevo: si ya estaba registrada no se duplica.",
+    message: "No pudimos confirmar si la venta se registró (¿se cortó la conexión?). Tocá «Reintentar registro»: si ya estaba registrada no se duplica.",
     problems: [],
   };
 }

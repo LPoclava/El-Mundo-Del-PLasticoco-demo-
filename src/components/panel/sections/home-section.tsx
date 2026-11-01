@@ -33,7 +33,7 @@ const SHORTCUTS: Shortcut[] = [
 export function HomeSection() {
   return (
     <div className="space-y-6">
-      <PageHeader title="Inicio" subtitle="Cómo viene el día: ventas, unidades y stock." />
+      <PageHeader title="Dashboard" subtitle="Resumen general del negocio: ventas, unidades y stock del día." />
       <PosGate>{({ db, role }) => <Dashboard db={db} role={role} />}</PosGate>
     </div>
   );
