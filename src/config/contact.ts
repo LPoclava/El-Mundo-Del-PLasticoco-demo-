@@ -7,8 +7,8 @@
  * - whatsapp / phone: número en formato internacional, solo dígitos o con + (ej.: código de país + área + número).
  * - instagramUrl / facebookUrl: dirección completa que empiece con https://
  *
- * Origen de la dirección y el horario: volante del negocio (Logo/475254990_...jpg). La localidad no figura en el
- * volante: se dedujo del barrio Los Lupinos y de la característica 2902 (Río Turbio). CONFIRMAR con el negocio.
+ * Origen de la dirección y el horario: volante del negocio (Logo/475254990_...jpg). La localidad (Río Turbio, Santa
+ * Cruz) no figura en el volante; la confirmó el responsable del proyecto el 2 de noviembre de 2026.
  */
 export const CONTACT: {
   whatsapp: string | null;
