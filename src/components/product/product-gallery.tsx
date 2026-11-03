@@ -32,7 +32,7 @@ export function ProductGallery({ name, images }: Props) {
   return (
     <div className="mx-auto w-full" style={{ maxWidth }}>
       <div
-        className="relative aspect-square overflow-hidden rounded-2xl border border-brand-line bg-white"
+        className="relative aspect-square overflow-hidden rounded-2xl border border-brand-line bg-surface"
         style={{ touchAction: "pan-y" }}
         onPointerDown={(e) => (start.current = { x: e.clientX, y: e.clientY })}
         onPointerUp={(e) => {
@@ -90,7 +90,7 @@ export function ProductGallery({ name, images }: Props) {
                   go(i - 1, true);
                 }
               }}
-              className={`relative aspect-square overflow-hidden rounded-lg border-2 bg-white motion-safe:transition-colors ${
+              className={`relative aspect-square overflow-hidden rounded-lg border-2 bg-surface motion-safe:transition-colors ${
                 i === index ? "border-brand-ink" : "border-brand-line hover:border-brand-ink/40"
               }`}
             >
@@ -109,7 +109,7 @@ function ArrowButton({ side, label, onClick }: { side: "left" | "right"; label: 
       type="button"
       onClick={onClick}
       aria-label={label}
-      className={`absolute top-1/2 grid size-11 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-brand-ink shadow-md hover:bg-white ${
+      className={`absolute top-1/2 grid size-11 -translate-y-1/2 place-items-center rounded-full bg-surface/90 text-brand-ink shadow-md hover:bg-surface ${
         side === "left" ? "left-2" : "right-2"
       }`}
     >

@@ -11,7 +11,8 @@ export const metadata: Metadata = {
 
 export default function PanelLayout({ children }: LayoutProps<"/panel">) {
   return (
-    <div className="flex-1">
+    // El panel no tiene modo oscuro: «panel-light» conserva sus colores claros aunque el catálogo esté en oscuro.
+    <div className="panel-light flex-1">
       <DemoProvider>{children}</DemoProvider>
     </div>
   );

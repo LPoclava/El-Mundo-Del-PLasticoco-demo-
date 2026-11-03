@@ -9,7 +9,7 @@ type Props = {
 };
 
 const base =
-  "flex h-11 items-center rounded-lg border border-brand-line bg-white px-4 text-sm font-medium";
+  "flex h-11 items-center rounded-lg border border-brand-line bg-surface px-4 text-sm font-medium";
 
 export function Pagination({ page, pageCount, query }: Props) {
   if (pageCount <= 1) return null;

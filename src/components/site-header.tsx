@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { HeaderSearch } from "./catalog/header-search";
 import { SearchForm } from "./catalog/search-form";
+import { ThemeToggle } from "./theme-toggle";
 
 /**
  * Encabezado compacto: logo y buscador. En el celular el buscador va en una segunda línea a todo el ancho;
@@ -11,7 +12,7 @@ import { SearchForm } from "./catalog/search-form";
  */
 export function SiteHeader() {
   return (
-    <header className="border-b border-brand-line bg-white">
+    <header className="border-b border-brand-line bg-surface">
       <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-6 gap-y-1.5 px-4 pb-2.5 pt-1.5 sm:flex-nowrap sm:py-2.5">
         <Link
           href="/"
@@ -28,7 +29,9 @@ export function SiteHeader() {
             className="h-9 w-auto sm:h-12"
           />
         </Link>
-        <div className="w-full sm:ml-auto sm:max-w-md lg:max-w-lg">
+        {/* Celular: el botón del tema queda en la primera fila, a la derecha del logo. */}
+        <div className="order-2 ml-auto sm:order-3"><ThemeToggle /></div>
+        <div className="order-3 w-full sm:order-2 sm:ml-auto sm:max-w-md lg:max-w-lg">
           {/* El buscador lee la URL en el navegador; mientras tanto se ve igual pero vacío. */}
           <Suspense fallback={<SearchForm />}>
             <HeaderSearch />

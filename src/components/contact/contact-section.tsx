@@ -32,7 +32,7 @@ function ChannelButton({ channel }: { channel: ContactChannel }) {
     <a
       href={channel.href}
       {...(channel.external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-      className={`${buttonBase} border-brand-line bg-white hover:border-brand-ink active:bg-brand-sand`}
+      className={`${buttonBase} border-brand-line bg-surface hover:border-brand-ink active:bg-brand-sand`}
     >
       {content}
     </a>

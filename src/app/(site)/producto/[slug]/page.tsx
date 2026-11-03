@@ -8,7 +8,8 @@ import { ProductPurchase } from "@/components/product/product-purchase";
 import { ProductGrid } from "@/components/catalog/product-grid";
 import { SectionHeading } from "@/components/catalog/section-heading";
 import { getProduct, getRelatedProducts } from "@/lib/catalog/repository";
-import { distinctValues, parseProductSlug, productPath, productSlug } from "@/lib/catalog/product";
+import { productFeatures } from "@/lib/catalog/features";
+import { parseProductSlug, productPath, productSlug } from "@/lib/catalog/product";
 import { catalogHref, formatPrice } from "@/lib/catalog/url";
 import type { ProductDetail } from "@/types/product";
 
@@ -55,15 +56,7 @@ export default async function ProductPage({ params }: PageProps<"/producto/[slug
   crumbs.push({ label: product.category.name, href: categoryHref(product.category.slug) });
   crumbs.push({ label: product.name });
 
-  // Características: solo datos cargados en el producto, nada supuesto.
-  const sizes = distinctValues(product.variants, "size");
-  const colors = distinctValues(product.variants, "color");
-  const features: [string, string][] = [];
-  if (product.brand) features.push(["Marca", product.brand]);
-  features.push(["Categoría", product.parentCategory ? `${product.parentCategory.name} › ${product.category.name}` : product.category.name]);
-  if (sizes.length) features.push([sizes.length > 1 ? "Medidas" : "Medida", sizes.join(", ")]);
-  if (colors.length) features.push([colors.length > 1 ? "Colores" : "Color", colors.join(", ")]);
-  if (product.variants.length > 1) features.push(["Opciones", `${product.variants.length} disponibles`]);
+  const features = productFeatures(product);
 
   const prices = product.variants.length ? product.variants.map((v) => v.price) : [product.price];
   const jsonLd = {
@@ -113,7 +106,7 @@ export default async function ProductPage({ params }: PageProps<"/producto/[slug
 
           <section aria-labelledby="caracteristicas" className="mt-8">
             <h2 id="caracteristicas" className="text-lg font-semibold">Características</h2>
-            <dl className="mt-2 divide-y divide-brand-line rounded-xl border border-brand-line bg-white text-sm">
+            <dl className="mt-2 divide-y divide-brand-line rounded-xl border border-brand-line bg-surface text-sm">
               {features.map(([term, value]) => (
                 <div key={term} className="grid grid-cols-[7rem_1fr] gap-3 px-4 py-2.5 sm:grid-cols-[8rem_1fr]">
                   <dt className="text-brand-muted">{term}</dt>

@@ -38,9 +38,19 @@ export const metadata: Metadata = {
   },
 };
 
+/**
+ * Aplica el tema ANTES de que el navegador pinte (evita el destello del tema equivocado): usa la preferencia
+ * guardada y, si no hay, la del sistema operativo. Es un script chico y bloqueante a propósito.
+ */
+const THEME_SCRIPT = `(function(){try{var t=localStorage.getItem("mp-theme");if(t!=="light"&&t!=="dark"){t=window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"}document.documentElement.dataset.theme=t}catch(e){}})()`;
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="es-AR" className={`${geistSans.variable} h-full antialiased`}>
+    // suppressHydrationWarning: el script cambia data-theme antes de que React hidrate.
+    <html lang="es-AR" suppressHydrationWarning className={`${geistSans.variable} h-full antialiased`}>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      </head>
       <body className="flex min-h-full flex-col font-sans text-[15px]">
         {children}
       </body>

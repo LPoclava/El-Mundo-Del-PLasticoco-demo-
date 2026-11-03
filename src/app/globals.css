@@ -16,7 +16,72 @@
   --color-brand-green-ink: #2a6338;
   /* Naranja de marca oscurecido para TEXTO (precios): el naranja puro da 2,5:1 sobre blanco; este da 5:1. */
   --color-brand-orange-ink: #b3500f;
+  /* Superficies del catálogo (cambian con el tema): blanco, tarjeta cálida y fondo de la foto. */
+  --color-surface: #ffffff;
+  --color-brand-card: #fffdfa;
+  --color-brand-photo: #f4f2ee;
+  --color-tint-orange: #fdf1e7;
+  --color-tint-green: #eaf4ec;
   --font-sans: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+/* ---- Modo oscuro del catálogo ----
+   Se activa con data-theme="dark" en <html> (lo pone el script de src/app/layout.tsx antes de pintar, a partir
+   de la preferencia guardada o, si no hay, del sistema). Solo se redefinen los tokens: los componentes no
+   cambian. Grises carbón (no negro puro), texto blanco suave, acentos verde y naranja. Contrastes sobre
+   #1c1e1f: texto 13:1, secundario 8:1, verde 8,5:1, naranja 8:1. */
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --color-brand-ink: #ece9e2;
+  --color-brand-cream: #1c1e1f;
+  --color-brand-sand: #2a2d2f;
+  --color-brand-line: #3b4042;
+  --color-brand-muted: #b3afa6;
+  --color-brand-green-ink: #86d29a;
+  --color-brand-orange-ink: #f2a46b;
+  --color-brand-danger: #f08a7e;
+  --color-surface: #242729;
+  --color-brand-card: #26292b;
+  --color-brand-photo: #33373a;
+  --color-tint-orange: #36302b;
+  --color-tint-green: #28332c;
+}
+
+/* El panel de administración no tiene modo oscuro: conserva siempre los colores claros. */
+.panel-light {
+  color-scheme: light;
+  --color-brand-ink: #202020;
+  --color-brand-cream: #faf8f3;
+  --color-brand-sand: #f1eee7;
+  --color-brand-line: #e4dfd3;
+  --color-brand-muted: #5a5956;
+  --color-brand-green-ink: #2a6338;
+  --color-brand-orange-ink: #b3500f;
+  --color-brand-danger: #b3382c;
+  --color-surface: #ffffff;
+  --color-brand-card: #fffdfa;
+  --color-brand-photo: #f4f2ee;
+  --color-tint-orange: #fdf1e7;
+  --color-tint-green: #eaf4ec;
+}
+body:has(.panel-light) {
+  background: #faf8f3;
+  color: #202020;
+}
+
+/* Botones con fondo «tinta» y texto blanco: en oscuro la tinta es clara, así que el texto pasa a ser oscuro. */
+html[data-theme="dark"] :not(.panel-light *)[class*="bg-brand-ink"][class*="text-white"] {
+  color: var(--color-brand-cream);
+}
+
+/* Cambio de tema sin transiciones largas: color y fondo con un fundido corto (se anula con movimiento reducido). */
+@media (prefers-reduced-motion: no-preference) {
+  html.theme-changing,
+  html.theme-changing *,
+  html.theme-changing *::before,
+  html.theme-changing *::after {
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease !important;
+  }
 }
 
 :root {
@@ -181,4 +246,39 @@ body {
 .cart-bump { animation: cart-bump 0.35s cubic-bezier(0.2, 0.8, 0.2, 1); }
 @media (prefers-reduced-motion: reduce) {
   .cart-bump { animation: none; }
+}
+
+/* Ventana flotante del producto (src/components/product/product-modal.tsx): entra con un fundido y un leve zoom;
+   el fondo se desenfoca y se oscurece (más en tema oscuro). */
+.product-modal {
+  opacity: 0;
+  transform: translateY(12px) scale(0.98);
+  transition: opacity 0.2s ease-out, transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+  box-shadow: 0 24px 80px -16px rgb(0 0 0 / 0.45), 0 2px 8px rgb(0 0 0 / 0.12);
+}
+.product-modal[data-state="open"] {
+  opacity: 1;
+  transform: none;
+}
+.product-modal::backdrop {
+  background: rgb(20 20 20 / 0);
+  backdrop-filter: blur(0);
+  transition: background 0.2s ease-out, backdrop-filter 0.2s ease-out;
+}
+.product-modal[data-state="open"]::backdrop {
+  background: rgb(20 20 20 / 0.45);
+  backdrop-filter: blur(6px);
+}
+html[data-theme="dark"] .product-modal[data-state="open"]::backdrop {
+  background: rgb(0 0 0 / 0.6);
+}
+/* Con la ventana abierta, la página de atrás no se desplaza. */
+html:has(.product-modal[open]) {
+  overflow: hidden;
+}
+@media (prefers-reduced-motion: reduce) {
+  .product-modal,
+  .product-modal::backdrop {
+    transition: none;
+  }
 }

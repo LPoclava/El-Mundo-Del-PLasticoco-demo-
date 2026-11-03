@@ -12,8 +12,8 @@ type Tone = "orange" | "green";
 
 /** Fondo de cada tarjeta mientras carga la ilustración (y de la tarjeta sin foto). Escritas completas para Tailwind. */
 const TONE = {
-  orange: { tint: "bg-[#fdf1e7]", tile: "text-brand-orange", globe: "text-brand-orange/20" },
-  green: { tint: "bg-[#eaf4ec]", tile: "text-brand-green", globe: "text-brand-green/20" },
+  orange: { tint: "bg-tint-orange", tile: "text-brand-orange", globe: "text-brand-orange/20" },
+  green: { tint: "bg-tint-green", tile: "text-brand-green", globe: "text-brand-green/20" },
 } satisfies Record<Tone, Record<string, string>>;
 
 /**
@@ -98,7 +98,7 @@ function CategoryCard({ category, tone, href, current, eager }: {
         // Sin ilustración cargada: ícono y nombre visibles (si no, la tarjeta quedaría sin rótulo).
         <span className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-3 text-center">
           <GlobeMotif className={`absolute -bottom-8 -right-8 size-32 ${t.globe}`} />
-          <span className="relative grid size-14 place-items-center rounded-xl bg-white shadow-sm ring-1 ring-brand-line sm:size-16">
+          <span className="relative grid size-14 place-items-center rounded-xl bg-surface shadow-sm ring-1 ring-brand-line sm:size-16">
             <CategoryIcon slug={category.slug} className={`size-9 sm:size-10 ${t.tile}`} />
           </span>
           <span className="relative text-base font-semibold leading-tight">{category.name}</span>

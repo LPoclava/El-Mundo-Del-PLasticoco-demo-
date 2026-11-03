@@ -40,7 +40,7 @@ export function HowToBuy() {
           href={whatsapp}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-lg border border-brand-green/50 bg-white px-4 text-sm font-medium text-brand-green-ink hover:bg-brand-green/10"
+          className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-lg border border-brand-green/50 bg-surface px-4 text-sm font-medium text-brand-green-ink hover:bg-brand-green/10"
         >
           <ContactIcon id="whatsapp" className="size-5" />
           Escribinos por WhatsApp

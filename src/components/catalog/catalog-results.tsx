@@ -44,7 +44,7 @@ export async function CatalogResults({ searchParams }: { searchParams: Promise<R
       </div>
 
       {result.items.length === 0 ? (
-        <div className="rounded-lg border border-brand-line bg-white px-6 py-12 text-center">
+        <div className="rounded-lg border border-brand-line bg-surface px-6 py-12 text-center">
           <GlobeMotif className="mx-auto size-10 text-brand-green" />
           {hasFilters ? (
             <>
@@ -64,7 +64,7 @@ export async function CatalogResults({ searchParams }: { searchParams: Promise<R
                 )}
                 <Link
                   href={catalogHref({})}
-                  className="inline-flex min-h-11 items-center rounded-lg border border-brand-line bg-white px-5 text-sm font-medium hover:border-brand-ink"
+                  className="inline-flex min-h-11 items-center rounded-lg border border-brand-line bg-surface px-5 text-sm font-medium hover:border-brand-ink"
                 >
                   Ver todo el catálogo
                 </Link>
@@ -92,7 +92,7 @@ export function CatalogResultsSkeleton() {
       <div className="mb-4 h-6 w-24 rounded bg-brand-sand" />
       <div className={GRID_CLASS}>
         {Array.from({ length: 12 }, (_, i) => (
-          <div key={i} className="overflow-hidden rounded-xl border border-brand-green/15 bg-white">
+          <div key={i} className="overflow-hidden rounded-xl border border-brand-green/15 bg-surface">
             <div className="aspect-square bg-brand-sand" />
             <div className="space-y-2 p-3">
               <div className="h-4 w-3/4 rounded bg-brand-sand" />

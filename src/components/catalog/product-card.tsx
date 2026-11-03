@@ -21,9 +21,9 @@ type Props = {
  */
 export function ProductCard({ product, eager = false }: Props) {
   return (
-    <article className="group relative flex h-full flex-col overflow-hidden rounded-xl border border-brand-green/20 bg-[#fffdfa] shadow-sm outline-offset-2 [-webkit-tap-highlight-color:transparent] motion-safe:transition motion-safe:duration-200 hover:border-brand-green/40 hover:shadow-md motion-safe:hover:-translate-y-0.5 motion-safe:active:translate-y-0 motion-safe:active:scale-[0.985] has-[a:focus-visible]:outline has-[a:focus-visible]:outline-2 has-[a:focus-visible]:outline-brand-ink">
+    <article className="group relative flex h-full flex-col overflow-hidden rounded-xl border border-brand-green/20 bg-brand-card shadow-sm outline-offset-2 [-webkit-tap-highlight-color:transparent] motion-safe:transition motion-safe:duration-200 hover:border-brand-green/40 hover:shadow-md motion-safe:hover:-translate-y-0.5 motion-safe:active:translate-y-0 motion-safe:active:scale-[0.985] has-[a:focus-visible]:outline has-[a:focus-visible]:outline-2 has-[a:focus-visible]:outline-brand-ink">
       {/* Área de imagen uniforme: la foto se ve entera (contain), centrada y sin ampliarse más de lo que su resolución permite. */}
-      <div className="relative aspect-square bg-[#f4f2ee]">
+      <div className="relative aspect-square bg-brand-photo">
         <Image
           src={product.imageUrl}
           alt={product.name}
@@ -40,6 +40,7 @@ export function ProductCard({ product, eager = false }: Props) {
         <h3 className="line-clamp-2 min-h-[2.75em] text-sm font-medium leading-snug text-brand-ink">
           <Link
             href={productPath(product)}
+            scroll={false}
             className="outline-none focus-visible:outline-none after:absolute after:inset-0 after:rounded-xl"
           >
             {product.name}

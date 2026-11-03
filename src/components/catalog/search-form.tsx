@@ -14,7 +14,7 @@ export function SearchForm({ q, category }: Props) {
       action="/#catalogo"
       method="get"
       role="search"
-      className="flex scroll-mt-4 items-center rounded-lg border border-brand-line bg-brand-cream focus-within:border-brand-ink focus-within:bg-white focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-brand-ink"
+      className="flex scroll-mt-4 items-center rounded-lg border border-brand-line bg-brand-cream focus-within:border-brand-ink focus-within:bg-surface focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-brand-ink"
     >
       {category && <input type="hidden" name="categoria" value={category} />}
       <label htmlFor="q" className="sr-only">

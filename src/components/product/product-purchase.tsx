@@ -62,7 +62,7 @@ export function ProductPurchase({ name, path, variants, price, hasPriceRange }: 
               return (
                 <label
                   key={v.id}
-                  className={`flex min-h-12 cursor-pointer items-center justify-between gap-3 rounded-xl border-2 bg-white px-3 py-2 text-sm has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-brand-ink motion-safe:transition-colors ${
+                  className={`flex min-h-12 cursor-pointer items-center justify-between gap-3 rounded-xl border-2 bg-surface px-3 py-2 text-sm has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-brand-ink motion-safe:transition-colors ${
                     checked ? "border-brand-ink bg-brand-orange/10" : "border-brand-line hover:border-brand-ink/40"
                   }`}
                 >
@@ -119,7 +119,7 @@ export function ProductPurchase({ name, path, variants, price, hasPriceRange }: 
                 setWarn(true);
                 groupRef.current?.focus();
               }}
-              className="inline-flex min-h-13 w-full items-center justify-center gap-2.5 rounded-xl border-2 border-dashed border-brand-green/50 bg-white px-5 py-3 text-base font-semibold text-brand-green-ink sm:w-auto"
+              className="inline-flex min-h-13 w-full items-center justify-center gap-2.5 rounded-xl border-2 border-dashed border-brand-green/50 bg-surface px-5 py-3 text-base font-semibold text-brand-green-ink sm:w-auto"
             >
               <ContactIcon id="whatsapp" className="size-5 shrink-0" />
               Elegí una opción para consultar
