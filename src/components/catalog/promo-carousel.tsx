@@ -255,11 +255,11 @@ function Slide({ banner, position, count, active, eager, mobileArt }: {
 function ArtDirectedImage({ desktop, mobile, alt, eager }: { desktop: string; mobile: string; alt: string; eager: boolean }) {
   const common = { alt, fill: true, quality: 90 };
   const { props: { srcSet: desktopSet } } = getImageProps({ ...common, src: desktop, sizes: DESKTOP_SIZES });
-  const { props: mobileProps } = getImageProps({ ...common, src: mobile, sizes: "100vw", loading: eager ? "eager" : "lazy" });
+  const { props: { src, ...mobileProps } } = getImageProps({ ...common, src: mobile, sizes: "100vw", loading: eager ? "eager" : "lazy" });
   return (
     <picture>
       <source media="(min-width: 768px)" srcSet={desktopSet} sizes={DESKTOP_SIZES} />
-      <img {...mobileProps} alt={alt} draggable={false} className="object-cover" />
+      <img {...mobileProps} src={src} alt={alt} draggable={false} className="object-cover" />
     </picture>
   );
 }

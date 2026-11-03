@@ -44,7 +44,7 @@ export function SiteFooter() {
                   <a
                     href={channel.href ?? undefined}
                     {...(channel.external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-                    className="-mx-2 flex min-h-11 items-center gap-3 rounded-lg px-2 text-sm font-medium hover:bg-white/10 focus-visible:outline-on-nav active:bg-white/20 motion-safe:transition-colors"
+                    className="-mx-2 flex min-h-11 flex-wrap items-center gap-x-3 rounded-lg px-2 text-sm font-medium hover:bg-white/10 focus-visible:outline-on-nav active:bg-white/20 motion-safe:transition-colors"
                   >
                     <ContactIcon id={channel.id} className="size-5 shrink-0" />
                     <span>{channel.id === "phone" ? "Teléfono" : channel.label}</span>
