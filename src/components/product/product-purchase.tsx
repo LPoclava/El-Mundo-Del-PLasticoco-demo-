@@ -107,7 +107,7 @@ export function ProductPurchase({ name, path, variants, price, hasPriceRange }: 
               href={inquiry}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex min-h-13 w-full items-center justify-center gap-2.5 rounded-xl bg-brand-green px-5 py-3 text-base font-semibold text-white shadow-sm hover:bg-brand-green-ink active:scale-[0.99] motion-safe:transition sm:w-auto"
+              className="inline-flex min-h-13 w-full items-center justify-center gap-2.5 rounded-xl bg-whatsapp hover:bg-whatsapp-hover active:bg-whatsapp-active px-5 py-3 text-base font-semibold text-white shadow-sm  active:scale-[0.99] motion-safe:transition sm:w-auto"
             >
               <ContactIcon id="whatsapp" className="size-5 shrink-0" />
               Consultar por WhatsApp

@@ -3,12 +3,10 @@ import { parseCatalogParams, type RawParams } from "@/lib/catalog/url";
 import { BusinessIntro } from "./business-intro";
 import { CategoryTickets, CategoryTicketsSkeleton } from "./category-tickets";
 import { PromoSection, PromoSkeleton } from "./promo-section";
-import { RouteDivider } from "./route-divider";
 
 /**
- * Parte de arriba de la portada: slider, presentación, categorías y separador. Con una búsqueda activa (?q=) no se
- * muestra: los resultados quedan justo debajo de la navegación y del buscador. Lee la URL (request-time): debe
- * renderizarse dentro de <Suspense>.
+ * Parte de arriba de la portada: slider, presentación y categorías. Con una búsqueda activa (?q=) no se muestra: los
+ * resultados quedan justo debajo de la navegación. Lee la URL (request-time): debe renderizarse dentro de <Suspense>.
  */
 export async function HomeFront({ searchParams }: { searchParams: Promise<RawParams> }) {
   const { q } = parseCatalogParams(await searchParams);
@@ -22,7 +20,6 @@ export async function HomeFront({ searchParams }: { searchParams: Promise<RawPar
       <Suspense fallback={<CategoryTicketsSkeleton />}>
         <CategoryTickets searchParams={searchParams} />
       </Suspense>
-      <RouteDivider />
     </>
   );
 }

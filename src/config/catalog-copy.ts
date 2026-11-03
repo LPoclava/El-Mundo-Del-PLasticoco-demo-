@@ -7,6 +7,7 @@ export const CATALOG_COPY = {
     /** La segunda parte va resaltada en naranja. */
     title: ["Todo lo que necesitás,", "en un mismo lugar."],
     text: "Somos un negocio familiar, comprometido con brindarte variedad, calidad y la mejor atención para tu hogar, tu estudio y mucho más.",
+    concept: "Un mundo para descubrir",
   },
   promotions: {
     title: "Promociones",
@@ -15,8 +16,8 @@ export const CATALOG_COPY = {
     title: "Explorá nuestras categorías",
   },
   catalog: {
-    title: "Descubrí nuestra variedad",
-    subtitle: "Artículos prácticos, resistentes y al mejor precio.",
+    title: "Nuestro catálogo",
+    howToBuy: "Elegís lo que necesitás, nos consultás por WhatsApp y coordinamos tu compra.",
   },
   benefits: {
     title: "Por qué elegirnos",

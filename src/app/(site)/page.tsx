@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { ContactSection } from "@/components/contact/contact-section";
+import { ContactIcon } from "@/components/contact/contact-icon";
 import {
   CatalogControls,
   CatalogControlsSkeleton,
@@ -10,16 +10,13 @@ import {
   CatalogResultsSkeleton,
 } from "@/components/catalog/catalog-results";
 import { BenefitsBand } from "@/components/catalog/benefits-band";
-import { HeaderSearch } from "@/components/catalog/header-search";
 import { HomeFront, HomeFrontSkeleton } from "@/components/catalog/home-front";
-import { SearchForm } from "@/components/catalog/search-form";
 import { WhatsAppFloat } from "@/components/catalog/whatsapp-float";
 import { CATALOG_COPY } from "@/config/catalog-copy";
 import { CONTACT } from "@/config/contact";
+import { publicSiteUrl } from "@/lib/site-url";
 
-export const metadata: Metadata = {
-  alternates: { canonical: "/" },
-};
+export const metadata: Metadata = publicSiteUrl() ? { alternates: { canonical: "/" } } : {};
 
 /** Datos del local para buscadores: solo lo configurado en src/config/contact.ts. */
 const STORE_JSON_LD = {
@@ -32,37 +29,36 @@ const STORE_JSON_LD = {
 };
 
 /**
- * Portada, de arriba hacia abajo: slider, presentación, categorías, separador, catálogo, beneficios, contacto y
- * formas de pago (la navegación y el pie están en el layout). Cada parte que lee datos o la URL llega por separado.
+ * Portada, de arriba hacia abajo: slider, presentación, categorías, catálogo y beneficios. La navegación y el pie, que
+ * reúne contacto, ubicación y formas de pago, están en el layout. Cada parte que lee datos o la URL llega por separado.
  */
 export default function Home({ searchParams }: PageProps<"/">) {
   return (
-    <main id="contenido" className="mx-auto max-w-7xl px-3 pt-3 sm:px-4 sm:pt-5">
+    <main id="contenido" className="mx-auto max-w-6xl px-3 pt-3 sm:px-4 sm:pt-4">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(STORE_JSON_LD).replace(/</g, "\\u003c") }} />
 
-      <Suspense fallback={<HomeFrontSkeleton />}>
-        <HomeFront searchParams={searchParams} />
-      </Suspense>
+      <div id="inicio">
+        <Suspense fallback={<HomeFrontSkeleton />}>
+          <HomeFront searchParams={searchParams} />
+        </Suspense>
+      </div>
 
-      <section id="catalogo" aria-labelledby="catalogo-titulo" className="mt-8 scroll-mt-4 sm:mt-12">
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,28rem)] lg:items-end lg:gap-10">
-          <div>
-            <h2 id="catalogo-titulo" className="text-[1.75rem] font-semibold leading-tight tracking-tight text-balance sm:text-4xl">{CATALOG_COPY.catalog.title}</h2>
-            <p className="mt-1.5 text-brand-muted text-pretty">{CATALOG_COPY.catalog.subtitle}</p>
-          </div>
-          {/* El buscador lee la URL en el navegador; mientras tanto se ve igual pero vacío. */}
-          <Suspense fallback={<SearchForm />}>
-            <HeaderSearch />
-          </Suspense>
+      <section id="catalogo" aria-labelledby="catalogo-titulo" className="mt-7 scroll-mt-4 sm:mt-9">
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-1">
+          <h2 id="catalogo-titulo" className="font-display text-2xl font-extrabold sm:text-[1.75rem]">{CATALOG_COPY.catalog.title}</h2>
+          <p className="flex items-start gap-2 text-sm text-brand-muted text-pretty sm:items-center sm:text-[0.95rem]">
+            <ContactIcon id="whatsapp" className="mt-0.5 size-5 shrink-0 text-brand-green-ink sm:mt-0" />
+            {CATALOG_COPY.catalog.howToBuy}
+          </p>
         </div>
 
-        <div className="mt-5">
+        <div className="mt-3">
           <Suspense fallback={<CatalogControlsSkeleton />}>
             <CatalogControls searchParams={searchParams} />
           </Suspense>
         </div>
 
-        <div className="mt-5">
+        <div className="mt-2">
           <Suspense fallback={<CatalogResultsSkeleton />}>
             <CatalogResults searchParams={searchParams} />
           </Suspense>
@@ -70,7 +66,6 @@ export default function Home({ searchParams }: PageProps<"/">) {
       </section>
 
       <BenefitsBand />
-      <ContactSection />
       <WhatsAppFloat />
     </main>
   );

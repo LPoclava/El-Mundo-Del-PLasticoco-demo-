@@ -13,6 +13,7 @@
   --color-brand-muted: #5a5956;
   /* Panel de administración (demo): error y texto verde legible sobre fondos tintados. */
   --color-brand-danger: #b3382c;
+  /* SOLO texto: cambia con el tema. Para fondos de acción usar los tokens --color-whatsapp*. */
   --color-brand-green-ink: #2a6338;
   /* Naranja de marca oscurecido para TEXTO (precios): el naranja puro da 2,5:1 sobre blanco; este da 5:1. */
   --color-brand-orange-ink: #b3500f;
@@ -30,7 +31,14 @@
   /* Fijos (no cambian con el tema): tinta sobre naranja (6,4:1) y crema del disco detrás del logo. */
   --color-brand-charcoal: #202020;
   --color-brand-cream-fixed: #faf8f3;
+  /* Texto sobre un fondo «tinta»: el fondo se invierte con el tema, así que su texto también. */
+  --color-on-ink: #ffffff;
+  /* Acción de WhatsApp, igual en los dos temas. Texto blanco: 5,3:1 en reposo, 7,6:1 al pasar y 10:1 al presionar. */
+  --color-whatsapp: #1f7a45;
+  --color-whatsapp-hover: #17633a;
+  --color-whatsapp-active: #124f2e;
   --font-sans: var(--font-geist-sans), system-ui, sans-serif;
+  --font-display: var(--font-nunito), var(--font-geist-sans), system-ui, sans-serif;
 }
 
 /* ---- Modo oscuro del catálogo ----
@@ -54,7 +62,8 @@ html[data-theme="dark"] {
   --color-brand-photo: #e9e7e1;
   --color-tint-orange: #33291f;
   --color-tint-green: #1f3026;
-  --color-nav: #1a3324;
+  --color-nav: #1f3d2b;
+  --color-on-ink: #121a16;
 }
 
 /* El panel de administración no tiene modo oscuro: conserva siempre los colores claros. */
@@ -73,15 +82,11 @@ html[data-theme="dark"] {
   --color-brand-photo: #f4f2ee;
   --color-tint-orange: #fdf1e7;
   --color-tint-green: #eaf4ec;
+  --color-on-ink: #ffffff;
 }
 body:has(.panel-light) {
   background: #faf8f3;
   color: #202020;
-}
-
-/* Botones con fondo «tinta» y texto blanco: en oscuro la tinta es clara, así que el texto pasa a ser oscuro. */
-html[data-theme="dark"] :not(.panel-light *)[class*="bg-brand-ink"][class*="text-white"] {
-  color: var(--color-brand-cream);
 }
 
 :root {
@@ -294,7 +299,7 @@ html:has(.product-modal[open]) {
 
 /* ---- Identidad del catálogo público ---- */
 
-/* La cápsula gana sombra y se angosta apenas al bajar (sin JavaScript, donde el navegador lo permite). */
+/* La cápsula gana sombra al bajar (sin JavaScript, donde el navegador lo permite). */
 .nav-capsule {
   box-shadow: 0 8px 24px -10px rgb(10 30 18 / 0.45);
 }
@@ -308,7 +313,7 @@ html:has(.product-modal[open]) {
   }
 }
 @keyframes nav-settle {
-  to { box-shadow: 0 14px 34px -12px rgb(10 30 18 / 0.6); max-width: 54rem; }
+  to { box-shadow: 0 14px 34px -12px rgb(10 30 18 / 0.6); }
 }
 
 /* Menú lateral (src/components/site-menu.tsx): entra desde la izquierda. */
@@ -360,8 +365,8 @@ html:has(.site-menu[open]) {
 
 /* Tickets de categoría: muescas en la línea de corte y perforaciones en los bordes, recortadas con máscara. */
 .ticket {
-  --notch: 0.6rem;
-  --stub: 3rem;
+  --notch: 0.5rem;
+  --stub: 2.25rem;
   mask-image:
     radial-gradient(circle var(--notch) at calc(100% - var(--stub)) 0, transparent 97%, #000 100%),
     radial-gradient(circle var(--notch) at calc(100% - var(--stub)) 100%, transparent 97%, #000 100%),
@@ -373,7 +378,7 @@ html:has(.site-menu[open]) {
 }
 @media (min-width: 640px) {
   .ticket {
-    --stub: 3.75rem;
+    --stub: 3.25rem;
   }
 }
 .ticket-wrap {
@@ -410,8 +415,10 @@ html:has(.site-menu[open]) {
 }
 
 /* ---- Pantalla de carga de marca (src/components/intro-loader.tsx) ----
-   Solo se ve si el script de src/app/layout.tsx marcó <html data-intro> antes de pintar (primera entrada a la
-   portada en la sesión). Sin JavaScript no aparece; si JavaScript falla después, se retira sola. */
+   Solo se ve si el script de src/app/layout.tsx marcó <html data-intro> antes de pintar: primera entrada a la portada
+   en la sesión y sin movimiento reducido. Se retira sola por CSS al terminar la secuencia (1,85 s), haya cargado o no
+   JavaScript, y el mismo script permite saltarla desde el primer momento. Mientras tanto lo de atrás queda con
+   visibility:hidden: no recibe foco ni lo anuncia un lector de pantalla. */
 .intro {
   display: none;
 }
@@ -424,15 +431,40 @@ html[data-intro] .intro {
   padding: 1.5rem;
   background: var(--color-brand-forest);
   color: var(--color-on-nav);
-  animation: intro-failsafe 0.3s linear 25s forwards;
+  animation: intro-out 0.3s ease-out 1.85s forwards;
 }
-@keyframes intro-failsafe {
+@keyframes intro-out {
   to { opacity: 0; visibility: hidden; }
 }
-html[data-intro] .intro[data-state="leaving"] {
-  opacity: 0;
-  transform: scale(1.015);
-  transition: opacity 0.42s ease-out, transform 0.42s ease-out;
+html[data-intro="play"] body > :not(.intro) {
+  visibility: hidden;
+  animation: intro-reveal 0s linear 1.85s forwards;
+}
+@keyframes intro-reveal {
+  to { visibility: visible; }
+}
+html[data-intro="leaving"] .intro {
+  animation: intro-out 0.2s ease-out forwards;
+}
+.intro-skip {
+  position: absolute;
+  bottom: max(1.25rem, env(safe-area-inset-bottom));
+  left: 50%;
+  translate: -50% 0;
+  min-height: 2.75rem;
+  min-width: 2.75rem;
+  padding: 0 1.25rem;
+  border-radius: 999px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-on-nav);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.35);
+}
+.intro-skip:hover {
+  background: rgb(255 255 255 / 0.12);
+}
+.intro-skip:focus-visible {
+  outline-color: var(--color-on-nav);
 }
 .intro-stage {
   --intro-wordmark: clamp(8.5rem, 36vw, 15.5rem);
@@ -445,7 +477,7 @@ html[data-intro] .intro[data-state="leaving"] {
   position: relative;
   width: clamp(6.5rem, 26vw, 10.5rem);
   aspect-ratio: 1;
-  animation: intro-globe-in 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation: intro-globe-in 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 @keyframes intro-globe-in {
   from { opacity: 0; transform: scale(0.82); }
@@ -461,7 +493,7 @@ html[data-intro] .intro[data-state="leaving"] {
 .intro-trail {
   stroke-dasharray: 1;
   stroke-dashoffset: 1;
-  animation: intro-trail 1.5s cubic-bezier(0.45, 0.05, 0.55, 0.95) 0.55s forwards, intro-trail-out 0.5s ease-out 2.2s forwards;
+  animation: intro-trail 0.95s cubic-bezier(0.45, 0.05, 0.55, 0.95) 0.3s forwards, intro-trail-out 0.35s ease-out 1.4s forwards;
 }
 @keyframes intro-trail {
   to { stroke-dashoffset: 0; }
@@ -471,7 +503,7 @@ html[data-intro] .intro[data-state="leaving"] {
 }
 .intro-plane {
   opacity: 0;
-  animation: intro-plane 2.3s linear 0.5s forwards;
+  animation: intro-plane 1.4s linear 0.28s forwards;
 }
 @keyframes intro-plane {
   0% { opacity: 0; }
@@ -483,7 +515,7 @@ html[data-intro] .intro[data-state="leaving"] {
   flex: none;
   width: 0;
   overflow: hidden;
-  animation: intro-unfold 0.62s cubic-bezier(0.2, 0.8, 0.2, 1) 2.08s forwards;
+  animation: intro-unfold 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) 1.25s forwards;
 }
 @keyframes intro-unfold {
   to { width: calc(var(--intro-pad) + 2px + var(--intro-gap) + var(--intro-wordmark)); }
@@ -496,7 +528,7 @@ html[data-intro] .intro[data-state="leaving"] {
   padding-left: var(--intro-pad);
   opacity: 0;
   transform: translateX(-14px);
-  animation: intro-name-in 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) 2.15s forwards;
+  animation: intro-name-in 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) 1.3s forwards;
 }
 @keyframes intro-name-in {
   to { opacity: 1; transform: none; }
@@ -508,7 +540,7 @@ html[data-intro] .intro[data-state="leaving"] {
   border-radius: 2px;
   background: color-mix(in srgb, var(--color-on-nav) 55%, transparent);
   transform: scaleY(0);
-  animation: intro-rule-in 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) 2.08s forwards;
+  animation: intro-rule-in 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) 1.25s forwards;
 }
 @keyframes intro-rule-in {
   to { transform: none; }
@@ -517,13 +549,4 @@ html[data-intro] .intro[data-state="leaving"] {
   flex: none;
   width: var(--intro-wordmark);
   height: auto;
-}
-@media (prefers-reduced-motion: reduce) {
-  /* Quieto y completo desde el primer cuadro; se retira cuando la página está lista. */
-  .intro-name { width: auto; overflow: visible; animation: none; }
-  .intro-globe,
-  .intro-rule { animation: none; transform: none; }
-  .intro-name-inner { animation: none; opacity: 1; transform: none; }
-  .intro-orbit { display: none; }
-  html[data-intro] .intro[data-state="leaving"] { transition: none; }
 }

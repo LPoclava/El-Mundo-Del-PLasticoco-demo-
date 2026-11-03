@@ -18,6 +18,7 @@ export type AdminBanner = {
   linkUrl: string | null;
   imageAlt: string | null;
   imagePath: string;
+  mobileImagePath: string | null;
   isActive: boolean;
   position: number;
   startsAt: string | null;
@@ -39,15 +40,23 @@ export type BannerInput = {
 
 type Row = {
   id: string; title: string | null; body: string | null; badge: string | null; cta_label: string | null;
-  link_url: string | null; image_alt: string | null; image_path: string; is_active: boolean;
+  link_url: string | null; image_alt: string | null; image_path: string; image_mobile_path?: string | null; is_active: boolean;
   position: number; starts_at: string | null; ends_at: string | null; updated_at: string;
 };
 
-const COLUMNS = "id,title,body,badge,cta_label,link_url,image_alt,image_path,is_active,position,starts_at,ends_at,updated_at";
+const LEGACY_COLUMNS = "id,title,body,badge,cta_label,link_url,image_alt,image_path,is_active,position,starts_at,ends_at,updated_at";
+const FULL_COLUMNS = `${LEGACY_COLUMNS},image_mobile_path`;
+/** La columna image_mobile_path llega con la migración 20261103000001; listBanners detecta si ya está aplicada. */
+let mobileColumnAvailable = true;
+const columns = () => (mobileColumnAvailable ? FULL_COLUMNS : LEGACY_COLUMNS);
+const MIGRATION_PENDING = "Para guardar una imagen de celular falta aplicar la migración 20261103000001 en la base de datos.";
+
+/** Cambios en el arte para celular: null reemplaza por la imagen dada o, con remove, la quita. */
+export type MobileImageChange = { image: PreparedImage | null; remove: boolean };
 
 const fromRow = (r: Row): AdminBanner => ({
   id: r.id, title: r.title, body: r.body, badge: r.badge, ctaLabel: r.cta_label, linkUrl: r.link_url,
-  imageAlt: r.image_alt, imagePath: r.image_path, isActive: r.is_active, position: r.position,
+  imageAlt: r.image_alt, imagePath: r.image_path, mobileImagePath: r.image_mobile_path ?? null, isActive: r.is_active, position: r.position,
   startsAt: r.starts_at, endsAt: r.ends_at, updatedAt: r.updated_at,
 });
 
@@ -57,9 +66,15 @@ const toRow = (b: BannerInput) => ({
 });
 
 export async function listBanners(db: SupabaseClient): Promise<AdminBanner[]> {
-  const { data, error } = await db.from("promo_banners").select(COLUMNS).order("position").order("created_at");
+  const read = (cols: string) => db.from("promo_banners").select(cols).order("position").order("created_at");
+  mobileColumnAvailable = true;
+  let { data, error } = await read(FULL_COLUMNS);
+  if (error && (error.code === "42703" || error.code === "PGRST204")) {
+    mobileColumnAvailable = false;
+    ({ data, error } = await read(LEGACY_COLUMNS));
+  }
   if (error) throw new Error(friendlyError(error));
-  return ((data ?? []) as Row[]).map(fromRow);
+  return ((data ?? []) as unknown as Row[]).map(fromRow);
 }
 
 async function upload(db: SupabaseClient, folder: "banners" | "categories", image: PreparedImage): Promise<string> {
@@ -86,18 +101,22 @@ async function isPathInUse(db: SupabaseClient, path: string): Promise<boolean> {
   return error ? true : (count ?? 0) > 0;
 }
 
-export async function createBanner(db: SupabaseClient, input: BannerInput, image: PreparedImage, nextPosition: number): Promise<AdminBanner> {
+export async function createBanner(db: SupabaseClient, input: BannerInput, image: PreparedImage, nextPosition: number, mobileImage: PreparedImage | null = null): Promise<AdminBanner> {
+  if (mobileImage && !mobileColumnAvailable) throw new Error(MIGRATION_PENDING);
   const path = await upload(db, "banners", image);
+  const mobilePath = mobileImage ? await upload(db, "banners", mobileImage) : null;
   const { data, error } = await db
     .from("promo_banners")
-    .insert({ ...toRow(input), image_path: path, position: nextPosition })
-    .select(COLUMNS)
+    .insert({ ...toRow(input), image_path: path, ...(mobilePath ? { image_mobile_path: mobilePath } : {}), position: nextPosition })
+    .select(columns())
     .single();
   if (error) {
-    await removeFile(db, path); // la fila no se creó: no dejar el archivo suelto
+    // La fila no se creó: no dejar archivos sueltos.
+    await removeFile(db, path);
+    if (mobilePath) await removeFile(db, mobilePath);
     throw new Error(friendlyError(error));
   }
-  return fromRow(data as Row);
+  return fromRow(data as unknown as Row);
 }
 
 /** Con `image` reemplaza la foto: sube la nueva, actualiza la fila y recién entonces borra la vieja. */
@@ -106,23 +125,29 @@ export async function updateBanner(
   current: AdminBanner,
   input: BannerInput,
   image: PreparedImage | null,
+  mobile: MobileImageChange = { image: null, remove: false },
 ): Promise<{ banner: AdminBanner; oldFileKept: boolean }> {
+  if (mobile.image && !mobileColumnAvailable) throw new Error(MIGRATION_PENDING);
   const newPath = image ? await upload(db, "banners", image) : null;
+  const newMobilePath = mobile.image ? await upload(db, "banners", mobile.image) : null;
+  const mobileChange = newMobilePath ? { image_mobile_path: newMobilePath } : mobile.remove ? { image_mobile_path: null } : {};
   const { data, error } = await db
     .from("promo_banners")
-    .update({ ...toRow(input), ...(newPath ? { image_path: newPath } : {}) })
+    .update({ ...toRow(input), ...(newPath ? { image_path: newPath } : {}), ...mobileChange })
     .eq("id", current.id)
-    .select(COLUMNS)
+    .select(columns())
     .single();
   if (error) {
     if (newPath) await removeFile(db, newPath);
+    if (newMobilePath) await removeFile(db, newMobilePath);
     throw new Error(friendlyError(error));
   }
+  if ((newMobilePath || mobile.remove) && current.mobileImagePath) await removeFile(db, current.mobileImagePath);
   let oldFileKept = false;
   if (newPath && newPath !== current.imagePath) {
     oldFileKept = (await isPathInUse(db, current.imagePath)) || !(await removeFile(db, current.imagePath));
   }
-  return { banner: fromRow(data as Row), oldFileKept };
+  return { banner: fromRow(data as unknown as Row), oldFileKept };
 }
 
 export async function setBannerActive(db: SupabaseClient, id: string, isActive: boolean): Promise<void> {
@@ -134,6 +159,7 @@ export async function deleteBanner(db: SupabaseClient, banner: AdminBanner): Pro
   const { error } = await db.from("promo_banners").delete().eq("id", banner.id);
   if (error) throw new Error(friendlyError(error));
   const fileKept = (await isPathInUse(db, banner.imagePath)) || !(await removeFile(db, banner.imagePath));
+  if (banner.mobileImagePath) await removeFile(db, banner.mobileImagePath);
   return { fileKept };
 }
 

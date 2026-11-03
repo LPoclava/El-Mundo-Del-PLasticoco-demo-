@@ -48,9 +48,11 @@ next-env.d.ts
 
 /supabase/tests/node_modules
 
-# Fuera del repositorio (se conservan en esta carpeta): migraciones, pruebas, documentación y recursos de marca.
+# Fuera del repositorio (se conservan en esta carpeta): migraciones, scripts sueltos, documentación y recursos de marca.
+# Las pruebas automáticas sí se versionan (no llevan credenciales ni datos de clientes).
 /supabase/
-/scripts/
+/scripts/*
+!/scripts/*.test.mjs
 /docs/
 /Logo/
 /.impeccable/

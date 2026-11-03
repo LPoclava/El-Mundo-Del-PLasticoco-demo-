@@ -6,6 +6,15 @@
 const UUID_AT_END = /([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/;
 const MAX_NAME_PART = 60;
 
+/** Id del título en la ventana flotante del producto: le da su nombre accesible. */
+export const MODAL_TITLE_ID = "ventana-producto-titulo";
+
+/** Nombre para mostrar: arranca en mayúscula aunque se haya cargado en minúscula («palitos» → «Palitos»). */
+export function displayName(name: string): string {
+  const clean = name.trim();
+  return clean.charAt(0).toLocaleUpperCase("es-AR") + clean.slice(1);
+}
+
 /** Nombre en minúsculas, sin tildes y con guiones: "Balde 10 L Rojo" -> "balde-10-l-rojo". */
 export function slugify(text: string): string {
   const slug = text

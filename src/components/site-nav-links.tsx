@@ -4,14 +4,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
-type Section = "inicio" | "catalogo" | "promociones";
+type Section = "inicio" | "catalogo" | "promociones" | "contacto";
 
 let initialHashHandled = false;
 
 const LINK =
-  "relative inline-flex h-11 items-center rounded-full px-3 text-sm font-medium focus-visible:outline-on-nav motion-safe:transition-colors lg:px-4";
+  "relative inline-flex h-11 items-center rounded-full px-3 text-sm font-medium focus-visible:outline-on-nav motion-safe:transition-colors active:bg-white/20";
 
-/** Inicio, Catálogo y Promociones. Sin banners vigentes, Promociones no aparece (no habría a dónde ir). */
+/** Inicio, Catálogo, Promociones y Contacto. Sin banners vigentes, Promociones no aparece (no habría a dónde ir). */
 export function NavLinkList({ active, hasPromos, onSelect }: {
   active: Section | null;
   hasPromos: boolean;
@@ -21,9 +21,10 @@ export function NavLinkList({ active, hasPromos, onSelect }: {
     { id: "inicio", label: "Inicio", href: "/" },
     { id: "catalogo", label: "Catálogo", href: "/#catalogo" },
     ...(hasPromos ? [{ id: "promociones" as const, label: "Promociones", href: "/#promociones" }] : []),
+    { id: "contacto", label: "Contacto", href: "#contacto" },
   ];
   return (
-    <ul className="flex items-center gap-0.5">
+    <ul className="flex items-center">
       {items.map((item) => {
         const current = active === item.id;
         return (
@@ -46,14 +47,16 @@ export function NavLinkList({ active, hasPromos, onSelect }: {
 }
 
 /**
- * Enlaces con la sección actual resaltada: Catálogo mientras esa sección ocupa el centro de la pantalla; Promociones
- * si se llegó con su enlace y el slider sigue a la vista; Inicio en el resto de la portada. Fuera de la portada,
- * ninguno.
+ * Enlaces con la sección actual resaltada, según lo que ocupa el centro de la pantalla: Contacto con el pie a la vista,
+ * Catálogo en esa sección, Promociones si se llegó con su enlace y Inicio mientras se recorre la parte de arriba. En la
+ * franja de beneficios y fuera de la portada no se marca ninguno (salvo Contacto, porque el pie está en todas).
  */
 export function SiteNavLinks({ hasPromos }: { hasPromos: boolean }) {
   const pathname = usePathname();
   const onHome = pathname === "/";
+  const [inHero, setInHero] = useState(true);
   const [inCatalog, setInCatalog] = useState(false);
+  const [inFooter, setInFooter] = useState(false);
   const [promoSelected, setPromoSelected] = useState(false);
 
   // Enlace directo a una sección (/?categoria=cocina#catalogo): las partes de arriba llegan después por streaming y
@@ -73,22 +76,37 @@ export function SiteNavLinks({ hasPromos }: { hasPromos: boolean }) {
   }, []);
 
   useEffect(() => {
-    if (!onHome || typeof IntersectionObserver === "undefined") return;
-    const catalog = document.getElementById("catalogo");
-    const promos = document.getElementById("promociones");
-    const central = new IntersectionObserver(([entry]) => setInCatalog(entry.isIntersecting), { rootMargin: "-45% 0px -50% 0px" });
-    if (catalog) central.observe(catalog);
-    const banner = new IntersectionObserver(([entry]) => {
-      if (!entry.isIntersecting) setPromoSelected(false);
-    });
-    if (promos) banner.observe(promos);
-    return () => {
-      central.disconnect();
-      banner.disconnect();
+    if (typeof IntersectionObserver === "undefined") return;
+    const band = { rootMargin: "-45% 0px -50% 0px" };
+    const watch = (id: string, onChange: (visible: boolean) => void, options?: IntersectionObserverInit) => {
+      const el = document.getElementById(id);
+      if (!el) return null;
+      const observer = new IntersectionObserver(([entry]) => onChange(entry.isIntersecting), options);
+      observer.observe(el);
+      return observer;
     };
+    const observers = [
+      watch("inicio", (visible) => {
+        setInHero(visible);
+        if (!visible) setPromoSelected(false);
+      }, band),
+      watch("catalogo", setInCatalog, band),
+      watch("contacto", setInFooter, { threshold: 0.2 }),
+    ];
+    return () => observers.forEach((o) => o?.disconnect());
   }, [onHome]);
 
-  const active: Section | null = !onHome ? null : inCatalog ? "catalogo" : promoSelected ? "promociones" : "inicio";
+  const active: Section | null = inFooter
+    ? "contacto"
+    : !onHome
+      ? null
+      : inCatalog
+        ? "catalogo"
+        : promoSelected && inHero
+          ? "promociones"
+          : inHero
+            ? "inicio"
+            : null;
 
   return (
     <NavLinkList

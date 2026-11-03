@@ -1,17 +1,18 @@
 import {
-  BANNER_MAX_OUTPUT_WIDTH, IMAGE_MAX_BYTES, PRODUCT_MAX_OUTPUT_WIDTH, validateCategoryImageSize, validateImageFile,
-  productImageWarning, validateImageSize, validateProductImageSize,
+  BANNER_MAX_OUTPUT_WIDTH, BANNER_MOBILE_MAX_OUTPUT_WIDTH, IMAGE_MAX_BYTES, PRODUCT_MAX_OUTPUT_WIDTH, validateBannerMobileSize,
+  validateCategoryImageSize, validateImageFile, productImageWarning, validateImageSize, validateProductImageSize,
 } from "./rules";
 
-/** banner = apaisada 16:7; category = tarjeta casi cuadrada; product = foto casi cuadrada. */
-export type ImageKind = "banner" | "category" | "product";
+/** banner = apaisada 16:7; bannerMobile = 4:3 para celular; category = tarjeta casi cuadrada; product = foto casi cuadrada. */
+export type ImageKind = "banner" | "bannerMobile" | "category" | "product";
 
 const SIZE_CHECK = {
   banner: validateImageSize,
+  bannerMobile: validateBannerMobileSize,
   category: validateCategoryImageSize,
   product: validateProductImageSize,
 } as const;
-const MAX_WIDTH = { banner: BANNER_MAX_OUTPUT_WIDTH, category: BANNER_MAX_OUTPUT_WIDTH, product: PRODUCT_MAX_OUTPUT_WIDTH } as const;
+const MAX_WIDTH = { banner: BANNER_MAX_OUTPUT_WIDTH, bannerMobile: BANNER_MOBILE_MAX_OUTPUT_WIDTH, category: BANNER_MAX_OUTPUT_WIDTH, product: PRODUCT_MAX_OUTPUT_WIDTH } as const;
 
 /** Imagen lista para subir: ya validada, reducida si era muy grande y codificada en WebP si el navegador puede. */
 export type PreparedImage = {

@@ -13,7 +13,7 @@ import {
 } from "@/lib/banners/admin";
 import { prepareImage, type PreparedImage } from "@/lib/banners/image";
 import {
-  BANNER_LIMITS, BANNER_RECOMMENDED_SIZE, STATUS_LABEL, bannerStatus, fromLocalInput,
+  BANNER_LIMITS, BANNER_MOBILE_RECOMMENDED_SIZE, BANNER_RECOMMENDED_SIZE, STATUS_LABEL, bannerStatus, fromLocalInput,
   toLocalInput, validateBannerForm, type BannerFormErrors, type BannerStatus,
 } from "@/lib/banners/rules";
 import { isBrowserSupabaseConfigured } from "@/lib/supabase/browser";
@@ -383,10 +383,14 @@ function BannerForm({ db, banner, nextPosition, onCancel, onSaved, onError }: {
   const [isActive, setIsActive] = useState(banner?.isActive ?? true);
   const [prepared, setPrepared] = useState<PreparedImage | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
+  const [preparedMobile, setPreparedMobile] = useState<PreparedImage | null>(null);
+  const [removeMobile, setRemoveMobile] = useState(false);
+  const [mobileError, setMobileError] = useState<string | null>(null);
   const [errors, setErrors] = useState<BannerFormErrors>({});
   const [busy, setBusy] = useState(false);
   const [categories, setCategories] = useState<AdminCategory[]>([]);
   const previewRef = useRef<string | null>(null);
+  const mobilePreviewRef = useRef<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -394,6 +398,7 @@ function BannerForm({ db, banner, nextPosition, onCancel, onSaved, onError }: {
     return () => {
       cancelled = true;
       if (previewRef.current) URL.revokeObjectURL(previewRef.current);
+      if (mobilePreviewRef.current) URL.revokeObjectURL(mobilePreviewRef.current);
     };
   }, [db]);
 
@@ -408,6 +413,20 @@ function BannerForm({ db, banner, nextPosition, onCancel, onSaved, onError }: {
       setErrors((e) => ({ ...e, hasImage: undefined }));
     } catch (e) {
       setFileError(e instanceof Error ? e.message : "No se pudo leer la imagen.");
+    }
+  }
+
+  async function onMobileFile(file: File | undefined) {
+    if (!file) return;
+    setMobileError(null);
+    try {
+      const image = await prepareImage(file, "bannerMobile");
+      if (mobilePreviewRef.current) URL.revokeObjectURL(mobilePreviewRef.current);
+      mobilePreviewRef.current = image.previewUrl;
+      setPreparedMobile(image);
+      setRemoveMobile(false);
+    } catch (e) {
+      setMobileError(e instanceof Error ? e.message : "No se pudo leer la imagen.");
     }
   }
 
@@ -426,10 +445,10 @@ function BannerForm({ db, banner, nextPosition, onCancel, onSaved, onError }: {
     setBusy(true);
     try {
       if (banner) {
-        const { oldFileKept } = await updateBanner(db, banner, input, prepared);
+        const { oldFileKept } = await updateBanner(db, banner, input, prepared, { image: preparedMobile, remove: removeMobile });
         await onSaved(oldFileKept ? "Cambios guardados. La imagen anterior quedó en Storage y se puede borrar a mano." : "Cambios guardados.");
       } else if (prepared) {
-        await createBanner(db, input, prepared, nextPosition);
+        await createBanner(db, input, prepared, nextPosition, preparedMobile);
         await onSaved(isActive ? "Banner creado. Ya se muestra en el catálogo." : "Banner creado sin activar.");
       }
     } catch (err) {
@@ -439,6 +458,7 @@ function BannerForm({ db, banner, nextPosition, onCancel, onSaved, onError }: {
   }
 
   const previewUrl = prepared?.previewUrl ?? (banner ? productImageUrl(banner.imagePath) : null);
+  const mobilePreviewUrl = preparedMobile?.previewUrl ?? (banner?.mobileImagePath && !removeMobile ? productImageUrl(banner.mobileImagePath) : null);
   const safeLink = linkUrl.trim() && !errors.linkUrl ? linkUrl.trim() : null;
 
   return (
@@ -448,7 +468,7 @@ function BannerForm({ db, banner, nextPosition, onCancel, onSaved, onError }: {
           <PromoCarousel
             banners={[{
               id: "preview", title: clean(title), body: clean(body), badge: clean(badge), ctaLabel: clean(ctaLabel),
-              linkUrl: safeLink, imageUrl: previewUrl, imageAlt: clean(imageAlt),
+              linkUrl: safeLink, imageUrl: previewUrl, mobileImageUrl: mobilePreviewUrl, imageAlt: clean(imageAlt),
             }]}
           />
         </div>
@@ -482,6 +502,44 @@ function BannerForm({ db, banner, nextPosition, onCancel, onSaved, onError }: {
         <p className="-mt-3 text-xs text-brand-muted">
           Lista para subir: {prepared.width} × {prepared.height} px, {(prepared.blob.size / 1024).toFixed(0)} KB.
         </p>
+      )}
+
+      <Field
+        label="Imagen para celular (recomendada)"
+        error={mobileError}
+        hint={`JPG, PNG o WebP, hasta 5 MB. De unos ${BANNER_MOBILE_RECOMMENDED_SIZE}, con textos grandes: en una pantalla angosta la imagen apaisada se achica y no se lee.`}
+      >
+        {({ id, describedBy, invalid }) => (
+          <input
+            id={id}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            aria-describedby={describedBy}
+            aria-invalid={invalid}
+            onChange={(e) => {
+              void onMobileFile(e.target.files?.[0]);
+              e.target.value = "";
+            }}
+            className="block w-full text-sm file:mr-3 file:h-11 file:cursor-pointer file:rounded-lg file:border file:border-brand-line file:bg-white file:px-4 file:text-sm file:font-medium hover:file:border-brand-ink"
+          />
+        )}
+      </Field>
+      {mobilePreviewUrl && (
+        <div className="-mt-3 flex flex-wrap items-center gap-3">
+          <div className="relative aspect-[4/3] w-32 overflow-hidden rounded-lg bg-brand-sand">
+            <Image src={mobilePreviewUrl} alt="Vista previa para celular" fill sizes="128px" className="object-cover" />
+          </div>
+          <Button
+            size="sm"
+            icon="trash"
+            onClick={() => {
+              setPreparedMobile(null);
+              setRemoveMobile(Boolean(banner?.mobileImagePath));
+            }}
+          >
+            Quitar imagen para celular
+          </Button>
+        </div>
       )}
 
       <TextInput label="Descripción de la imagen" value={imageAlt} maxLength={BANNER_LIMITS.alt} error={errors.imageAlt}

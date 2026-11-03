@@ -1,6 +1,7 @@
 import { cacheLife } from "next/cache";
 import type { CatalogProduct, Category, ProductDetail, PromoBanner } from "@/types/product";
 import { isSafeBannerLink } from "@/lib/banners/rules";
+import { displayName } from "@/lib/catalog/product";
 import { getSupabase, isSupabaseConfigured, productImageUrl } from "@/lib/supabase/public";
 
 /**
@@ -123,6 +124,7 @@ type BannerRow = {
   cta_label: string | null;
   link_url: string | null;
   image_path: string;
+  image_mobile_path?: string | null;
   image_alt: string | null;
 };
 
@@ -140,17 +142,17 @@ async function fetchPromoBanners(): Promise<PromoBanner[]> {
   "use cache";
   cacheLife(CATALOG_CACHE);
 
-  const { data, error } = await getSupabase()
-    .from("public_promo_banners")
-    .select("id,title,body,badge,cta_label,link_url,image_path,image_alt")
-    .order("position")
-    .order("id")
-    .limit(10);
+  // La columna del arte para celular llega con la migración 20261103000001: sin ella se lee lo anterior.
+  const read = (columns: string) =>
+    getSupabase().from("public_promo_banners").select(columns).order("position").order("id").limit(10);
+  const base = "id,title,body,badge,cta_label,link_url,image_path,image_alt";
+  let { data, error } = await read(`${base},image_mobile_path`);
+  if (error && isMissingColumn(error)) ({ data, error } = await read(base));
   if (error) {
     console.error(`No se pudieron leer los banners: ${error.message}`);
     return [];
   }
-  return ((data ?? []) as BannerRow[]).map((b) => ({
+  return ((data ?? []) as unknown as BannerRow[]).map((b) => ({
     id: b.id,
     title: b.title,
     body: b.body,
@@ -158,6 +160,7 @@ async function fetchPromoBanners(): Promise<PromoBanner[]> {
     ctaLabel: b.cta_label,
     linkUrl: b.link_url && isSafeBannerLink(b.link_url) ? b.link_url : null,
     imageUrl: productImageUrl(b.image_path),
+    mobileImageUrl: b.image_mobile_path ? productImageUrl(b.image_mobile_path) : null,
     imageAlt: b.image_alt,
   }));
 }
@@ -213,7 +216,7 @@ async function fromSupabase(query: CatalogQuery): Promise<CatalogPage> {
 
   const items: CatalogProduct[] = rows.map((r) => ({
     id: r.id,
-    name: r.name,
+    name: displayName(r.name),
     brand: r.brand,
     categorySlug: r.category_slug,
     imageUrl: productImageUrl(r.image_path),
@@ -278,7 +281,7 @@ async function fetchProduct(id: string): Promise<ProductDetail | null> {
 
   return {
     id: p.id,
-    name: p.name,
+    name: displayName(p.name),
     brand: p.brand,
     description: p.description?.trim() || null,
     category: { slug: p.category_slug, name: name(p.category_slug) },
@@ -313,7 +316,7 @@ async function fetchRelated(id: string, categorySlug: string): Promise<CatalogPr
   }
   return ((result.data ?? []) as CatalogRow[]).map((r) => ({
     id: r.id,
-    name: r.name,
+    name: displayName(r.name),
     brand: r.brand,
     categorySlug: r.category_slug,
     imageUrl: productImageUrl(r.image_path),

@@ -2,7 +2,7 @@ import { ProductGallery } from "@/components/product/product-gallery";
 import { ProductPurchase } from "@/components/product/product-purchase";
 import { getProduct } from "@/lib/catalog/repository";
 import { productFeatures } from "@/lib/catalog/features";
-import { parseProductSlug, productPath } from "@/lib/catalog/product";
+import { MODAL_TITLE_ID, parseProductSlug, productPath } from "@/lib/catalog/product";
 
 /**
  * Contenido de la ventana flotante: los mismos datos reales de la ficha (galería, descripción, precio, variantes,
@@ -16,7 +16,7 @@ export async function ProductQuickView({ params }: { params: Promise<{ slug: str
   if (!product) {
     return (
       <div className="px-6 py-14 text-center">
-        <h2 className="text-lg font-semibold">Este producto no está disponible</h2>
+        <h2 id={MODAL_TITLE_ID} className="text-lg font-semibold">Este producto no está disponible</h2>
         <p className="mt-1 text-brand-muted">Puede que ya no esté en el catálogo.</p>
       </div>
     );
@@ -31,7 +31,7 @@ export async function ProductQuickView({ params }: { params: Promise<{ slug: str
 
       <div className="min-w-0 md:pt-2">
         <p className="pr-12 text-xs font-medium uppercase tracking-wide text-brand-green-ink md:pr-0">{category}</p>
-        <h2 className="mt-1 text-xl font-semibold leading-tight tracking-tight text-balance sm:text-2xl">{product.name}</h2>
+        <h2 id={MODAL_TITLE_ID} className="mt-1 font-display text-xl font-extrabold leading-tight text-balance sm:text-2xl">{product.name}</h2>
 
         {product.description && <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-brand-ink/90 text-pretty">{product.description}</p>}
 

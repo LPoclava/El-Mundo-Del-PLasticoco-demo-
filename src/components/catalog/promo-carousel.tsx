@@ -1,11 +1,13 @@
 "use client";
 
-import Image from "next/image";
+import Image, { getImageProps } from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { CATALOG_COPY } from "@/config/catalog-copy";
 import type { PromoBanner } from "@/types/product";
-import { AUTOPLAY_MS, BANNER_RATIO, isExternalLink, stepIndex, swipeDirection } from "@/lib/banners/rules";
+import { AUTOPLAY_MS, BANNER_MOBILE_RATIO, BANNER_RATIO, isExternalLink, stepIndex, swipeDirection } from "@/lib/banners/rules";
+
+const DESKTOP_SIZES = "(min-width: 1152px) 1120px, 100vw";
 
 type Props = {
   banners: PromoBanner[];
@@ -30,7 +32,8 @@ const ARROW_OVERLAY =
   "absolute top-1/2 z-10 hidden size-11 -translate-y-1/2 place-items-center rounded-full bg-surface/80 text-brand-ink shadow-sm backdrop-blur-sm hover:bg-surface motion-safe:transition-colors md:grid";
 
 /**
- * Slider de promociones: solo la imagen, con flechas e indicadores encima. Avanza solo cada 10 s y vuelve al primero
+ * Slider de promociones: solo la imagen, con flechas encima e indicadores debajo, para no tapar productos ni textos.
+ * Con todos los banners con arte para celular, en pantallas angostas usa esa imagen y esa proporción. Avanza solo cada 10 s y vuelve al primero
  * al llegar al último. La cuenta se reinicia al cambiar a mano y se detiene cuando el usuario lo está usando
  * (cursor encima, foco dentro, dedo apoyado), cuando el carrusel no está en pantalla, cuando la pestaña está
  * oculta y siempre que el sistema pida movimiento reducido (en ese caso solo se cambia con las flechas o
@@ -39,6 +42,8 @@ const ARROW_OVERLAY =
  */
 export function PromoCarousel({ banners, intervalMs = AUTOPLAY_MS }: Props) {
   const count = banners.length;
+  // La proporción es la misma para todos: si falta el arte de uno, el celular usa la apaisada en todos (no salta).
+  const mobileArt = count > 0 && banners.every((b) => b.mobileImageUrl);
   const [index, setIndex] = useState(0);
   const [hovered, setHovered] = useState(false);
   const [focused, setFocused] = useState(false);
@@ -103,8 +108,8 @@ export function PromoCarousel({ banners, intervalMs = AUTOPLAY_MS }: Props) {
       }}
     >
       <div
-        className="relative overflow-hidden rounded-2xl bg-brand-sand sm:rounded-3xl"
-        style={{ aspectRatio: BANNER_RATIO, touchAction: "pan-y" }}
+        className="relative aspect-[var(--ratio-mobile)] overflow-hidden rounded-2xl bg-brand-sand sm:rounded-3xl md:aspect-[var(--ratio-desktop)]"
+        style={{ "--ratio-mobile": mobileArt ? BANNER_MOBILE_RATIO : BANNER_RATIO, "--ratio-desktop": BANNER_RATIO, touchAction: "pan-y" } as React.CSSProperties}
         onPointerDown={(e) => {
           swipe.current = { x: e.clientX, y: e.clientY };
           swiped.current = false;
@@ -147,6 +152,7 @@ export function PromoCarousel({ banners, intervalMs = AUTOPLAY_MS }: Props) {
               count={count}
               active={i === current}
               eager={i === 0}
+              mobileArt={Boolean(mobileArt)}
             />
           ))}
         </div>
@@ -159,37 +165,38 @@ export function PromoCarousel({ banners, intervalMs = AUTOPLAY_MS }: Props) {
             <button type="button" onClick={() => go(1)} aria-label="Promoción siguiente" className={`${ARROW_OVERLAY} right-3`}>
               <Chevron direction="right" />
             </button>
-            {/* Indicadores chicos y, si rota solo, un botón para detenerlo. Sobre un fondo propio: se leen en cualquier banner. */}
-            <div className="absolute bottom-2 left-1/2 z-10 flex -translate-x-1/2 items-center rounded-full bg-black/40 px-1 backdrop-blur-sm sm:bottom-3">
-              {banners.map((banner, i) => (
-                <button
-                  key={banner.id}
-                  type="button"
-                  onClick={() => setIndex(i)}
-                  aria-label={`Ir a la promoción ${i + 1}`}
-                  aria-current={i === current ? "true" : undefined}
-                  className="grid size-6 place-items-center rounded-full"
-                >
-                  <span className={`block rounded-full bg-white motion-safe:transition-all ${i === current ? "h-2 w-4" : "size-2 opacity-60"}`} />
-                </button>
-              ))}
-              {!reduced && (
-                <button
-                  type="button"
-                  onClick={() => setPaused((p) => !p)}
-                  aria-label={paused ? "Reanudar el cambio automático" : "Detener el cambio automático"}
-                  className="grid size-6 place-items-center rounded-full text-white"
-                >
-                  <svg viewBox="0 0 24 24" className="size-3.5" fill="currentColor" aria-hidden>
-                    {paused ? <path d="M8 5v14l11-7L8 5Z" /> : <path d="M7 5h4v14H7V5Zm6 0h4v14h-4V5Z" />}
-                  </svg>
-                </button>
-              )}
-            </div>
           </>
         )}
       </div>
 
+      {count > 1 && (
+        <div className="mt-0.5 flex items-center justify-center">
+          {banners.map((banner, i) => (
+            <button
+              key={banner.id}
+              type="button"
+              onClick={() => setIndex(i)}
+              aria-label={`Ir a la promoción ${i + 1}`}
+              aria-current={i === current ? "true" : undefined}
+              className="group/dot grid size-11 place-items-center rounded-full"
+            >
+              <span className={`block rounded-full motion-safe:transition-all ${i === current ? "h-2 w-5 bg-brand-green" : "size-2 bg-brand-ink/35 group-hover/dot:bg-brand-ink/60"}`} />
+            </button>
+          ))}
+          {!reduced && (
+            <button
+              type="button"
+              onClick={() => setPaused((p) => !p)}
+              aria-label={paused ? "Reanudar el cambio automático" : "Detener el cambio automático"}
+              className="grid size-11 place-items-center rounded-full text-brand-muted hover:text-brand-ink motion-safe:transition-colors"
+            >
+              <svg viewBox="0 0 24 24" className="size-4" fill="currentColor" aria-hidden>
+                {paused ? <path d="M8 5v14l11-7L8 5Z" /> : <path d="M7 5h4v14H7V5Zm6 0h4v14h-4V5Z" />}
+              </svg>
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -199,26 +206,29 @@ export function PromoCarousel({ banners, intervalMs = AUTOPLAY_MS }: Props) {
  * texto). Con destino configurado toda la imagen es el enlace; sin destino es una imagen sin acción.
  * El nombre accesible sale de la descripción de la imagen (o del título cargado en el panel).
  */
-function Slide({ banner, position, count, active, eager }: {
+function Slide({ banner, position, count, active, eager, mobileArt }: {
   banner: PromoBanner;
   position: number;
   count: number;
   active: boolean;
   eager: boolean;
+  mobileArt: boolean;
 }) {
   const alt = banner.imageAlt ?? banner.title ?? "Promoción de El Mundo del Plástico";
-  const image = (
-    <Image
-      src={banner.imageUrl}
-      alt={alt}
-      fill
-      sizes="(min-width: 1280px) 1248px, 100vw"
-      quality={90}
-      className="object-cover"
-      draggable={false}
-      preload={eager}
-    />
-  );
+  const image = mobileArt && banner.mobileImageUrl
+    ? <ArtDirectedImage desktop={banner.imageUrl} mobile={banner.mobileImageUrl} alt={alt} eager={eager} />
+    : (
+      <Image
+        src={banner.imageUrl}
+        alt={alt}
+        fill
+        sizes={DESKTOP_SIZES}
+        quality={90}
+        className="object-cover"
+        draggable={false}
+        preload={eager}
+      />
+    );
   // El contorno de foco va hacia adentro: el contenedor recorta lo que sobresale.
   const box = "relative block h-full w-full rounded-xl focus-visible:-outline-offset-4";
   return (
@@ -238,6 +248,19 @@ function Slide({ banner, position, count, active, eager }: {
         <Link href={banner.linkUrl} className={box}>{image}</Link>
       )}
     </div>
+  );
+}
+
+/** Una imagen para cada ancho (no un recorte de la misma): el navegador baja solo la que corresponde. */
+function ArtDirectedImage({ desktop, mobile, alt, eager }: { desktop: string; mobile: string; alt: string; eager: boolean }) {
+  const common = { alt, fill: true, quality: 90 };
+  const { props: { srcSet: desktopSet } } = getImageProps({ ...common, src: desktop, sizes: DESKTOP_SIZES });
+  const { props: mobileProps } = getImageProps({ ...common, src: mobile, sizes: "100vw", loading: eager ? "eager" : "lazy" });
+  return (
+    <picture>
+      <source media="(min-width: 768px)" srcSet={desktopSet} sizes={DESKTOP_SIZES} />
+      <img {...mobileProps} alt={alt} draggable={false} className="object-cover" />
+    </picture>
   );
 }
 

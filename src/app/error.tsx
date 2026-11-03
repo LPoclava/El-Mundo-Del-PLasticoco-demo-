@@ -9,7 +9,7 @@ export default function Error({ reset }: { error: Error; reset: () => void }) {
         <button
           type="button"
           onClick={reset}
-          className="mt-5 h-11 rounded-lg bg-brand-ink px-5 text-sm font-medium text-white hover:bg-brand-ink/85"
+          className="mt-5 h-11 rounded-lg bg-brand-ink px-5 text-sm font-medium text-on-ink hover:bg-brand-ink/85"
         >
           Reintentar
         </button>

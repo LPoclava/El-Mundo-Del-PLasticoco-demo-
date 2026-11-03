@@ -12,7 +12,7 @@ export default function ProductError({ reset }: { error: Error; reset: () => voi
           <button
             type="button"
             onClick={reset}
-            className="h-11 rounded-lg bg-brand-ink px-5 text-sm font-medium text-white hover:bg-brand-ink/85"
+            className="h-11 rounded-lg bg-brand-ink px-5 text-sm font-medium text-on-ink hover:bg-brand-ink/85"
           >
             Reintentar
           </button>

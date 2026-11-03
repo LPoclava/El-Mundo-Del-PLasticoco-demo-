@@ -63,7 +63,7 @@ export function CategoryNav({ categories, active, q }: Props) {
         </p>
         <Link
           href={catalogHref({ q })}
-          className="inline-flex min-h-11 items-center gap-1 text-sm font-medium text-brand-muted underline underline-offset-4 hover:text-brand-ink"
+          className="inline-flex min-h-11 items-center gap-1 text-sm font-medium text-brand-muted underline underline-offset-4 hover:text-brand-ink active:text-brand-ink"
         >
           Ver todos los productos
         </Link>

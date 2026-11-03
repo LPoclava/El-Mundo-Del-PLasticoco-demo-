@@ -20,6 +20,11 @@ export const BANNER_RATIO_MIN = 2.0;
 export const BANNER_RATIO_MAX = 2.6;
 export const BANNER_RECOMMENDED_SIZE = "1600 × 700 px";
 export const BANNER_MIN_WIDTH = 800;
+/** Arte para celular (opcional): más alto que el apaisado, para que el texto se lea en una pantalla angosta. */
+export const BANNER_MOBILE_RATIO = 4 / 3;
+export const BANNER_MOBILE_RECOMMENDED_SIZE = "1200 × 900 px";
+export const BANNER_MOBILE_MIN_WIDTH = 600;
+export const BANNER_MOBILE_MAX_OUTPUT_WIDTH = 1200;
 /** Se reduce al subir: más ancho no mejora la imagen en pantalla y pesa más. */
 export const BANNER_MAX_OUTPUT_WIDTH = 1920;
 
@@ -83,6 +88,19 @@ export function validateImageSize(width: number, height: number): string | null 
   const ratio = width / height;
   if (ratio < BANNER_RATIO_MIN || ratio > BANNER_RATIO_MAX) {
     return `La proporción no es la de un banner (${width} × ${height}). Tiene que ser apaisada, de unos ${BANNER_RECOMMENDED_SIZE}, para que no se recorte nada.`;
+  }
+  return null;
+}
+
+/** Imagen del banner para celular: no se recorta, así que la proporción tiene que ser la del espacio que ocupa. */
+export function validateBannerMobileSize(width: number, height: number): string | null {
+  if (!(width > 0 && height > 0)) return "No se pudo leer el tamaño de la imagen.";
+  if (width < BANNER_MOBILE_MIN_WIDTH) {
+    return `La imagen para celular es muy chica (${width} px de ancho). Usá al menos ${BANNER_MOBILE_MIN_WIDTH} px; lo ideal es ${BANNER_MOBILE_RECOMMENDED_SIZE}.`;
+  }
+  const ratio = width / height;
+  if (ratio < 1.2 || ratio > 1.45) {
+    return `La proporción no sirve para celular (${width} × ${height}). Tiene que ser de unos ${BANNER_MOBILE_RECOMMENDED_SIZE}, para que no se recorte nada.`;
   }
   return null;
 }

@@ -16,8 +16,16 @@ function subscribe(callback: () => void) {
 }
 const current = (): Theme => (document.documentElement.dataset.theme === "dark" ? "dark" : "light");
 
+/** Colores de fondo de cada tema (--color-brand-cream), para la barra del navegador en celulares. */
+const BROWSER_BAR: Record<Theme, string> = { light: "#faf8f3", dark: "#121a16" };
+
+function syncBrowserBar(theme: Theme) {
+  document.querySelectorAll('meta[name="theme-color"]').forEach((meta) => meta.setAttribute("content", BROWSER_BAR[theme]));
+}
+
 function apply(next: Theme) {
   document.documentElement.dataset.theme = next;
+  syncBrowserBar(next);
   window.dispatchEvent(new Event("mp-theme"));
 }
 
@@ -41,6 +49,7 @@ export function ThemeToggle() {
 
   // Sin elección propia, acompaña los cambios del sistema operativo.
   useEffect(() => {
+    syncBrowserBar(current());
     const media = window.matchMedia("(prefers-color-scheme: dark)");
     const onChange = () => {
       if (storedTheme() !== "light" && storedTheme() !== "dark") apply(media.matches ? "dark" : "light");

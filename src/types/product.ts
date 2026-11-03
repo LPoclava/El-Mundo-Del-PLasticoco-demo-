@@ -24,6 +24,8 @@ export type PromoBanner = {
   ctaLabel: string | null;
   linkUrl: string | null;
   imageUrl: string;
+  /** Arte para celular; sin él, el celular usa la imagen apaisada. */
+  mobileImageUrl?: string | null;
   imageAlt: string | null;
 };
 

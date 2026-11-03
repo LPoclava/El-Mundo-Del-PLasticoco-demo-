@@ -5,7 +5,7 @@ import { ContactIcon } from "@/components/contact/contact-icon";
 import { generalInquiryHref } from "@/lib/contact";
 import { GlobeMotif } from "./globe-motif";
 import { Pagination } from "./pagination";
-import { GRID_CLASS, ProductGrid } from "./product-grid";
+import { gridClass, ProductGrid } from "./product-grid";
 
 /** Lee la URL (request-time) y consulta; debe renderizarse dentro de <Suspense>. */
 export async function CatalogResults({ searchParams }: { searchParams: Promise<RawParams> }) {
@@ -34,12 +34,13 @@ export async function CatalogResults({ searchParams }: { searchParams: Promise<R
             `${result.total} productos`
           )}
         </p>
-        {hasFilters && (
+        {/* Con una categoría elegida, «Ver todos los productos» ya está en su barra (category-nav.tsx). */}
+        {query.q && (
           <Link
             href="/"
             className="inline-flex min-h-11 items-center font-medium underline underline-offset-4 hover:decoration-2"
           >
-            {query.q ? "Ver todo el catálogo" : "Quitar filtros"}
+            Ver todo el catálogo
           </Link>
         )}
       </div>
@@ -57,7 +58,7 @@ export async function CatalogResults({ searchParams }: { searchParams: Promise<R
                     href={whatsapp}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-brand-green px-5 text-sm font-semibold text-white hover:bg-brand-green-ink"
+                    className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-whatsapp hover:bg-whatsapp-hover active:bg-whatsapp-active px-5 text-sm font-semibold text-white "
                   >
                     <ContactIcon id="whatsapp" className="size-5" />
                     Escribirnos por WhatsApp
@@ -91,10 +92,10 @@ export function CatalogResultsSkeleton() {
   return (
     <div aria-busy="true" aria-label="Cargando productos" className="motion-safe:animate-pulse">
       <div className="mb-4 h-6 w-24 rounded bg-brand-sand" />
-      <div className={GRID_CLASS}>
-        {Array.from({ length: 12 }, (_, i) => (
+      <div className={gridClass(8)}>
+        {Array.from({ length: 8 }, (_, i) => (
           <div key={i} className="overflow-hidden rounded-xl border border-brand-green/15 bg-surface">
-            <div className="aspect-square bg-brand-sand" />
+            <div className="aspect-[4/3] bg-brand-sand" />
             <div className="space-y-2 p-3">
               <div className="h-4 w-3/4 rounded bg-brand-sand" />
               <div className="h-5 w-1/3 rounded bg-brand-sand" />

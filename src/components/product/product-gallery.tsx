@@ -62,7 +62,7 @@ export function ProductGallery({ name, images }: Props) {
           <>
             <ArrowButton side="left" label="Foto anterior" onClick={() => go(index - 1)} />
             <ArrowButton side="right" label="Foto siguiente" onClick={() => go(index + 1)} />
-            <span className="absolute bottom-2 right-2 rounded-full bg-brand-ink/75 px-2 py-0.5 text-xs font-medium tabular-nums text-white">
+            <span className="absolute bottom-2 right-2 rounded-full bg-brand-ink/75 px-2 py-0.5 text-xs font-medium tabular-nums text-on-ink">
               {index + 1}/{count}
             </span>
           </>

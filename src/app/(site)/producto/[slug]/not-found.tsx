@@ -11,7 +11,7 @@ export default function ProductNotFound() {
         <p className="mt-1 text-brand-muted">Puede que ya no esté en el catálogo o que el enlace esté incompleto.</p>
         <Link
           href="/#catalogo"
-          className="mt-5 inline-flex h-11 items-center rounded-lg bg-brand-ink px-5 text-sm font-medium text-white hover:bg-brand-ink/85"
+          className="mt-5 inline-flex h-11 items-center rounded-lg bg-brand-ink px-5 text-sm font-medium text-on-ink hover:bg-brand-ink/85"
         >
           Ver el catálogo
         </Link>

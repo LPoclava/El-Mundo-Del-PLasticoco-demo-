@@ -5,14 +5,13 @@ import { notFound, permanentRedirect } from "next/navigation";
 import { Breadcrumbs, type Crumb } from "@/components/product/breadcrumbs";
 import { ProductGallery } from "@/components/product/product-gallery";
 import { ProductPurchase } from "@/components/product/product-purchase";
-import { HeaderSearch } from "@/components/catalog/header-search";
 import { ProductGrid } from "@/components/catalog/product-grid";
-import { SearchForm } from "@/components/catalog/search-form";
 import { SectionHeading } from "@/components/catalog/section-heading";
 import { getProduct, getRelatedProducts } from "@/lib/catalog/repository";
 import { productFeatures } from "@/lib/catalog/features";
 import { parseProductSlug, productPath, productSlug } from "@/lib/catalog/product";
 import { catalogHref, formatPrice } from "@/lib/catalog/url";
+import { publicSiteUrl } from "@/lib/site-url";
 import type { ProductDetail } from "@/types/product";
 
 /** Ficha válida para el segmento de la URL, o null (404). El id manda: el nombre es solo legible. */
@@ -34,7 +33,7 @@ export async function generateMetadata({ params }: PageProps<"/producto/[slug]">
   return {
     title,
     description: `${summary} ${price}.`,
-    alternates: { canonical: productPath(product) },
+    ...(publicSiteUrl() ? { alternates: { canonical: productPath(product) } } : {}),
     openGraph: {
       type: "website",
       title,
@@ -79,22 +78,15 @@ export default async function ProductPage({ params }: PageProps<"/producto/[slug
   };
 
   return (
-    <main id="contenido" className="mx-auto max-w-7xl px-4 pb-4 pt-2 sm:pt-4">
+    <main id="contenido" className="mx-auto max-w-6xl px-3 pb-4 pt-3 sm:px-4 sm:pt-5">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
-      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
-        <Breadcrumbs items={crumbs} />
-        <div className="w-full shrink-0 sm:max-w-xs">
-          <Suspense fallback={<SearchForm />}>
-            <HeaderSearch />
-          </Suspense>
-        </div>
-      </div>
+      <Breadcrumbs items={crumbs} />
 
       <div className="mt-2 grid gap-6 sm:mt-3 md:grid-cols-2 md:gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:gap-12">
         <ProductGallery name={product.name} images={product.images} />
 
         <div className="min-w-0">
-          <h1 className="text-2xl font-semibold leading-tight tracking-tight text-balance sm:text-3xl">{product.name}</h1>
+          <h1 className="font-display text-2xl font-extrabold leading-tight text-balance sm:text-3xl">{product.name}</h1>
 
           <div className="mt-4 border-t border-brand-line pt-5">
             <ProductPurchase
@@ -154,7 +146,7 @@ async function RelatedProducts({ product, category }: { product: ProductDetail; 
       <ProductGrid products={related} />
       <Link
         href={categoryHref(category.slug)}
-        className="mt-6 inline-flex h-11 items-center rounded-lg bg-brand-ink px-5 text-sm font-medium text-white hover:bg-brand-ink/85"
+        className="mt-6 inline-flex h-11 items-center rounded-lg bg-brand-ink px-5 text-sm font-medium text-on-ink hover:bg-brand-ink/85"
       >
         Ver todo {category.name}
       </Link>
