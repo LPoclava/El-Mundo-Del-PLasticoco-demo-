@@ -1,97 +1,72 @@
+import { LocationGlobe } from "@/components/location-globe";
 import { CONTACT } from "@/config/contact";
-import { getContactChannels, type ContactChannel } from "@/lib/contact";
-import { ContactIcon } from "./contact-icon";
+import { formatPhone, getMapsHref, generalInquiryHref } from "@/lib/contact";
+import { PaymentMethods } from "./payment-methods";
 
-// En celular solo el ícono (48 × 48); desde 640 px, ícono y nombre. Los botones pasan de renglón si no entran.
-const buttonBase =
-  "flex h-12 min-w-12 items-center justify-center gap-2.5 rounded-lg border px-3 text-sm font-medium sm:px-4";
-
-function ChannelButton({ channel }: { channel: ContactChannel }) {
-  const content = (
-    <>
-      <ContactIcon id={channel.id} className="size-6 shrink-0 text-brand-green sm:size-5" />
-      {/* En celular solo se ve el ícono; el nombre queda disponible para lectores de pantalla. */}
-      <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">{channel.label}</span>
-    </>
-  );
-
-  if (!channel.href) {
-    // Solo llega acá en desarrollo: un canal pendiente nunca es un enlace.
-    return (
-      <span
-        aria-disabled="true"
-        title="Pendiente de configurar en src/config/contact.ts"
-        className={`${buttonBase} cursor-not-allowed border-dashed border-brand-line text-brand-ink/45`}
-      >
-        {content}
-      </span>
-    );
-  }
-
+function Row({ term, children }: { term: string; children: React.ReactNode }) {
   return (
-    <a
-      href={channel.href}
-      {...(channel.external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-      className={`${buttonBase} border-brand-line bg-surface hover:border-brand-ink active:bg-brand-sand`}
-    >
-      {content}
-    </a>
+    <div className="grid grid-cols-[6rem_1fr] gap-3 py-2.5">
+      <dt className="text-sm text-brand-muted">{term}</dt>
+      <dd className="min-w-0 font-medium">{children}</dd>
+    </div>
   );
 }
 
 /**
- * Contacto. Las redes (incluido Facebook) se muestran solo acá, no en el pie. La dirección y los
- * horarios aparecen únicamente si están confirmados en src/config/contact.ts (hoy no lo están).
+ * Contacto y ubicación: globo, datos del local y formas de pago; en celular se apilan. Todos los datos salen de
+ * src/config/contact.ts: el que no esté configurado no se muestra. «Cómo llegar» abre Google Maps con la dirección.
  */
 export function ContactSection() {
-  const isDev = process.env.NODE_ENV !== "production";
-  const channels = getContactChannels().filter((c) => c.href || isDev);
   const address = CONTACT.address?.trim() || null;
+  const locality = CONTACT.locality?.trim() || null;
   const hours = CONTACT.hours?.map((h) => h.trim()).filter(Boolean) ?? [];
-  if (channels.length === 0 && !address && hours.length === 0) return null;
+  const phone = formatPhone(CONTACT.phone);
+  const whatsapp = formatPhone(CONTACT.whatsapp);
+  const whatsappHref = generalInquiryHref("Hola, quería hacer una consulta.");
+  const mapsHref = getMapsHref();
+  const globeLabel = locality ? `Globo terráqueo con un marcador en ${locality}` : "Globo terráqueo";
 
   return (
     <section
       id="contacto"
       aria-labelledby="contacto-titulo"
-      className="mt-10 scroll-mt-4 border-t border-brand-line pt-6 lg:pt-8"
+      className="reveal mt-14 grid scroll-mt-4 gap-10 sm:mt-20 md:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.15fr)_minmax(0,1fr)] lg:gap-12"
     >
-      <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-        <div className="min-w-0">
-          <h2 id="contacto-titulo" className="text-xl font-semibold tracking-tight">
-            ¿Tenés alguna consulta?
-          </h2>
-          <span aria-hidden className="mt-2 block h-0.5 w-8 bg-brand-orange" />
-          <p className="mt-3 text-brand-muted">
-            Contactanos a través de nuestras redes o por teléfono.
-          </p>
-          {(address || hours.length > 0) && (
-            <dl className="mt-3 grid gap-1 text-sm">
-              {address && (
-                <div className="flex gap-2"><dt className="font-medium">Dirección:</dt><dd className="text-brand-muted">{address}</dd></div>
-              )}
-              {hours.length > 0 && (
-                <div className="flex gap-2"><dt className="font-medium">Horarios:</dt><dd className="text-brand-muted">{hours.map((h) => <span key={h} className="block">{h}</span>)}</dd></div>
-              )}
-            </dl>
+      <div className="mx-auto w-full max-w-72 self-center md:max-w-none">
+        <LocationGlobe title={globeLabel} className="w-full" />
+      </div>
+
+      <div className="min-w-0">
+        <h2 id="contacto-titulo" className="text-2xl font-semibold tracking-tight">Dónde encontrarnos</h2>
+        <dl className="mt-3 divide-y divide-brand-line">
+          {address && <Row term="Dirección">{address}</Row>}
+          {locality && <Row term="Localidad">{locality}</Row>}
+          {hours.length > 0 && <Row term="Horarios">{hours.map((h) => <span key={h} className="block">{h}</span>)}</Row>}
+          {phone && <Row term="Teléfono"><a href={`tel:+${CONTACT.phone?.replace(/\D/g, "")}`} className="underline-offset-4 hover:underline">{phone}</a></Row>}
+          {whatsapp && whatsappHref && (
+            <Row term="WhatsApp"><a href={whatsappHref} target="_blank" rel="noopener noreferrer" className="underline-offset-4 hover:underline">{whatsapp}</a></Row>
           )}
-        </div>
-        {channels.length > 0 && (
-          <ul className="flex flex-wrap gap-3">
-            {channels.map((channel) => (
-              <li key={channel.id}>
-                <ChannelButton channel={channel} />
-              </li>
-            ))}
-          </ul>
+        </dl>
+        {mapsHref && (
+          <a
+            href={mapsHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-5 inline-flex min-h-12 items-center gap-2 rounded-full bg-brand-orange px-6 font-semibold text-brand-charcoal hover:brightness-105 motion-safe:transition motion-safe:active:scale-[0.98]"
+          >
+            <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M12 21s7-5.6 7-11.5A7 7 0 0 0 5 9.5C5 15.4 12 21 12 21Z" />
+              <circle cx="12" cy="9.5" r="2.5" />
+            </svg>
+            Cómo llegar
+            <span className="sr-only"> (abre Google Maps)</span>
+          </a>
         )}
       </div>
-      {isDev && channels.some((c) => !c.href) && (
-        <p className="mt-4 text-xs text-brand-muted">
-          Solo en desarrollo: los canales con borde punteado están pendientes de configurar en
-          src/config/contact.ts y no se muestran al público.
-        </p>
-      )}
+
+      <div className="min-w-0 md:col-span-2 lg:col-span-1">
+        <PaymentMethods />
+      </div>
     </section>
   );
 }

@@ -5,7 +5,9 @@ import { notFound, permanentRedirect } from "next/navigation";
 import { Breadcrumbs, type Crumb } from "@/components/product/breadcrumbs";
 import { ProductGallery } from "@/components/product/product-gallery";
 import { ProductPurchase } from "@/components/product/product-purchase";
+import { HeaderSearch } from "@/components/catalog/header-search";
 import { ProductGrid } from "@/components/catalog/product-grid";
+import { SearchForm } from "@/components/catalog/search-form";
 import { SectionHeading } from "@/components/catalog/section-heading";
 import { getProduct, getRelatedProducts } from "@/lib/catalog/repository";
 import { productFeatures } from "@/lib/catalog/features";
@@ -79,7 +81,14 @@ export default async function ProductPage({ params }: PageProps<"/producto/[slug
   return (
     <main id="contenido" className="mx-auto max-w-7xl px-4 pb-4 pt-2 sm:pt-4">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
-      <Breadcrumbs items={crumbs} />
+      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+        <Breadcrumbs items={crumbs} />
+        <div className="w-full shrink-0 sm:max-w-xs">
+          <Suspense fallback={<SearchForm />}>
+            <HeaderSearch />
+          </Suspense>
+        </div>
+      </div>
 
       <div className="mt-2 grid gap-6 sm:mt-3 md:grid-cols-2 md:gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:gap-12">
         <ProductGallery name={product.name} images={product.images} />

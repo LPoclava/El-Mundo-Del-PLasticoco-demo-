@@ -52,6 +52,29 @@ export function generalInquiryHref(text: string): string | null {
   return number ? `https://wa.me/${number}?text=${encodeURIComponent(text)}` : null;
 }
 
+/** «Cómo llegar»: abre Google Maps con la dirección configurada. null si no hay dirección. */
+export function getMapsHref(): string | null {
+  const place = [CONTACT.address, CONTACT.locality].map((p) => p?.trim()).filter(Boolean).join(", ");
+  if (!CONTACT.address?.trim()) return null;
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place)}`;
+}
+
+/** Número legible para mostrar: sin código de país y agrupado (2902 40-4916). */
+export function formatPhone(value: string | null): string | null {
+  const d = digits(value);
+  if (!d) return null;
+  const local = d.replace(/^549?/, "");
+  return local.length === 10 ? `${local.slice(0, 4)} ${local.slice(4, 6)}-${local.slice(6)}` : local;
+}
+
+/** Colores de cada plataforma sobre los que el ícono se lee bien. */
+export const CHANNEL_TILE: Record<ContactChannelId, string> = {
+  whatsapp: "bg-[#128c7e] text-white",
+  facebook: "bg-[#1877f2] text-white",
+  phone: "bg-brand-orange text-brand-charcoal",
+  instagram: "bg-[#c13584] text-white",
+};
+
 /** Canales en orden de prioridad: WhatsApp y teléfono primero. */
 export function getContactChannels(): ContactChannel[] {
   const wa = digits(CONTACT.whatsapp);

@@ -45,7 +45,7 @@ export function ProductPurchase({ name, path, variants, price, hasPriceRange }: 
 
   return (
     <div className="space-y-5">
-      <p className="text-3xl font-semibold tabular-nums tracking-tight" aria-live="polite">
+      <p className="text-3xl font-semibold tabular-nums tracking-tight text-brand-orange-ink" aria-live="polite">
         {fromPrice && <span className="mr-1.5 text-base font-normal text-brand-muted">Desde</span>}
         {formatPrice(shownPrice)}
         {label && <span className="sr-only"> para {label}</span>}

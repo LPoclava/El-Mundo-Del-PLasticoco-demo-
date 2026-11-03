@@ -33,11 +33,11 @@ export async function ProductQuickView({ params }: { params: Promise<{ slug: str
         <p className="pr-12 text-xs font-medium uppercase tracking-wide text-brand-green-ink md:pr-0">{category}</p>
         <h2 className="mt-1 text-xl font-semibold leading-tight tracking-tight text-balance sm:text-2xl">{product.name}</h2>
 
+        {product.description && <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-brand-ink/90 text-pretty">{product.description}</p>}
+
         <div className="mt-4 border-t border-brand-line pt-4">
           <ProductPurchase name={product.name} path={productPath(product)} variants={product.variants} price={product.price} hasPriceRange={product.hasPriceRange} />
         </div>
-
-        {product.description && <p className="mt-5 whitespace-pre-line text-sm leading-relaxed text-brand-ink/90 text-pretty">{product.description}</p>}
 
         {features.length > 0 && (
           <dl className="mt-5 divide-y divide-brand-line rounded-xl border border-brand-line text-sm">
@@ -51,7 +51,6 @@ export async function ProductQuickView({ params }: { params: Promise<{ slug: str
         )}
 
         {/* Navegación completa (no intercepta: es un enlace normal a la página individual). */}
-        {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
         <a href={productPath(product)} className="mt-5 inline-flex min-h-11 items-center gap-1.5 text-sm font-medium underline underline-offset-4 hover:decoration-2">
           Ver la página completa del producto
         </a>

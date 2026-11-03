@@ -17,10 +17,16 @@ export function ProductModal({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    el.showModal();
+    // Next conserva la ruta oculta al volver atrás: este efecto corre de nuevo cada vez que se reabre la ventana.
+    closing.current = false;
+    if (!el.open) el.showModal();
     // El estado «open» se pone en el cuadro siguiente para que la entrada se anime desde afuera.
     const frame = requestAnimationFrame(() => el.setAttribute("data-state", "open"));
-    return () => cancelAnimationFrame(frame);
+    return () => {
+      cancelAnimationFrame(frame);
+      el.setAttribute("data-state", "closed");
+      if (el.open) el.close();
+    };
   }, []);
 
   function close() {

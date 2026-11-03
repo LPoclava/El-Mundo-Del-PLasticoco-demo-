@@ -3,25 +3,34 @@
  * (los componentes los leen de acá, no los repiten).
  */
 export const CATALOG_COPY = {
-  hero: {
-    /** Título de la portada (solo para lectores de pantalla y buscadores; no hay bloque de bienvenida). */
-    title: "Bienvenido a El Mundo del Plástico",
+  intro: {
+    /** La segunda parte va resaltada en naranja. */
+    title: ["Todo lo que necesitás,", "en un mismo lugar."],
+    text: "Somos un negocio familiar, comprometido con brindarte variedad, calidad y la mejor atención para tu hogar, tu estudio y mucho más.",
   },
   promotions: {
-    title: "Promociones y combos",
+    title: "Promociones",
   },
   categories: {
-    title: "Explorá nuestros productos",
+    title: "Explorá nuestras categorías",
+  },
+  catalog: {
+    title: "Descubrí nuestra variedad",
+    subtitle: "Artículos prácticos, resistentes y al mejor precio.",
+  },
+  benefits: {
+    title: "Por qué elegirnos",
   },
 } as const;
 
 /**
- * Color de acento de cada categoría principal (slug estable → naranja o verde). Las que no figuren
- * alternan por posición. Solo cambia el tinte: las tarjetas comparten estructura y proporciones.
+ * Numeración gráfica de los tickets (identidad visual, NO identificadores de la base). Va por slug estable: «bano» es
+ * el slug histórico de Limpieza. Una categoría nueva toma el número de su posición.
  */
-export const CATEGORY_TONE: Record<string, "orange" | "green"> = {
-  cocina: "orange",
-  bano: "green",
-  libreria: "green",
-  regaleria: "orange",
+export const CATEGORY_TICKET: Record<string, string> = {
+  cocina: "001",
+  bano: "002",
+  limpieza: "002",
+  regaleria: "003",
+  libreria: "004",
 };

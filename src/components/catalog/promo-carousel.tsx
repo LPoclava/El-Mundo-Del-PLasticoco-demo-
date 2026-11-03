@@ -30,7 +30,7 @@ const ARROW_OVERLAY =
   "absolute top-1/2 z-10 hidden size-11 -translate-y-1/2 place-items-center rounded-full bg-surface/80 text-brand-ink shadow-sm backdrop-blur-sm hover:bg-surface motion-safe:transition-colors md:grid";
 
 /**
- * Carrusel «Promociones y combos»: solo la imagen, con flechas encima. Avanza solo cada 10 s y vuelve al primero
+ * Slider de promociones: solo la imagen, con flechas e indicadores encima. Avanza solo cada 10 s y vuelve al primero
  * al llegar al último. La cuenta se reinicia al cambiar a mano y se detiene cuando el usuario lo está usando
  * (cursor encima, foco dentro, dedo apoyado), cuando el carrusel no está en pantalla, cuando la pestaña está
  * oculta y siempre que el sistema pida movimiento reducido (en ese caso solo se cambia con las flechas o
@@ -56,7 +56,8 @@ export function PromoCarousel({ banners, intervalMs = AUTOPLAY_MS }: Props) {
   const swiped = useRef(false);
 
   const current = Math.min(index, Math.max(count - 1, 0));
-  const playing = count > 1 && !reduced && inView && !hovered && !focused && !touching && !hidden;
+  const [paused, setPaused] = useState(false);
+  const playing = count > 1 && !reduced && !paused && inView && !hovered && !focused && !touching && !hidden;
 
   const go = useCallback((direction: 1 | -1) => setIndex((i) => stepIndex(i, count, direction)), [count]);
 
@@ -102,7 +103,7 @@ export function PromoCarousel({ banners, intervalMs = AUTOPLAY_MS }: Props) {
       }}
     >
       <div
-        className="relative overflow-hidden rounded-xl bg-brand-sand"
+        className="relative overflow-hidden rounded-2xl bg-brand-sand sm:rounded-3xl"
         style={{ aspectRatio: BANNER_RATIO, touchAction: "pan-y" }}
         onPointerDown={(e) => {
           swipe.current = { x: e.clientX, y: e.clientY };
@@ -158,6 +159,33 @@ export function PromoCarousel({ banners, intervalMs = AUTOPLAY_MS }: Props) {
             <button type="button" onClick={() => go(1)} aria-label="Promoción siguiente" className={`${ARROW_OVERLAY} right-3`}>
               <Chevron direction="right" />
             </button>
+            {/* Indicadores chicos y, si rota solo, un botón para detenerlo. Sobre un fondo propio: se leen en cualquier banner. */}
+            <div className="absolute bottom-2 left-1/2 z-10 flex -translate-x-1/2 items-center rounded-full bg-black/40 px-1 backdrop-blur-sm sm:bottom-3">
+              {banners.map((banner, i) => (
+                <button
+                  key={banner.id}
+                  type="button"
+                  onClick={() => setIndex(i)}
+                  aria-label={`Ir a la promoción ${i + 1}`}
+                  aria-current={i === current ? "true" : undefined}
+                  className="grid size-6 place-items-center rounded-full"
+                >
+                  <span className={`block rounded-full bg-white motion-safe:transition-all ${i === current ? "h-2 w-4" : "size-2 opacity-60"}`} />
+                </button>
+              ))}
+              {!reduced && (
+                <button
+                  type="button"
+                  onClick={() => setPaused((p) => !p)}
+                  aria-label={paused ? "Reanudar el cambio automático" : "Detener el cambio automático"}
+                  className="grid size-6 place-items-center rounded-full text-white"
+                >
+                  <svg viewBox="0 0 24 24" className="size-3.5" fill="currentColor" aria-hidden>
+                    {paused ? <path d="M8 5v14l11-7L8 5Z" /> : <path d="M7 5h4v14H7V5Zm6 0h4v14h-4V5Z" />}
+                  </svg>
+                </button>
+              )}
+            </div>
           </>
         )}
       </div>
@@ -184,7 +212,7 @@ function Slide({ banner, position, count, active, eager }: {
       src={banner.imageUrl}
       alt={alt}
       fill
-      sizes="(min-width: 1280px) 780px, (min-width: 1024px) 62vw, 100vw"
+      sizes="(min-width: 1280px) 1248px, 100vw"
       quality={90}
       className="object-cover"
       draggable={false}

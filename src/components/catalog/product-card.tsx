@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { CatalogProduct } from "@/types/product";
+import { highlightParts } from "@/lib/catalog/highlight";
 import { formatPrice } from "@/lib/catalog/url";
 import { productPath } from "@/lib/catalog/product";
 import { LinkPending } from "./link-pending";
@@ -9,6 +10,8 @@ type Props = {
   product: CatalogProduct;
   /** Carga la foto de inmediato (primeras tarjetas, visibles sin desplazarse). */
   eager?: boolean;
+  /** Texto buscado: se destaca dentro del nombre. */
+  highlight?: string;
 };
 
 /**
@@ -19,7 +22,7 @@ type Props = {
  * Disponibilidad: no se muestra. La vista pública del catálogo no expone stock y no hay una decisión del negocio
  * para publicarlo; cuando exista el dato real, va entre el nombre y el precio (ver docs del catálogo).
  */
-export function ProductCard({ product, eager = false }: Props) {
+export function ProductCard({ product, eager = false, highlight }: Props) {
   return (
     <article className="group relative flex h-full flex-col overflow-hidden rounded-xl border border-brand-green/20 bg-brand-card shadow-sm outline-offset-2 [-webkit-tap-highlight-color:transparent] motion-safe:transition motion-safe:duration-200 hover:border-brand-green/40 hover:shadow-md motion-safe:hover:-translate-y-0.5 motion-safe:active:translate-y-0 motion-safe:active:scale-[0.985] has-[a:focus-visible]:outline has-[a:focus-visible]:outline-2 has-[a:focus-visible]:outline-brand-ink">
       {/* Área de imagen uniforme: la foto se ve entera (contain), centrada y sin ampliarse más de lo que su resolución permite. */}
@@ -28,7 +31,7 @@ export function ProductCard({ product, eager = false }: Props) {
           src={product.imageUrl}
           alt={product.name}
           fill
-          sizes="(min-width: 1280px) 16vw, (min-width: 1024px) 20vw, (min-width: 768px) 25vw, (min-width: 640px) 33vw, 50vw"
+          sizes="(min-width: 1280px) 240px, (min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
           quality={90}
           className="object-contain p-2"
           unoptimized={product.imageUrl.endsWith(".svg")}
@@ -43,7 +46,9 @@ export function ProductCard({ product, eager = false }: Props) {
             scroll={false}
             className="outline-none focus-visible:outline-none after:absolute after:inset-0 after:rounded-xl"
           >
-            {product.name}
+            {highlightParts(product.name, highlight).map((part, i) =>
+              part.match ? <mark key={i} className="rounded-sm bg-brand-orange/30 text-inherit">{part.text}</mark> : part.text,
+            )}
           </Link>
         </h3>
         <p className="mt-1 text-lg font-semibold tabular-nums text-brand-orange-ink">

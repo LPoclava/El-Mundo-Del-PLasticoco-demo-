@@ -19,8 +19,9 @@ function siteUrl(): URL | undefined {
   }
 }
 
-const TITLE = "El Mundo del Plástico — Catálogo";
-const DESCRIPTION = "Catálogo de productos de El Mundo del Plástico.";
+const TITLE = "El Mundo del Plástico — Todo lo que necesitás, en un mismo lugar";
+const DESCRIPTION =
+  "Negocio familiar con variedad de artículos para tu hogar, tu estudio y mucho más: cocina, limpieza, regalería y librería. Mirá el catálogo y consultanos por WhatsApp.";
 
 export const metadata: Metadata = {
   metadataBase: siteUrl(),
@@ -40,14 +41,16 @@ export const metadata: Metadata = {
 
 /**
  * Aplica el tema ANTES de que el navegador pinte (evita el destello del tema equivocado): usa la preferencia
- * guardada y, si no hay, la del sistema operativo. Es un script chico y bloqueante a propósito.
+ * guardada y, si no hay, la del sistema operativo. También marca si corresponde la pantalla de carga: primera entrada
+ * de la sesión a la portada, sin búsqueda ni filtros (una carga completa; la navegación interna no pasa por acá).
+ * Es un script chico y bloqueante a propósito.
  */
-const THEME_SCRIPT = `(function(){try{var t=localStorage.getItem("mp-theme");if(t!=="light"&&t!=="dark"){t=window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"}document.documentElement.dataset.theme=t}catch(e){}})()`;
+const THEME_SCRIPT = `(function(){var d=document.documentElement;try{var t=localStorage.getItem("mp-theme");if(t!=="light"&&t!=="dark"){t=window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"}d.dataset.theme=t}catch(e){}try{if(location.pathname==="/"&&!location.search&&!location.hash&&!sessionStorage.getItem("mp-intro"))d.setAttribute("data-intro","")}catch(e){}})()`;
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     // suppressHydrationWarning: el script cambia data-theme antes de que React hidrate.
-    <html lang="es-AR" suppressHydrationWarning className={`${geistSans.variable} h-full antialiased`}>
+    <html lang="es-AR" suppressHydrationWarning data-scroll-behavior="smooth" className={`${geistSans.variable} h-full antialiased`}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
       </head>

@@ -19,7 +19,7 @@ function tabClass(isActive: boolean) {
 }
 
 /**
- * Las tarjetas «Explorá nuestros productos» son el acceso principal a las categorías. Esta barra NO
+ * Los tickets de «Explorá nuestras categorías» son el acceso principal a las categorías. Esta barra NO
  * las repite: solo aparece cuando hace falta
  * - con una categoría elegida: cuál es, cómo salir de ella y sus subcategorías;
  * - sin categoría elegida: únicamente las categorías que no cuelgan de ninguna de las cuatro principales

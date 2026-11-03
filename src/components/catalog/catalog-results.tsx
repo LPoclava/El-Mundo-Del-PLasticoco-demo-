@@ -17,7 +17,8 @@ export async function CatalogResults({ searchParams }: { searchParams: Promise<R
 
   return (
     <>
-      <h2 className="sr-only">Productos</h2>
+      {/* Avisa a la pantalla de carga que los datos del catálogo ya llegaron. */}
+      <span hidden data-catalog-ready />
       <div className="mb-4 flex items-center justify-between gap-4 text-sm">
         <p className="text-brand-muted" aria-live="polite">
           {query.q ? (
@@ -25,7 +26,7 @@ export async function CatalogResults({ searchParams }: { searchParams: Promise<R
               <span className="font-medium text-brand-ink">
                 {result.total === 0 ? "Sin resultados" : result.total === 1 ? "1 resultado" : `${result.total} resultados`}
               </span>{" "}
-              para «{query.q}»
+              para <mark className="rounded-sm bg-brand-orange/30 px-1 font-medium text-brand-ink">{query.q}</mark>
             </>
           ) : result.total === 1 ? (
             "1 producto"
@@ -78,7 +79,7 @@ export async function CatalogResults({ searchParams }: { searchParams: Promise<R
           )}
         </div>
       ) : (
-        <ProductGrid products={result.items} />
+        <ProductGrid products={result.items} highlight={query.q} />
       )}
 
       <Pagination page={result.page} pageCount={result.pageCount} query={query} />
