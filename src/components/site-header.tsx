@@ -57,11 +57,11 @@ async function LinksWithData() {
  * Orden: menú, logo, divisor, secciones, buscador, tema. El logo es el original: el ícono sobre un disco crema (como
  * en el volante del negocio) y el nombre con las mismas letras en claro, porque el negro no se lee sobre verde.
  * En pantallas chicas las secciones pasan al menú y el buscador se abre con la lupa. Si el texto se agranda, la cápsula
- * crece y pasa a varios renglones. No hay acceso de inicio de sesión (reservado para más adelante).
+ * crece y pasa a varios renglones; si en un celular ya ocuparía demasiada altura, deja de acompañar el recorrido. No hay acceso de inicio de sesión (reservado para más adelante).
  */
 export function SiteHeader() {
   return (
-    <header className="pointer-events-none sticky top-2 z-40 px-3 pt-2 sm:top-3 sm:px-4 sm:pt-3">
+    <header className="pointer-events-none sticky top-2 z-40 px-3 pt-2 max-[18rem]:static sm:top-3 sm:px-4 sm:pt-3">
       <div className="nav-capsule pointer-events-auto relative mx-auto flex min-h-14 w-full max-w-6xl flex-wrap items-center gap-x-1 rounded-[1.75rem] bg-nav px-1.5 text-on-nav ring-1 ring-white/10 sm:gap-x-2 sm:px-2">
         <Suspense fallback={<Menu categories={[]} hasPromos />}>
           <MenuWithData />
