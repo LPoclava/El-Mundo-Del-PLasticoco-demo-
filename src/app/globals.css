@@ -27,7 +27,7 @@
   --color-nav: #1c4a2f;
   --color-on-nav: #faf8f3;
   --color-on-nav-muted: #c9dacd;
-  /* Fijos (no cambian con el tema): tinta sobre naranja (6,9:1) y crema del disco detrás del logo. */
+  /* Fijos (no cambian con el tema): tinta sobre naranja (6,4:1) y crema del disco detrás del logo. */
   --color-brand-charcoal: #202020;
   --color-brand-cream-fixed: #faf8f3;
   --font-sans: var(--font-geist-sans), system-ui, sans-serif;
