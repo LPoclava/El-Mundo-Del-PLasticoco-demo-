@@ -34,7 +34,7 @@ const STORE_JSON_LD = {
  */
 export default function Home({ searchParams }: PageProps<"/">) {
   return (
-    <main id="contenido" className="mx-auto max-w-6xl px-3 pt-3 sm:px-4 sm:pt-4">
+    <main id="contenido" className="mx-auto max-w-6xl px-3 pt-3 sm:px-4">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(STORE_JSON_LD).replace(/</g, "\\u003c") }} />
 
       <div id="inicio">

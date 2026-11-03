@@ -88,16 +88,19 @@ export function ProductModal({ children }: { children: React.ReactNode }) {
       className="product-modal m-auto max-h-[calc(100dvh-1.5rem)] w-[min(62rem,calc(100vw-1.5rem))] max-w-none overflow-hidden rounded-2xl border border-brand-line bg-surface p-0 text-brand-ink"
     >
       <div className="relative max-h-[calc(100dvh-1.5rem)] overflow-y-auto overscroll-contain">
-        <button
-          type="button"
-          onClick={close}
-          aria-label="Cerrar la ventana del producto"
-          className="sticky top-2 z-10 float-right mr-2 mt-2 grid size-11 place-items-center rounded-full border border-brand-line bg-surface/90 text-brand-ink shadow-sm backdrop-blur-sm hover:bg-surface"
-        >
-          <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden>
-            <path d="M6 6l12 12M18 6 6 18" />
-          </svg>
-        </button>
+        {/* Sin alto propio: siempre a la vista al desplazarse, pero no le quita ancho al contenido. */}
+        <div className="sticky top-0 z-10 flex h-0 justify-end">
+          <button
+            type="button"
+            onClick={close}
+            aria-label="Cerrar la ventana del producto"
+            className="mr-2 mt-2 grid size-11 shrink-0 place-items-center rounded-full border border-brand-line bg-surface/90 text-brand-ink shadow-sm backdrop-blur-sm hover:bg-surface"
+          >
+            <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden>
+              <path d="M6 6l12 12M18 6 6 18" />
+            </svg>
+          </button>
+        </div>
         {children}
       </div>
     </dialog>

@@ -35,7 +35,7 @@ export async function CatalogResults({ searchParams }: { searchParams: Promise<R
           )}
         </p>
         {/* Con una categoría elegida, «Ver todos los productos» ya está en su barra (category-nav.tsx). */}
-        {query.q && (
+        {query.q && result.total > 0 && (
           <Link
             href="/"
             className="inline-flex min-h-11 items-center font-medium underline underline-offset-4 hover:decoration-2"

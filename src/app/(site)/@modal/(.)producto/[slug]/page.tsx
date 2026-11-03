@@ -10,7 +10,7 @@ import { ProductQuickView } from "@/components/product/product-quick-view";
 export default function ProductModalPage({ params }: PageProps<"/producto/[slug]">) {
   return (
     <ProductModal>
-      <Suspense fallback={<p role="status" className="px-6 py-14 text-center text-sm text-brand-muted">Cargando el producto…</p>}>
+      <Suspense fallback={<p role="status" className="grid min-h-[min(32rem,70dvh)] place-items-center px-6 text-center text-sm text-brand-muted">Cargando el producto…</p>}>
         <ProductQuickView params={params} />
       </Suspense>
     </ProductModal>

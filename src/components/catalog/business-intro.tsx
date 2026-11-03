@@ -16,7 +16,7 @@ export function BusinessIntro() {
       </h1>
       <div className="md:border-l md:border-brand-line md:pl-8">
         <p className="max-w-[56ch] leading-relaxed text-brand-muted text-pretty">{CATALOG_COPY.intro.text}</p>
-        <p className="mt-1.5 text-sm font-semibold text-brand-green-ink">
+        <p className="mt-1.5 hidden text-sm font-semibold text-brand-green-ink sm:block">
           {CATALOG_COPY.intro.concept}{CONTACT.locality ? `, desde ${CONTACT.locality}` : ""}.
         </p>
       </div>

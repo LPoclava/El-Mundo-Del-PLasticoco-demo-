@@ -5,7 +5,7 @@ import { CopyrightYear } from "@/components/copyright-year";
 import { CONTACT } from "@/config/contact";
 import { formatPhone, getContactChannels, getMapsHref } from "@/lib/contact";
 
-const COLUMN = "border-t border-white/15 pt-6 first:border-t-0 first:pt-0 md:border-t-0 md:pt-0 lg:border-l lg:pl-7 lg:first:border-l-0 lg:first:pl-0";
+const COLUMN = "border-t border-white/15 pt-6 first:border-t-0 first:pt-0 md:border-t-0 md:pt-0 lg:border-l lg:pl-6 lg:first:border-l-0 lg:first:pl-0";
 const HEADING = "font-display text-base font-extrabold";
 
 /**
@@ -24,7 +24,7 @@ export function SiteFooter() {
   return (
     <footer id="contacto" className="mt-10 scroll-mt-20 rounded-t-[2rem] bg-nav text-on-nav sm:mt-14 sm:rounded-t-[2.5rem]">
       <div aria-hidden className="mx-auto h-1 w-20 rounded-b-full bg-brand-orange" />
-      <div className="mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)] gap-6 px-5 pb-7 pt-8 md:grid-cols-2 md:gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)_minmax(0,1.15fr)_minmax(0,1.2fr)] lg:gap-7 lg:px-8">
+      <div className="mx-auto grid max-w-6xl grid-cols-[minmax(0,1fr)] gap-6 px-4 pb-7 pt-8 md:grid-cols-2 md:gap-8 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,0.95fr)_minmax(0,1.1fr)_minmax(0,1.1fr)] lg:gap-6">
         <div className={COLUMN}>
           <div className="flex flex-wrap items-center gap-3">
             <span className="grid size-16 shrink-0 place-items-center rounded-full bg-brand-cream-fixed p-1">
@@ -101,7 +101,7 @@ export function SiteFooter() {
       </div>
 
       <div className="border-t border-white/15">
-        <p className="mx-auto max-w-7xl px-5 pb-20 pt-4 text-sm text-on-nav-muted sm:pb-4 lg:px-8">
+        <p className="mx-auto max-w-6xl px-4 pb-20 pt-4 text-sm text-on-nav-muted sm:pb-4">
           © <CopyrightYear /> El Mundo del Plástico. Todos los derechos reservados.
         </p>
       </div>

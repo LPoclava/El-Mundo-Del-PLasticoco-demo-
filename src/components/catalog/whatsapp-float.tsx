@@ -1,14 +1,17 @@
 import { ContactIcon } from "@/components/contact/contact-icon";
 import { generalInquiryHref } from "@/lib/contact";
+import { WhatsAppFloatGuard } from "./whatsapp-float-guard";
 
 /**
  * Acceso flotante a WhatsApp en la portada. Pequeño (48 px) y pegado a la esquina para no tapar productos; usa
- * el número configurado (sin número no se dibuja). Solo abre el chat: no registra nada.
+ * el número configurado (sin número no se dibuja). Solo abre el chat: no registra nada. En celular se aparta mientras
+ * se recorre la grilla: taparía la consulta de una tarjeta, que lleva el producto en el mensaje.
  */
 export function WhatsAppFloat() {
   const href = generalInquiryHref("Hola, quería hacer una consulta.");
   if (!href) return null;
   return (
+    <WhatsAppFloatGuard>
     <a
       href={href}
       target="_blank"
@@ -18,5 +21,6 @@ export function WhatsAppFloat() {
     >
       <ContactIcon id="whatsapp" className="size-6" />
     </a>
+    </WhatsAppFloatGuard>
   );
 }

@@ -22,7 +22,8 @@ export async function ProductQuickView({ params }: { params: Promise<{ slug: str
     );
   }
 
-  const features = productFeatures(product);
+  // La categoría ya está arriba del nombre.
+  const features = productFeatures(product).filter(([term]) => term !== "Categoría");
   const category = product.parentCategory ? `${product.parentCategory.name} › ${product.category.name}` : product.category.name;
 
   return (
@@ -30,8 +31,8 @@ export async function ProductQuickView({ params }: { params: Promise<{ slug: str
       <ProductGallery name={product.name} images={product.images} />
 
       <div className="min-w-0 md:pt-2">
-        <p className="pr-12 text-xs font-medium uppercase tracking-wide text-brand-green-ink md:pr-0">{category}</p>
-        <h2 id={MODAL_TITLE_ID} className="mt-1 font-display text-xl font-extrabold leading-tight text-balance sm:text-2xl">{product.name}</h2>
+        <p className="pr-12 text-xs font-medium uppercase tracking-wide text-brand-green-ink">{category}</p>
+        <h2 id={MODAL_TITLE_ID} className="mt-1 pr-8 font-display text-xl font-extrabold leading-tight text-balance sm:text-2xl md:pr-10">{product.name}</h2>
 
         {product.description && <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-brand-ink/90 text-pretty">{product.description}</p>}
 

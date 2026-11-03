@@ -61,8 +61,8 @@ async function LinksWithData() {
  */
 export function SiteHeader() {
   return (
-    <header className="pointer-events-none sticky top-2 z-40 px-3 pt-2 max-[18rem]:static sm:top-3 sm:px-4 sm:pt-3">
-      <div className="nav-capsule pointer-events-auto relative mx-auto flex min-h-14 w-full max-w-6xl flex-wrap items-center gap-x-1 rounded-[1.75rem] bg-nav px-1.5 text-on-nav ring-1 ring-white/10 sm:gap-x-2 sm:px-2">
+    <header className="pointer-events-none sticky top-0 z-40 px-3 pt-2 max-[18rem]:static sm:px-4 sm:pt-3">
+      <div className="nav-capsule pointer-events-auto relative mx-auto flex min-h-14 w-full max-w-[70rem] flex-wrap items-center gap-x-1 rounded-[1.75rem] bg-nav px-1.5 text-on-nav ring-1 ring-white/10 sm:gap-x-2 sm:px-2">
         <Suspense fallback={<Menu categories={[]} hasPromos />}>
           <MenuWithData />
         </Suspense>

@@ -108,8 +108,8 @@ export function PromoCarousel({ banners, intervalMs = AUTOPLAY_MS }: Props) {
       }}
     >
       <div
-        className="relative aspect-[var(--ratio-mobile)] overflow-hidden rounded-2xl bg-brand-sand sm:rounded-3xl md:aspect-[var(--ratio-desktop)]"
-        style={{ "--ratio-mobile": mobileArt ? BANNER_MOBILE_RATIO : BANNER_RATIO, "--ratio-desktop": BANNER_RATIO, touchAction: "pan-y" } as React.CSSProperties}
+        className="relative aspect-[var(--ratio-mobile)] overflow-hidden rounded-2xl bg-brand-sand sm:rounded-3xl md:aspect-auto md:h-[min(46svh,22.5rem)]"
+        style={{ "--ratio-mobile": mobileArt ? BANNER_MOBILE_RATIO : BANNER_RATIO, touchAction: "pan-y" } as React.CSSProperties}
         onPointerDown={(e) => {
           swipe.current = { x: e.clientX, y: e.clientY };
           swiped.current = false;
@@ -215,20 +215,26 @@ function Slide({ banner, position, count, active, eager, mobileArt }: {
   mobileArt: boolean;
 }) {
   const alt = banner.imageAlt ?? banner.title ?? "Promoción de El Mundo del Plástico";
-  const image = mobileArt && banner.mobileImageUrl
-    ? <ArtDirectedImage desktop={banner.imageUrl} mobile={banner.mobileImageUrl} alt={alt} eager={eager} />
-    : (
-      <Image
-        src={banner.imageUrl}
-        alt={alt}
-        fill
-        sizes={DESKTOP_SIZES}
-        quality={90}
-        className="object-cover"
-        draggable={false}
-        preload={eager}
-      />
-    );
+  const image = (
+    <>
+      {/* Solo desde tablet, donde el alto limitado puede dejar márgenes a los costados de la imagen. */}
+      <Image src={banner.imageUrl} alt="" aria-hidden fill sizes={DESKTOP_SIZES} quality={90} draggable={false} className="hidden scale-110 object-cover blur-2xl md:block" />
+      {mobileArt && banner.mobileImageUrl ? (
+        <ArtDirectedImage desktop={banner.imageUrl} mobile={banner.mobileImageUrl} alt={alt} eager={eager} />
+      ) : (
+        <Image
+          src={banner.imageUrl}
+          alt={alt}
+          fill
+          sizes={DESKTOP_SIZES}
+          quality={90}
+          className="object-cover md:object-contain"
+          draggable={false}
+          preload={eager}
+        />
+      )}
+    </>
+  );
   // El contorno de foco va hacia adentro: el contenedor recorta lo que sobresale.
   const box = "relative block h-full w-full rounded-xl focus-visible:-outline-offset-4";
   return (
@@ -259,7 +265,7 @@ function ArtDirectedImage({ desktop, mobile, alt, eager }: { desktop: string; mo
   return (
     <picture>
       <source media="(min-width: 768px)" srcSet={desktopSet} sizes={DESKTOP_SIZES} />
-      <img {...mobileProps} src={src} alt={alt} draggable={false} className="object-cover" />
+      <img {...mobileProps} src={src} alt={alt} draggable={false} className="object-cover md:object-contain" />
     </picture>
   );
 }

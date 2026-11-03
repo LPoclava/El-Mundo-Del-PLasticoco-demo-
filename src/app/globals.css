@@ -59,7 +59,7 @@ html[data-theme="dark"] {
   --color-surface: #1b2520;
   --color-brand-card: #1d2822;
   /* Fondo claro y neutro para las fotos: un producto oscuro o una foto con fondo blanco se siguen viendo bien. */
-  --color-brand-photo: #e9e7e1;
+  --color-brand-photo: #dedcd6;
   --color-tint-orange: #33291f;
   --color-tint-green: #1f3026;
   --color-nav: #1f3d2b;

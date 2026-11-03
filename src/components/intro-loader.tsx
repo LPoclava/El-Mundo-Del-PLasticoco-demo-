@@ -60,7 +60,7 @@ export function IntroLoader() {
         <div className="intro-globe">
           {/* Disco crema como el del volante del negocio: las líneas verdes del logo no se leen sobre verde oscuro. */}
           <span className="block size-full rounded-full bg-brand-cream-fixed p-[3%]">
-            <Image src="/brand/logo-icono.png" alt="" width={322} height={323} sizes="168px" preload className="size-full" />
+            <Image src="/brand/logo-icono.png" alt="" width={322} height={323} sizes="168px" loading="eager" className="size-full" />
           </span>
           <svg viewBox="-150 -150 300 300" aria-hidden className="intro-orbit">
             <g transform="rotate(-18)">
@@ -75,7 +75,7 @@ export function IntroLoader() {
         <div className="intro-name">
           <div className="intro-name-inner">
             <span aria-hidden className="intro-rule" />
-            <Image src="/brand/logo-nombre-claro.png" alt="El Mundo del Plástico" width={554} height={196} sizes="248px" preload className="intro-wordmark" />
+            <Image src="/brand/logo-nombre-claro.png" alt="El Mundo del Plástico" width={554} height={196} sizes="248px" loading="eager" className="intro-wordmark" />
           </div>
         </div>
       </div>
