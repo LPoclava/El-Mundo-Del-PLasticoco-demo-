@@ -43,7 +43,7 @@ export default function Home({ searchParams }: PageProps<"/">) {
         </Suspense>
       </div>
 
-      <section id="catalogo" aria-labelledby="catalogo-titulo" className="mt-7 scroll-mt-4 sm:mt-9">
+      <section id="catalogo" aria-labelledby="catalogo-titulo" className="mt-5 scroll-mt-4 sm:mt-9">
         <div className="flex flex-wrap items-center gap-x-5 gap-y-1">
           <h2 id="catalogo-titulo" className="font-display text-2xl font-extrabold sm:text-[1.75rem]">{CATALOG_COPY.catalog.title}</h2>
           <p className="flex items-start gap-2 text-sm text-brand-muted text-pretty sm:items-center sm:text-[0.95rem]">

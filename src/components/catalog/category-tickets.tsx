@@ -25,14 +25,14 @@ export async function CategoryTickets({ searchParams }: { searchParams: Promise<
   const odd = featured.length % 2 === 1;
 
   return (
-    <section aria-labelledby="categorias-titulo" className="reveal mt-6 sm:mt-8">
+    <section aria-labelledby="categorias-titulo" className="reveal mt-4 sm:mt-8">
       <h2 id="categorias-titulo" className="font-display text-xl font-extrabold text-balance sm:text-2xl">
         {CATALOG_COPY.categories.title}
       </h2>
-      <nav aria-label="Categorías" className="mt-3">
-        <ul className={`flex flex-wrap gap-3 ${odd ? "md:flex-nowrap" : "lg:flex-nowrap"}`}>
+      <nav aria-label="Categorías" className="mt-2.5 sm:mt-3">
+        <ul className={`flex flex-wrap gap-2 sm:gap-3 ${odd ? "md:flex-nowrap" : "lg:flex-nowrap"}`}>
           {featured.map((category, i) => (
-            <li key={category.slug} className={odd ? "w-full md:w-auto md:min-w-0 md:flex-1 md:basis-0" : "w-[calc(50%-0.375rem)] lg:w-auto lg:min-w-0 lg:flex-1 lg:basis-0"}>
+            <li key={category.slug} className={odd ? "w-full md:w-auto md:min-w-0 md:flex-1 md:basis-0" : "w-[calc(50%-0.25rem)] sm:w-[calc(50%-0.375rem)] lg:w-auto lg:min-w-0 lg:flex-1 lg:basis-0"}>
               <Ticket
                 slug={category.slug}
                 name={category.name}
@@ -66,13 +66,13 @@ function Ticket({ slug, name, number, tone, href, current, wide }: {
       <Link
         href={href}
         aria-current={current ? "page" : undefined}
-        className={`ticket group relative flex h-full ${wide ? "min-h-[4.5rem] sm:min-h-24" : "min-h-24"} overflow-clip rounded-2xl outline-none [-webkit-tap-highlight-color:transparent] ${colors}`}
+        className={`ticket group relative flex h-full ${wide ? "min-h-14 md:min-h-24" : "min-h-24"} overflow-clip rounded-2xl outline-none [-webkit-tap-highlight-color:transparent] ${colors}`}
       >
         <GlobeMotif className="pointer-events-none absolute -bottom-8 right-6 size-28 opacity-15 sm:right-10" />
 
-        <span className="relative flex min-w-0 flex-1 flex-col justify-center gap-1 py-2.5 pl-3 pr-1 sm:pl-5 sm:pr-2">
-          <span aria-hidden className="text-[0.6875rem] font-medium tabular-nums tracking-[0.12em]">MP / {number}</span>
-          <span className={`flex min-w-0 ${wide ? "flex-row items-center gap-2.5" : "flex-col gap-1 sm:flex-row sm:items-center sm:gap-2.5"}`}>
+        <span className={`relative flex min-w-0 flex-1 justify-center ${wide ? "flex-row-reverse items-center gap-3 py-1.5 md:flex-col md:items-stretch md:gap-1 md:py-2.5" : "flex-col gap-1 py-2.5"} pl-3 pr-2 sm:pl-5`}>
+          <span aria-hidden className={`text-[0.6875rem] font-medium tabular-nums tracking-[0.12em] ${wide ? "shrink-0 max-md:ml-auto" : ""}`}>MP / {number}</span>
+          <span className={`flex min-w-0 ${wide ? "flex-1 flex-row items-center gap-2.5" : "flex-col gap-1 sm:flex-row sm:items-center sm:gap-2.5"}`}>
             <CategoryIcon slug={slug} className="size-7 shrink-0 sm:size-9" />
             <span className="min-w-0 font-display text-[1.0625rem] font-extrabold leading-tight [overflow-wrap:anywhere] sm:text-xl">{name}</span>
           </span>

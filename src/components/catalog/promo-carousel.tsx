@@ -7,7 +7,7 @@ import { CATALOG_COPY } from "@/config/catalog-copy";
 import type { PromoBanner } from "@/types/product";
 import { AUTOPLAY_MS, BANNER_MOBILE_RATIO, BANNER_RATIO, isExternalLink, stepIndex, swipeDirection } from "@/lib/banners/rules";
 
-const DESKTOP_SIZES = "(min-width: 1152px) 1120px, 100vw";
+const DESKTOP_SIZES = "(min-width: 768px) 823px, 100vw";
 
 type Props = {
   banners: PromoBanner[];
@@ -27,7 +27,7 @@ function subscribeVisibility(callback: () => void) {
   return () => document.removeEventListener("visibilitychange", callback);
 }
 
-/** Flechas sobre la imagen solo desde 768 px (escritorio y tablet ancha); en celular se cambia deslizando. Discretas, de 44 px. */
+/** Flechas solo desde 768 px, y desde escritorio al costado de la imagen, sin taparla; en celular se cambia deslizando. De 44 px. */
 const ARROW_OVERLAY =
   "absolute top-1/2 z-10 hidden size-11 -translate-y-1/2 place-items-center rounded-full bg-surface/80 text-brand-ink shadow-sm backdrop-blur-sm hover:bg-surface motion-safe:transition-colors md:grid";
 
@@ -107,9 +107,10 @@ export function PromoCarousel({ banners, intervalMs = AUTOPLAY_MS }: Props) {
         if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setFocused(false);
       }}
     >
+      <div className="relative">
       <div
-        className="relative aspect-[var(--ratio-mobile)] overflow-hidden rounded-2xl bg-brand-sand sm:rounded-3xl md:aspect-auto md:h-[min(46svh,22.5rem)]"
-        style={{ "--ratio-mobile": mobileArt ? BANNER_MOBILE_RATIO : BANNER_RATIO, touchAction: "pan-y" } as React.CSSProperties}
+        className="relative mx-auto aspect-[var(--ratio-mobile)] overflow-hidden rounded-2xl bg-brand-sand sm:rounded-3xl md:aspect-[var(--ratio-desktop)] md:w-[min(100%,calc(min(46svh,22.5rem)*var(--ratio-desktop)))]"
+        style={{ "--ratio-mobile": mobileArt ? BANNER_MOBILE_RATIO : BANNER_RATIO, "--ratio-desktop": BANNER_RATIO, touchAction: "pan-y" } as React.CSSProperties}
         onPointerDown={(e) => {
           swipe.current = { x: e.clientX, y: e.clientY };
           swiped.current = false;
@@ -156,13 +157,14 @@ export function PromoCarousel({ banners, intervalMs = AUTOPLAY_MS }: Props) {
             />
           ))}
         </div>
+      </div>
 
         {count > 1 && (
           <>
-            <button type="button" onClick={() => go(-1)} aria-label="Promoción anterior" className={`${ARROW_OVERLAY} left-3`}>
+            <button type="button" onClick={() => go(-1)} aria-label="Promoción anterior" className={`${ARROW_OVERLAY} left-3 lg:left-0`}>
               <Chevron direction="left" />
             </button>
-            <button type="button" onClick={() => go(1)} aria-label="Promoción siguiente" className={`${ARROW_OVERLAY} right-3`}>
+            <button type="button" onClick={() => go(1)} aria-label="Promoción siguiente" className={`${ARROW_OVERLAY} right-3 lg:right-0`}>
               <Chevron direction="right" />
             </button>
           </>
@@ -217,8 +219,6 @@ function Slide({ banner, position, count, active, eager, mobileArt }: {
   const alt = banner.imageAlt ?? banner.title ?? "Promoción de El Mundo del Plástico";
   const image = (
     <>
-      {/* Solo desde tablet, donde el alto limitado puede dejar márgenes a los costados de la imagen. */}
-      <Image src={banner.imageUrl} alt="" aria-hidden fill sizes={DESKTOP_SIZES} quality={90} draggable={false} className="hidden scale-110 object-cover blur-2xl md:block" />
       {mobileArt && banner.mobileImageUrl ? (
         <ArtDirectedImage desktop={banner.imageUrl} mobile={banner.mobileImageUrl} alt={alt} eager={eager} />
       ) : (
@@ -228,7 +228,7 @@ function Slide({ banner, position, count, active, eager, mobileArt }: {
           fill
           sizes={DESKTOP_SIZES}
           quality={90}
-          className="object-cover md:object-contain"
+          className="object-cover"
           draggable={false}
           preload={eager}
         />
@@ -265,7 +265,7 @@ function ArtDirectedImage({ desktop, mobile, alt, eager }: { desktop: string; mo
   return (
     <picture>
       <source media="(min-width: 768px)" srcSet={desktopSet} sizes={DESKTOP_SIZES} />
-      <img {...mobileProps} src={src} alt={alt} draggable={false} className="object-cover md:object-contain" />
+      <img {...mobileProps} src={src} alt={alt} draggable={false} className="object-cover" />
     </picture>
   );
 }
