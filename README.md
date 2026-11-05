@@ -1,6 +1,9 @@
-# El Mundo del Plástico — Catálogo público
+# El Mundo del Plástico
 
-Next.js 16 (App Router) · TypeScript · Tailwind CSS 4 · Supabase (solo lectura pública).
+Catálogo público y panel interno de un comercio de Río Turbio, Santa Cruz. Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS 4 · Supabase.
+
+- **Catálogo público** (`/`): categorías, buscador, ficha de producto y consulta por WhatsApp. Lee solo vistas públicas de Supabase. Sin carrito ni pagos en línea.
+- **Panel interno** (`/panel`): productos, categorías, banners, stock y punto de venta con escáner, con roles `empleado`, `gerente` y `ceo`. Usuarios, CRM y Configuración siguen en demostración.
 
 ## Ejecutar
 
@@ -9,7 +12,10 @@ npm install
 npm run dev      # http://localhost:3000
 npm run lint
 npm run build
+npm test         # pruebas de scripts/*.test.mjs, sin base de datos
 ```
+
+Las pruebas de la base de datos están en `supabase/tests` (PGlite, en memoria): `cd supabase/tests && npm install && npm test`.
 
 ## Configuración
 
@@ -19,27 +25,34 @@ Copiar `.env.local.example` como `.env.local` y completar:
 | --- | --- |
 | `NEXT_PUBLIC_SUPABASE_URL` | URL del proyecto de Supabase |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Clave **pública** (anon / publishable). Nunca la `service_role` |
-| `NEXT_PUBLIC_SITE_URL` | Dirección pública del sitio, para la vista previa al compartir el enlace |
+| `NEXT_PUBLIC_SITE_URL` | Dirección pública del sitio, para el enlace canónico y la vista previa al compartir. Sin ella no se publica `localhost` |
 
-Sin las variables de Supabase el catálogo queda vacío. Con ellas lee las vistas públicas `public_catalog` y `public_categories`.
-
-Los datos de contacto (WhatsApp, teléfono, Instagram, Facebook) se completan en `src/config/contact.ts`. Un canal sin dato no se muestra al público.
+Sin las variables de Supabase el catálogo queda vacío. Los datos de contacto (WhatsApp, teléfono, Instagram, Facebook) se completan en `src/config/contact.ts`; un canal sin dato no se muestra.
 
 ## Estructura
 
-- `src/app/` — `layout.tsx`, `page.tsx` (catálogo y contacto), `error.tsx`, `globals.css` (colores de la marca).
-- `src/components/catalog/` — buscador, categorías, tarjetas, cuadrícula, paginación y estados.
-- `src/components/contact/` — sección de contacto e íconos.
-- `src/lib/catalog/` — `repository.ts` (único acceso a datos, con caché de 1 a 2 minutos), `query.ts`, `url.ts`.
-- `src/lib/supabase/public.ts` — cliente de solo lectura pública.
-- `supabase/migrations/` — esquema de la base. `supabase/rollback/` — reversión (no es una migración).
-- `docs/modelo-de-datos.md` — modelo de datos, seguridad, decisiones y pendientes.
-- `docs/pos-ventas.md` — punto de venta con escáner, stock, medios de pago y ventas atómicas.
-- `docs/promociones-y-banners.md` — categorías principales, carrusel «Promociones y combos» y panel de banners.
+- `src/app/(site)/` — catálogo público: portada, ficha `producto/[slug]` y ventana flotante de producto (`@modal`).
+- `src/app/panel/` — panel interno: `login` y las secciones bajo `(shell)/`.
+- `src/components/catalog/`, `product/`, `contact/` — piezas del sitio público.
+- `src/components/panel/` — panel: secciones, punto de venta (`pos/`), escáner y componentes comunes.
+- `src/lib/catalog/` — `repository.ts` es el único acceso a datos del público, con caché.
+- `src/lib/products/`, `categories/`, `banners/`, `pos/`, `barcode/` — lógica del panel y de las reglas de negocio.
+- `src/lib/supabase/` — clientes de Supabase (público y del navegador).
+- `src/lib/panel-demo/` — datos de demostración del panel.
+- `src/config/` — contacto y textos del catálogo.
+- `scripts/*.test.mjs` — pruebas versionadas.
+- `public/brand/` — logo y logos de pago.
+
+## Documentación
+
+`CLAUDE.md` guarda las instrucciones para trabajar con Claude Code. La documentación está en `docs/`; empezar por `docs/README.md`, `docs/estado.md` (qué está aplicado, qué falta) y `docs/decisiones.md`.
+
+**`docs/`, `supabase/` (migraciones, pruebas de base), `Logo/` y `.impeccable/` no están en Git** por decisión anterior (ver `.gitignore`). Un clon de este repositorio no los trae.
 
 ## Reglas importantes
 
-- Un producto se publica solo si está habilitado, tiene foto principal y al menos una variante con precio mayor que 0. La regla vive en la base (vista `public_catalog`), no en la pantalla.
+- Un producto se publica solo si está habilitado, no archivado, con foto principal y al menos una variante con precio mayor que 0. La regla vive en la base (vista `public_catalog`), no en la pantalla.
+- Los permisos se aplican en la base (RLS y funciones por rol). Ocultar botones en el panel no es protección.
 - Los cambios en productos o precios tardan hasta 2 minutos en verse en el catálogo por la caché.
 - Las migraciones se aplican a mano en Supabase; el repositorio no las ejecuta.
-- Nunca poner la clave `service_role` en el frontend ni en el repositorio.
+- Nunca poner la clave `service_role` en el frontend ni en el repositorio. `.env` está versionado a propósito y solo lleva la URL y la clave pública.
