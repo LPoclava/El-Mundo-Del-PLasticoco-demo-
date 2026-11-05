@@ -17,7 +17,7 @@ export function WhatsAppFloat() {
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Escribinos por WhatsApp"
-      className="fixed bottom-4 right-4 z-30 grid size-12 place-items-center rounded-full bg-whatsapp hover:bg-whatsapp-hover active:bg-whatsapp-active text-white shadow-md  motion-safe:transition motion-safe:active:scale-95 sm:bottom-6 sm:right-6"
+      className="whatsapp-float fixed bottom-4 right-4 z-30 grid size-12 place-items-center rounded-full bg-whatsapp hover:bg-whatsapp-hover active:bg-whatsapp-active text-white shadow-md sm:bottom-6 sm:right-6"
     >
       <ContactIcon id="whatsapp" className="size-6" />
     </a>

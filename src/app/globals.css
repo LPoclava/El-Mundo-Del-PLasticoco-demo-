@@ -262,17 +262,19 @@ body {
   .cart-bump { animation: none; }
 }
 
-/* Ventana flotante del producto (src/components/product/product-modal.tsx): entra con un fundido y un leve zoom;
-   el fondo se desenfoca y se oscurece (más en tema oscuro). */
+/* Ventana flotante del producto (src/components/product/product-modal.tsx): crece desde la tarjeta que la abrió y vuelve
+   a ella al cerrarse, más rápido (--from-* los calcula el componente; sin tarjeta, un leve zoom en el lugar). El fondo se
+   desenfoca y se oscurece (más en tema oscuro). */
 .product-modal {
   opacity: 0;
-  transform: translateY(12px) scale(0.98);
-  transition: opacity 0.2s ease-out, transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transform: translate(var(--from-x, 0), var(--from-y, 12px)) scale(var(--from-scale, 0.98));
+  transition: opacity 0.18s ease-in, transform 0.18s cubic-bezier(0.4, 0, 1, 1);
   box-shadow: 0 24px 80px -16px rgb(0 0 0 / 0.45), 0 2px 8px rgb(0 0 0 / 0.12);
 }
 .product-modal[data-state="open"] {
   opacity: 1;
   transform: none;
+  transition: opacity 0.14s ease-out, transform 0.38s var(--ease-flight);
 }
 .product-modal::backdrop {
   background: rgb(20 20 20 / 0);
@@ -292,12 +294,17 @@ html:has(.product-modal[open]) {
 }
 @media (prefers-reduced-motion: reduce) {
   .product-modal,
+  .product-modal[data-state="open"],
   .product-modal::backdrop {
     transition: none;
   }
 }
 
 /* ---- Identidad del catálogo público ---- */
+
+:root {
+  --ease-flight: cubic-bezier(0.16, 1, 0.3, 1);
+}
 
 /* La cápsula gana sombra al bajar (sin JavaScript, donde el navegador lo permite). */
 .nav-capsule {
@@ -348,21 +355,6 @@ html:has(.site-menu[open]) {
   mix-blend-mode: normal;
 }
 
-/* Las secciones entran apenas al aparecer. Parten de un estado ya visible y solo donde el navegador lo admite. */
-@supports (animation-timeline: view()) {
-  @media (prefers-reduced-motion: no-preference) {
-    .reveal {
-      animation: reveal linear both;
-      animation-timeline: view();
-      animation-range: entry 0% entry 35%;
-    }
-  }
-}
-@keyframes reveal {
-  from { opacity: 0.35; transform: translateY(18px); }
-  to { opacity: 1; transform: none; }
-}
-
 /* Tickets de categoría: muescas en la línea de corte y perforaciones en los bordes, recortadas con máscara. */
 .ticket {
   --notch: 0.5rem;
@@ -397,7 +389,175 @@ html:has(.site-menu[open]) {
   }
 }
 
-/* Globo de ubicación: el marcador late; el avión da una vuelta lenta. */
+/* El momento del catálogo: elegir una categoría es sacar un boleto.
+   1. Al apuntarlo, la flecha del talón sale y entra el avión, y el globo de fondo gira un poco. */
+.ticket-stub {
+  display: grid;
+}
+.ticket-stub > * {
+  grid-area: 1 / 1;
+}
+.ticket-stub-plane {
+  opacity: 0;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .ticket-stub > *,
+  .ticket-globe {
+    transition: transform 0.28s var(--ease-flight), opacity 0.14s ease-out;
+  }
+  .ticket-stub-plane {
+    transform: translateX(-90%);
+  }
+  .ticket:focus-visible .ticket-stub-arrow {
+    transform: translateX(90%);
+    opacity: 0;
+  }
+  .ticket:focus-visible .ticket-stub-plane {
+    transform: none;
+    opacity: 1;
+  }
+  @media (hover: hover) {
+    .ticket-wrap:hover .ticket-stub-arrow {
+      transform: translateX(90%);
+      opacity: 0;
+    }
+    .ticket-wrap:hover .ticket-stub-plane {
+      transform: none;
+      opacity: 1;
+    }
+    .ticket-wrap:hover .ticket-globe {
+      transform: rotate(16deg) translateY(-4px);
+    }
+  }
+}
+
+/* 2. Mientras carga, el avión cruza el boleto dibujando la ruta punteada. El trazo y el avión viajan juntos: el recorrido
+   se resuelve con un solo transform. Con movimiento reducido, la ruta queda dibujada y quieta. */
+.ticket-flight {
+  background: color-mix(in srgb, var(--ticket-bg) 74%, transparent);
+}
+.ticket-route {
+  position: absolute;
+  inset-block: 0;
+  left: 0.75rem;
+  right: calc(var(--stub) + 0.375rem);
+  overflow: hidden;
+}
+.ticket-route-fill {
+  position: relative;
+  display: block;
+  height: 100%;
+  background: repeating-linear-gradient(90deg, currentColor 0 6px, transparent 6px 12px) center / 100% 2px no-repeat;
+}
+.ticket-route-fill > svg {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  width: 1.5rem;
+  height: 1.5rem;
+  translate: 0 -50%;
+}
+@keyframes ticket-flight {
+  0% { transform: translateX(-100%); opacity: 1; }
+  78% { transform: none; opacity: 1; }
+  100% { transform: none; opacity: 0; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .ticket-route-fill {
+    animation: ticket-flight 1.15s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  }
+}
+
+/* 3. Al llegar, el talón y la barra del catálogo quedan sellados: el aro se apoya y el visto se dibuja. */
+@keyframes ticket-stamp {
+  from { transform: scale(1.5) rotate(-10deg); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+@keyframes ticket-check {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .ticket-stamp {
+    animation: ticket-stamp 0.32s var(--ease-flight) both;
+  }
+  .ticket-stamp-check {
+    stroke-dasharray: 1;
+    animation: ticket-check 0.26s ease-out 0.16s both;
+  }
+}
+
+/* 4. Las tarjetas aterrizan en cadena, en la dirección en que venía el avión. Se escalona solo la primera tanda, para que
+   una página larga no haga esperar; lo buscado se marca recién cuando su tarjeta tocó tierra. */
+@keyframes card-land {
+  from { opacity: 0; transform: translate(-12px, 14px); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .card-land {
+    animation: card-land 0.46s var(--ease-flight) calc(var(--i, 0) * 45ms) backwards;
+  }
+}
+.search-mark {
+  background: linear-gradient(color-mix(in srgb, var(--color-brand-orange) 30%, transparent) 0 0) no-repeat 0 0 / 100% 100%;
+  color: inherit;
+}
+@keyframes search-mark {
+  from { background-size: 0 100%; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .search-mark {
+    animation: search-mark 0.34s ease-out calc(var(--i, 0) * 45ms + 0.24s) backwards;
+  }
+}
+
+/* Slider de promociones: el indicador activo se llena en el tiempo que falta para el próximo cambio. Solo existe mientras
+   el cambio automático corre: al detenerse, el indicador queda lleno y la cuenta vuelve a empezar al reanudarse. */
+@keyframes carousel-countdown {
+  from { transform: scaleX(0); }
+  to { transform: none; }
+}
+.carousel-countdown {
+  transform-origin: left;
+  animation: carousel-countdown linear both;
+}
+
+/* Galería de la ficha: la foto nueva entra del lado hacia el que se avanzó. */
+@keyframes gallery-photo {
+  from { opacity: 0; transform: translateX(calc(var(--dir) * 20px)); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .gallery-photo {
+    animation: gallery-photo 0.26s var(--ease-flight);
+  }
+}
+
+/* WhatsApp flotante: en celular se aparta mientras se recorre la grilla, sin desaparecer de golpe. */
+.whatsapp-float {
+  transition: background-color 0.15s ease-out, scale 0.12s ease-out, opacity 0.16s ease-out, translate 0.26s var(--ease-flight), visibility 0.26s;
+}
+.whatsapp-float:active {
+  scale: 0.95;
+}
+@media (max-width: 767.98px) {
+  [data-away] > .whatsapp-float {
+    opacity: 0;
+    translate: 0 1rem;
+    visibility: hidden;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .whatsapp-float {
+    transition: none;
+  }
+  .whatsapp-float:active {
+    scale: none;
+  }
+}
+
+/* Globo de ubicación: el marcador late; el avión da una vuelta lenta. Se detiene fuera de pantalla y al completar la
+   vuelta (src/components/globe-motion.tsx). */
 @keyframes globe-pulse {
   0% { transform: scale(0.6); opacity: 0.7; }
   100% { transform: scale(2.4); opacity: 0; }
@@ -406,6 +566,9 @@ html:has(.site-menu[open]) {
   transform-box: fill-box;
   transform-origin: center;
   animation: globe-pulse 2.8s ease-out infinite;
+}
+svg[data-still] .globe-pulse {
+  visibility: hidden;
 }
 @media (prefers-reduced-motion: reduce) {
   .globe-pulse,

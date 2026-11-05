@@ -4,6 +4,10 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { MODAL_TITLE_ID } from "@/lib/catalog/product";
 
+function productLink(path: string) {
+  return Array.from(document.querySelectorAll<HTMLAnchorElement>("a[href^='/producto/']")).find((a) => a.getAttribute("href") === path);
+}
+
 /**
  * Devuelve el foco al cerrar: al elemento que abrió la ventana o, si ya no está (el catálogo cambió, o el navegador no
  * le dio foco al hacer clic), a la tarjeta de ese producto; como último recurso, al catálogo.
@@ -13,7 +17,7 @@ function restoreFocus(opener: HTMLElement | null, path: string) {
     opener.focus({ preventScroll: true });
     if (document.activeElement === opener) return;
   }
-  const card = Array.from(document.querySelectorAll<HTMLAnchorElement>("a[href^='/producto/']")).find((a) => a.getAttribute("href") === path);
+  const card = productLink(path);
   if (card) {
     card.focus({ preventScroll: true });
     if (document.activeElement === card) return;
@@ -23,6 +27,23 @@ function restoreFocus(opener: HTMLElement | null, path: string) {
     catalog.setAttribute("tabindex", "-1");
     catalog.focus({ preventScroll: true });
   }
+}
+
+/**
+ * Punto de partida de la ventana: la tarjeta del producto, si está a la vista. Con el desplazamiento y la escala que la
+ * llevan hasta ahí, abrir y cerrar se leen como una misma pieza que se expande y se recoge. Sin tarjeta (o con movimiento
+ * reducido) se quitan los valores y queda la entrada en el lugar.
+ */
+function setOrigin(dialog: HTMLDialogElement, path: string) {
+  for (const name of ["--from-x", "--from-y", "--from-scale"]) dialog.style.removeProperty(name);
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const box = productLink(path)?.closest("article")?.getBoundingClientRect();
+  if (!box || box.bottom <= 0 || box.top >= window.innerHeight) return;
+  // Las medidas offset no cuentan el transform: son el lugar donde la ventana va a terminar.
+  const { offsetLeft, offsetTop, offsetWidth, offsetHeight } = dialog;
+  dialog.style.setProperty("--from-x", `${box.left + box.width / 2 - (offsetLeft + offsetWidth / 2)}px`);
+  dialog.style.setProperty("--from-y", `${box.top + box.height / 2 - (offsetTop + offsetHeight / 2)}px`);
+  dialog.style.setProperty("--from-scale", String(Math.max(box.width / offsetWidth, box.height / offsetHeight, 0.3)));
 }
 
 /**
@@ -47,11 +68,19 @@ export function ProductModal({ children }: { children: React.ReactNode }) {
     const active = document.activeElement;
     if (active instanceof HTMLElement && active !== document.body && !el.contains(active)) opener.current = active;
     const path = window.location.pathname;
+    // Sin transición mientras se ubica en el punto de partida: el recorrido empieza recién con el estado «open».
+    el.style.transition = "none";
     if (!el.open) el.showModal();
+    setOrigin(el, path);
+    el.getBoundingClientRect();
     // El estado «open» se pone en el cuadro siguiente para que la entrada se anime desde afuera.
-    const frame = requestAnimationFrame(() => el.setAttribute("data-state", "open"));
+    const frame = requestAnimationFrame(() => {
+      el.style.transition = "";
+      el.setAttribute("data-state", "open");
+    });
     return () => {
       cancelAnimationFrame(frame);
+      el.style.transition = "";
       el.setAttribute("data-state", "closed");
       if (el.open) el.close();
       // Después de que Next oculte la ruta: mientras tanto el elemento todavía puede no recibir foco.

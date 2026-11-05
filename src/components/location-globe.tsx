@@ -1,5 +1,6 @@
 import { CONTACT } from "@/config/contact";
 import { graticule, linePath, PLANE_PATH, project, SOUTH_AMERICA } from "@/lib/geo";
+import { GlobeMotion } from "./globe-motion";
 
 const GRID = graticule();
 const LAND = linePath(SOUTH_AMERICA, undefined, 100, true);
@@ -8,7 +9,7 @@ const ORBIT = "M-122 0A122 44 0 1 1 122 0A122 44 0 1 1-122 0";
 /**
  * Globo de la ubicación real: costa de Sudamérica y marcador en las coordenadas de src/config/contact.ts (sin
  * coordenadas, no hay marcador). Es SVG calculado en el servidor: la única animación es un avión lento en órbita y
- * el latido del marcador, ambos anulados con «reducir movimiento». Sin librerías 3D y sin JavaScript en el navegador.
+ * el latido del marcador, ambos anulados con «reducir movimiento». GlobeMotion les pone un fin. Sin librerías 3D.
  */
 export function LocationGlobe({ className, title, compact = false }: {
   className?: string;
@@ -19,6 +20,7 @@ export function LocationGlobe({ className, title, compact = false }: {
 }) {
   const marker = CONTACT.location ? project(CONTACT.location) : null;
   return (
+    <GlobeMotion lapMs={(compact ? 9 : 22) * 1000}>
     <svg
       viewBox="-135 -135 270 270"
       className={className}
@@ -45,5 +47,6 @@ export function LocationGlobe({ className, title, compact = false }: {
         </g>
       )}
     </svg>
+    </GlobeMotion>
   );
 }

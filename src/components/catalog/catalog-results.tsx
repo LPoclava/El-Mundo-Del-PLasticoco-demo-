@@ -26,7 +26,7 @@ export async function CatalogResults({ searchParams }: { searchParams: Promise<R
               <span className="font-medium text-brand-ink">
                 {result.total === 0 ? "Sin resultados" : result.total === 1 ? "1 resultado" : `${result.total} resultados`}
               </span>{" "}
-              para <mark className="rounded-sm bg-brand-orange/30 px-1 font-medium text-brand-ink">{query.q}</mark>
+              para <mark className="search-mark rounded-sm px-1 font-medium text-brand-ink">{query.q}</mark>
             </>
           ) : result.total === 1 ? (
             "1 producto"

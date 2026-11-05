@@ -13,15 +13,19 @@ export function gridClass(count: number): string {
   return `${base} grid-cols-1 min-[18rem]:grid-cols-2 md:grid-cols-3 lg:grid-cols-4`;
 }
 
+/** Tarjetas que aterrizan una detrás de otra; el resto llega junto con la última. */
+const LANDING_STAGGER = 7;
+
 export function ProductGrid({ products, highlight }: {
   products: CatalogProduct[];
   /** Texto buscado: se destaca en el nombre de cada producto. */
   highlight?: string;
 }) {
   return (
-    <ul className={gridClass(products.length)}>
+    // La clave cambia con la lista: un filtro, una búsqueda o una página nueva vuelven a hacer aterrizar las tarjetas.
+    <ul key={products.map((p) => p.id).join()} className={gridClass(products.length)}>
       {products.map((p, i) => (
-        <li key={p.id}>
+        <li key={p.id} className="card-land" style={{ "--i": Math.min(i, LANDING_STAGGER) } as React.CSSProperties}>
           <ProductCard product={p} eager={i < 4} highlight={highlight} />
         </li>
       ))}

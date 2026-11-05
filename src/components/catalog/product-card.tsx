@@ -59,8 +59,10 @@ export function ProductCard({ product, eager = false, highlight }: Props) {
             className="outline-none focus-visible:outline-none after:absolute after:inset-0 after:rounded-xl"
           >
             {highlightParts(product.name, highlight).map((part, i) =>
-              part.match ? <mark key={i} className="rounded-sm bg-brand-orange/30 text-inherit">{part.text}</mark> : part.text,
+              part.match ? <mark key={i} className="search-mark rounded-sm">{part.text}</mark> : part.text,
             )}
+            {/* Dentro del enlace: es lo único que le permite enterarse de que la navegación está en curso. */}
+            <LinkPending />
           </Link>
         </h3>
         <p className="mb-2.5 mt-1 font-display text-lg font-extrabold tabular-nums text-brand-orange-ink">
@@ -82,7 +84,6 @@ export function ProductCard({ product, eager = false, highlight }: Props) {
           </a>
         )}
       </div>
-      <LinkPending />
     </article>
   );
 }

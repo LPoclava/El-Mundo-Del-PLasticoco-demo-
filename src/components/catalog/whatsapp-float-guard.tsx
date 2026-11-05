@@ -15,7 +15,7 @@ export function WhatsAppFloatGuard({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <div className={overGrid ? "max-md:invisible" : undefined}>
+    <div data-away={overGrid || undefined}>
       {children}
     </div>
   );

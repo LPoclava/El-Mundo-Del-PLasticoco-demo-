@@ -141,7 +141,7 @@ export function PromoCarousel({ banners, intervalMs = AUTOPLAY_MS }: Props) {
         }}
       >
         <div
-          className="flex h-full motion-safe:transition-transform motion-safe:duration-500 motion-safe:ease-out"
+          className="flex h-full motion-safe:transition-transform motion-safe:duration-500 motion-safe:ease-(--ease-flight)"
           style={{ transform: `translateX(-${current * 100}%)` }}
           aria-live={playing ? "off" : "polite"}
         >
@@ -182,7 +182,9 @@ export function PromoCarousel({ banners, intervalMs = AUTOPLAY_MS }: Props) {
               aria-current={i === current ? "true" : undefined}
               className="group/dot grid size-11 place-items-center rounded-full"
             >
-              <span className={`block rounded-full motion-safe:transition-all ${i === current ? "h-2 w-5 bg-brand-green" : "size-2 bg-brand-ink/35 group-hover/dot:bg-brand-ink/60"}`} />
+              <span className={`relative block overflow-hidden rounded-full motion-safe:transition-[width,background-color] ${i === current ? `h-2 w-6 ${playing ? "bg-brand-green/35" : "bg-brand-green"}` : "size-2 bg-brand-ink/35 group-hover/dot:bg-brand-ink/60"}`}>
+                {i === current && playing && <span key={current} className="carousel-countdown absolute inset-0 bg-brand-green" style={{ animationDuration: `${intervalMs}ms` }} />}
+              </span>
             </button>
           ))}
           {!reduced && (

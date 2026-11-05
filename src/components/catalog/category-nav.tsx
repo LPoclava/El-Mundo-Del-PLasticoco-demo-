@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Category } from "@/types/product";
 import { catalogHref } from "@/lib/catalog/url";
 import { LinkPending } from "./link-pending";
+import { TicketStamp } from "./ticket-stamp";
 
 type Props = {
   categories: Category[];
@@ -57,9 +58,12 @@ export function CategoryNav({ categories, active, q }: Props) {
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-        <p className="text-base font-semibold">
-          <span className="sr-only">Categoría elegida: </span>
-          {mainCategory.name}
+        <p className="flex items-center gap-2 text-base font-semibold">
+          <TicketStamp className="size-6 shrink-0 text-brand-green-ink" />
+          <span>
+            <span className="sr-only">Categoría elegida: </span>
+            {mainCategory.name}
+          </span>
         </p>
         <Link
           href={catalogHref({ q })}

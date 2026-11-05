@@ -14,7 +14,7 @@ const BENEFITS = [
  */
 export function BenefitsBand() {
   return (
-    <section aria-label={CATALOG_COPY.benefits.title} className="reveal relative mt-14 overflow-hidden rounded-2xl bg-nav text-on-nav sm:mt-20 sm:rounded-3xl">
+    <section aria-label={CATALOG_COPY.benefits.title} className="relative mt-14 overflow-hidden rounded-2xl bg-nav text-on-nav sm:mt-20 sm:rounded-3xl">
       <span aria-hidden className="absolute inset-y-6 left-0 w-1 rounded-r-full bg-brand-orange" />
       <span aria-hidden className="absolute inset-y-6 right-0 w-1 rounded-l-full bg-brand-orange" />
       <ul className="grid grid-cols-2 gap-y-6 px-4 py-7 sm:px-6 lg:grid-cols-4 lg:py-8">

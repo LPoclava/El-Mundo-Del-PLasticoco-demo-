@@ -10,7 +10,7 @@ import { CONTACT } from "@/config/contact";
 export function BusinessIntro() {
   const [first, second] = CATALOG_COPY.intro.title;
   return (
-    <section aria-labelledby="presentacion" className="reveal mt-2 grid items-center gap-2 sm:mt-6 sm:gap-3 md:grid-cols-[minmax(0,auto)_minmax(0,1fr)] md:gap-8 lg:grid-cols-[minmax(0,auto)_minmax(0,1fr)_auto]">
+    <section aria-labelledby="presentacion" className="mt-2 grid items-center gap-2 sm:mt-6 sm:gap-3 md:grid-cols-[minmax(0,auto)_minmax(0,1fr)] md:gap-8 lg:grid-cols-[minmax(0,auto)_minmax(0,1fr)_auto]">
       <h1 id="presentacion" className="font-display text-[1.75rem] font-extrabold leading-[1.1] text-balance sm:text-[2.5rem] lg:text-[2.75rem]">
         {first} <span className="block text-brand-orange-ink">{second}</span>
       </h1>

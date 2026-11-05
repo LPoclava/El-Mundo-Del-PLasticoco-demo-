@@ -12,6 +12,8 @@ type Props = { name: string; images: { url: string }[] };
  */
 export function ProductGallery({ name, images }: Props) {
   const [index, setIndex] = useState(0);
+  // Hacia dónde se avanzó (0 = todavía no se cambió de foto): la foto nueva entra de ese lado.
+  const [direction, setDirection] = useState(0);
   // Resolución real de cada foto (la que entrega el optimizador, que nunca agranda: si el original es chico,
   // llega chico). Con ella se limita el tamaño en pantalla para no mostrar una foto ampliada y borrosa.
   const [natural, setNatural] = useState<Record<string, number>>({});
@@ -25,6 +27,7 @@ export function ProductGallery({ name, images }: Props) {
 
   const go = (next: number, focus = false) => {
     const i = (next + count) % count;
+    setDirection(Math.sign(next - index));
     setIndex(i);
     if (focus) thumbs.current[i]?.focus();
   };
@@ -33,7 +36,7 @@ export function ProductGallery({ name, images }: Props) {
     <div className="mx-auto w-full" style={{ maxWidth }}>
       <div
         className="relative aspect-square overflow-hidden rounded-2xl border border-brand-line bg-surface"
-        style={{ touchAction: "pan-y" }}
+        style={{ touchAction: "pan-y", "--dir": direction } as React.CSSProperties}
         onPointerDown={(e) => (start.current = { x: e.clientX, y: e.clientY })}
         onPointerUp={(e) => {
           const s = start.current;
@@ -51,7 +54,7 @@ export function ProductGallery({ name, images }: Props) {
           fill
           preload={index === 0}
           sizes="(min-width: 1024px) 560px, (min-width: 768px) 50vw, 100vw"
-          className="object-contain p-2"
+          className={`object-contain p-2 ${direction !== 0 ? "gallery-photo" : ""}`}
           draggable={false}
           onLoad={(e) => {
             const w = e.currentTarget.naturalWidth;
