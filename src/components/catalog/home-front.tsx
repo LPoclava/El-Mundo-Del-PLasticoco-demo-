@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { parseCatalogParams, type RawParams } from "@/lib/catalog/url";
 import { BusinessIntro } from "./business-intro";
 import { CategoryTickets, CategoryTicketsSkeleton } from "./category-tickets";
+import { DiscoverySection, DiscoverySkeleton } from "./discovery-section";
 import { PromoSection, PromoSkeleton } from "./promo-section";
 
 /**
@@ -19,6 +20,9 @@ export async function HomeFront({ searchParams }: { searchParams: Promise<RawPar
       <BusinessIntro />
       <Suspense fallback={<CategoryTicketsSkeleton />}>
         <CategoryTickets searchParams={searchParams} />
+      </Suspense>
+      <Suspense fallback={<DiscoverySkeleton />}>
+        <DiscoverySection searchParams={searchParams} />
       </Suspense>
     </>
   );

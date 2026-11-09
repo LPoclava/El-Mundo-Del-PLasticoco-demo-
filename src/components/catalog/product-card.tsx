@@ -19,12 +19,13 @@ type Props = {
 };
 
 /**
- * Tarjeta de producto: ÚNICA para portada, búsqueda, categorías y relacionados. Toda la tarjeta abre la ficha (el enlace
- * está en el nombre y su área se extiende a toda la tarjeta); el único otro control es la consulta por WhatsApp, que va
- * por encima y abre el chat con el producto y el precio. Con opciones de distinto precio, el mensaje dice «desde».
+ * Tarjeta de producto: ÚNICA para portada, búsqueda, categorías, relacionados y descubrimiento. La FOTO manda: ocupa la
+ * mitad de la tarjeta, se ve entera (contain, sin recortes ni ampliaciones) sobre un fondo neutro y se acerca un poco al
+ * apuntarla. Debajo, marca (si existe), nombre y precio con jerarquía. Una línea de corte, como la de un boleto (la
+ * identidad de las categorías), separa la información de las acciones: «Agregar» al pedido y la consulta por WhatsApp.
+ * Toda la tarjeta abre la ficha (el enlace está en el nombre y su área se extiende a la tarjeta); los botones van por encima.
  *
- * Disponibilidad: no se muestra. La vista pública del catálogo no expone stock y no hay una decisión del negocio
- * para publicarlo; cuando exista el dato real, va entre el nombre y el precio (ver docs del catálogo).
+ * Disponibilidad: no se muestra. La vista pública no expone stock y el negocio no decidió publicarlo.
  */
 export function ProductCard({ product, eager = false, highlight }: Props) {
   const path = productPath(product);
@@ -37,27 +38,33 @@ export function ProductCard({ product, eager = false, highlight }: Props) {
   });
 
   return (
-    <article className="group relative flex h-full flex-col overflow-hidden rounded-xl border border-brand-green/20 bg-brand-card shadow-sm outline-offset-2 [-webkit-tap-highlight-color:transparent] motion-safe:transition motion-safe:duration-200 hover:border-brand-green/40 hover:shadow-md motion-safe:hover:-translate-y-0.5 has-[a:focus-visible]:outline has-[a:focus-visible]:outline-2 has-[a:focus-visible]:outline-brand-ink">
-      {/* Área de imagen uniforme: la foto se ve entera (contain), centrada y sin ampliarse más de lo que su resolución permite. */}
-      <div className="relative aspect-[4/3] bg-brand-photo">
+    <article className="product-card group relative flex h-full flex-col overflow-hidden rounded-2xl border border-brand-green/20 bg-brand-card shadow-sm outline-offset-2 [-webkit-tap-highlight-color:transparent] motion-safe:transition motion-safe:duration-200 hover:border-brand-green/40 hover:shadow-md motion-safe:hover:-translate-y-0.5 has-[a:focus-visible]:outline has-[a:focus-visible]:outline-2 has-[a:focus-visible]:outline-brand-ink">
+      {/* La foto es lo principal: altura uniforme, se ve completa y casi sin margen. */}
+      <div className="relative aspect-square overflow-hidden bg-brand-photo sm:aspect-[5/4]">
         <Image
           src={product.imageUrl}
           alt={product.name}
           fill
           sizes="(min-width: 1152px) 276px, (min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw"
           quality={90}
-          className="object-contain p-2"
+          className="card-photo object-contain p-1.5"
           unoptimized={product.imageUrl.endsWith(".svg")}
           {...(eager ? { loading: "eager" as const, fetchPriority: "high" as const } : {})}
         />
+        {product.hasPriceRange && (
+          <span className="absolute left-2 top-2 rounded-full bg-brand-charcoal/85 px-2 py-0.5 text-[0.6875rem] font-semibold text-white">
+            Varias opciones
+          </span>
+        )}
       </div>
 
       <div className="flex flex-1 flex-col px-3 pb-3 pt-2.5">
-        <h3 className="line-clamp-2 min-h-[2.75em] text-sm font-semibold leading-snug text-brand-ink">
+        {product.brand && <p className="truncate text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-brand-green-ink">{product.brand}</p>}
+        <h3 className="line-clamp-2 min-h-[2.6em] text-[0.9375rem] font-semibold leading-snug text-brand-ink">
           <Link
             href={path}
             scroll={false}
-            className="outline-none focus-visible:outline-none after:absolute after:inset-0 after:rounded-xl"
+            className="outline-none focus-visible:outline-none after:absolute after:inset-0 after:z-0"
           >
             {highlightParts(product.name, highlight).map((part, i) =>
               part.match ? <mark key={i} className="search-mark rounded-sm">{part.text}</mark> : part.text,
@@ -66,26 +73,32 @@ export function ProductCard({ product, eager = false, highlight }: Props) {
             <LinkPending />
           </Link>
         </h3>
-        <p className="mb-2.5 mt-1 font-display text-lg font-extrabold tabular-nums text-brand-orange-ink">
+        <p className="mt-1 font-display text-xl font-extrabold leading-none tabular-nums text-brand-orange-ink">
           {product.hasPriceRange && <span className="mr-1 font-sans text-xs font-normal text-brand-muted">Desde</span>}
           {formatPrice(product.price)}
         </p>
 
-        <div className="mt-auto space-y-1.5">
-        <AddToCartButton product={product} path={path} />
-        {inquiry && (
-          <a
-            href={inquiry}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label={`Consultar por WhatsApp sobre ${product.name}`}
-            className="relative z-10 flex min-h-11 items-center justify-center gap-1.5 rounded-xl border border-brand-green/50 text-sm font-semibold text-brand-green-ink hover:bg-brand-green/10 active:bg-brand-green/20 motion-safe:transition-colors"
-          >
-            <ContactIcon id="whatsapp" className="size-5 shrink-0" />
-            <span className="min-[43.75rem]:hidden">Consultar</span>
-            <span className="hidden min-[43.75rem]:inline">Consultar por WhatsApp</span>
-          </a>
-        )}
+        {/* Línea de corte del boleto: separa la información de las acciones. */}
+        <div className="-mx-3 mb-2.5 mt-3" aria-hidden>
+          <div className="perforation" />
+        </div>
+
+        {/* Tarjeta angosta (celulares chicos o texto muy agrandado): los dos botones se apilan y cada uno dice lo que hace. */}
+        <div className="relative z-10 mt-auto grid grid-cols-1 gap-2 min-[24rem]:grid-cols-[minmax(0,1fr)_auto]">
+          <AddToCartButton product={product} path={path} />
+          {inquiry && (
+            <a
+              href={inquiry}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={`Consultar por WhatsApp sobre ${product.name}`}
+              title="Consultar por WhatsApp"
+              className="flex h-11 w-full items-center justify-center gap-1.5 rounded-xl bg-whatsapp text-sm font-semibold text-white hover:bg-whatsapp-hover active:bg-whatsapp-active motion-safe:transition-colors min-[24rem]:w-11"
+            >
+              <ContactIcon id="whatsapp" className="size-5 shrink-0" />
+              <span className="min-[24rem]:hidden">Consultar</span>
+            </a>
+          )}
         </div>
       </div>
     </article>

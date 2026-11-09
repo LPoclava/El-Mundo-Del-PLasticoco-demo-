@@ -17,7 +17,7 @@ const noOrigin = () => (typeof window === "undefined" ? null : window.location.o
  * WhatsApp (no hay pago ni venta): el mensaje se arma con los datos del carrito y el cliente decide si lo envía.
  */
 export function CartDrawer() {
-  const { cart, units, total, open, closeCart, setQuantity, remove, clear } = useCart();
+  const { cart, units, total, open, closeCart, setQuantity, remove, clear, notify } = useCart();
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
   const closeTimer = useRef<number | undefined>(undefined);
@@ -66,11 +66,15 @@ export function CartDrawer() {
     >
       {(open || mounted) && (
         <div className="flex h-full flex-col">
-          <header className="flex shrink-0 items-center gap-3 border-b border-brand-line px-4 py-3">
-            <h2 id={titleId} className="min-w-0 flex-1 truncate font-display text-lg font-extrabold">
-              Tu pedido
-              {units > 0 && <span className="ml-2 font-sans text-sm font-normal text-brand-muted">{units} {units === 1 ? "unidad" : "unidades"}</span>}
-            </h2>
+          <header className="relative flex shrink-0 items-center gap-3 border-b-2 border-dashed border-brand-line px-4 py-3">
+            <span aria-hidden className="absolute inset-x-0 top-0 flex h-1"><span className="flex-1 bg-brand-orange" /><span className="w-1/4 bg-brand-green" /></span>
+            <div className="min-w-0 flex-1">
+              <p aria-hidden className="text-[0.6875rem] font-medium tabular-nums tracking-[0.12em] text-brand-muted">MP / PEDIDO</p>
+              <h2 id={titleId} className="truncate font-display text-lg font-extrabold leading-tight">
+                Tu pedido
+                {units > 0 && <span className="ml-2 font-sans text-sm font-normal text-brand-muted">{units} {units === 1 ? "unidad" : "unidades"}</span>}
+              </h2>
+            </div>
             <button type="button" onClick={closeCart} aria-label="Cerrar el carrito" className="-mr-1 grid size-11 shrink-0 place-items-center rounded-lg hover:bg-brand-sand">
               <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden><path d="M6 6l12 12M18 6 6 18" /></svg>
             </button>
@@ -92,7 +96,7 @@ export function CartDrawer() {
             ) : (
               <ul className="divide-y divide-brand-line">
                 {cart.map((l) => (
-                  <li key={l.key} className="flex gap-3 py-3">
+                  <li key={l.key} className="cart-line-in flex gap-3 py-3">
                     <div className="relative size-16 shrink-0 overflow-hidden rounded-lg bg-brand-photo">
                       {l.imageUrl && <Image src={l.imageUrl} alt="" fill sizes="64px" className="object-contain p-1" unoptimized={l.imageUrl.endsWith(".svg")} />}
                     </div>
@@ -105,7 +109,7 @@ export function CartDrawer() {
                           <button type="button" onClick={() => setQuantity(l.key, l.quantity - 1)} aria-label={l.quantity === 1 ? `Quitar ${l.name}` : `Una unidad menos de ${l.name}`} className="grid size-11 place-items-center rounded-l-lg hover:bg-brand-sand">
                             <span aria-hidden className="text-lg leading-none">−</span>
                           </button>
-                          <span className="min-w-8 text-center text-sm font-semibold tabular-nums" aria-live="polite">{l.quantity}</span>
+                          <span key={l.quantity} className="qty-pop min-w-8 text-center text-sm font-semibold tabular-nums" aria-live="polite">{l.quantity}</span>
                           <button type="button" onClick={() => setQuantity(l.key, l.quantity + 1)} disabled={l.quantity >= MAX_QUANTITY} aria-label={`Una unidad más de ${l.name}`} className="grid size-11 place-items-center rounded-r-lg hover:bg-brand-sand disabled:opacity-40">
                             <span aria-hidden className="text-lg leading-none">+</span>
                           </button>
@@ -123,7 +127,9 @@ export function CartDrawer() {
           </div>
 
           {cart.length > 0 && (
-            <footer className="shrink-0 space-y-3 border-t border-brand-line bg-brand-card px-4 pb-4 pt-3 shadow-[0_-4px_12px_-8px_rgba(0,0,0,0.25)]">
+            <footer className="shrink-0 bg-brand-card pb-4 shadow-[0_-4px_12px_-8px_rgba(0,0,0,0.25)] [--perf-bg:var(--color-brand-card)]">
+              <div className="perforation" aria-hidden />
+              <div className="space-y-3 px-4 pt-3">
               <p className="flex items-baseline justify-between text-lg font-semibold tabular-nums">
                 <span className="font-display font-extrabold">Total estimado</span>
                 <span>{formatPrice(total)}</span>
@@ -135,6 +141,7 @@ export function CartDrawer() {
               {whatsappConfigured && href && !tooBig ? (
                 <a
                   href={href}
+                  onClick={() => notify("Se abrió WhatsApp con tu pedido. Sigue acá hasta que lo vacíes.")}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex min-h-13 w-full items-center justify-center gap-2.5 rounded-xl bg-whatsapp px-5 py-3 text-base font-semibold text-white shadow-sm hover:bg-whatsapp-hover active:bg-whatsapp-active motion-safe:transition"
@@ -156,6 +163,7 @@ export function CartDrawer() {
               ) : (
                 <button type="button" onClick={() => setConfirmClear(true)} className="min-h-11 w-full rounded-lg text-sm text-brand-muted hover:bg-brand-sand hover:text-brand-ink">Vaciar pedido</button>
               )}
+              </div>
             </footer>
           )}
         </div>

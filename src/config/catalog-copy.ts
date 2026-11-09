@@ -9,6 +9,13 @@ export const CATALOG_COPY = {
     text: "Somos un negocio familiar, comprometido con brindarte variedad, calidad y la mejor atención para tu hogar, tu estudio y mucho más.",
     concept: "Un mundo para descubrir",
   },
+  /** Sección «descubrimiento» de la portada: un vistazo real a cada rubro. */
+  discovery: {
+    kicker: "Un vistazo por rubro",
+    title: "Recorré el local desde tu casa",
+    text: "Un poco de cada rubro, para que encuentres todo lo que necesitás en un mismo lugar. Sumá lo que te guste al pedido y lo coordinamos por WhatsApp.",
+    seeAll: "Ver todo",
+  },
   promotions: {
     title: "Promociones",
   },

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { notFound, permanentRedirect } from "next/navigation";
 import { Breadcrumbs, type Crumb } from "@/components/product/breadcrumbs";
+import { FeatureTiles } from "@/components/product/feature-tiles";
 import { ProductGallery } from "@/components/product/product-gallery";
 import { ProductPurchase } from "@/components/product/product-purchase";
 import { ProductGrid } from "@/components/catalog/product-grid";
@@ -57,7 +58,8 @@ export default async function ProductPage({ params }: PageProps<"/producto/[slug
   crumbs.push({ label: product.category.name, href: categoryHref(product.category.slug) });
   crumbs.push({ label: product.name });
 
-  const features = productFeatures(product);
+  // La marca y la categoría ya están arriba del nombre: acá solo lo que falta (medidas, colores, opciones).
+  const tiles = productFeatures(product).filter(([term]) => term !== "Marca" && term !== "Categoría");
 
   const prices = product.variants.length ? product.variants.map((v) => v.price) : [product.price];
   const jsonLd = {
@@ -82,46 +84,53 @@ export default async function ProductPage({ params }: PageProps<"/producto/[slug
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
       <Breadcrumbs items={crumbs} />
 
-      <div className="mt-2 grid gap-6 sm:mt-3 md:grid-cols-2 md:gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:gap-12">
-        <ProductGallery name={product.name} images={product.images} />
+      <div className="mt-2 grid gap-6 sm:mt-3 md:grid-cols-[minmax(0,1.08fr)_minmax(0,1fr)] md:gap-8 lg:gap-12">
+        {/* En pantallas anchas la galería acompaña la lectura de la columna derecha. */}
+        <div className="min-w-0 md:sticky md:top-24 md:self-start">
+          <ProductGallery name={product.name} images={product.images} />
+        </div>
 
-        <div className="min-w-0">
-          <h1 className="font-display text-2xl font-extrabold leading-tight text-balance sm:text-3xl">{product.name}</h1>
+        <div className="min-w-0 space-y-6">
+          <header>
+            <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <Link
+                href={categoryHref(product.category.slug)}
+                className="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-tint-green px-3 text-xs font-semibold uppercase tracking-[0.08em] text-brand-green-ink hover:bg-brand-green/15 motion-safe:transition-colors"
+              >
+                {product.parentCategory ? `${product.parentCategory.name} › ${product.category.name}` : product.category.name}
+              </Link>
+              {product.brand && <span className="text-sm text-brand-muted">Marca <strong className="font-semibold text-brand-ink">{product.brand}</strong></span>}
+            </p>
+            <h1 className="mt-1.5 font-display text-[1.75rem] font-extrabold leading-[1.12] text-balance sm:text-4xl">{product.name}</h1>
+          </header>
 
-          <div className="mt-4 border-t border-brand-line pt-5">
-            <ProductPurchase
-              productId={product.id}
-              imageUrl={product.images[0]?.url ?? null}
-              name={product.name}
-              path={productPath(product)}
-              variants={product.variants}
-              price={product.price}
-              hasPriceRange={product.hasPriceRange}
-            />
-          </div>
+          <ProductPurchase
+            productId={product.id}
+            imageUrl={product.images[0]?.url ?? null}
+            name={product.name}
+            path={productPath(product)}
+            variants={product.variants}
+            price={product.price}
+            hasPriceRange={product.hasPriceRange}
+          />
 
           {product.description && (
-            <section aria-labelledby="descripcion" className="mt-8">
-              <h2 id="descripcion" className="text-lg font-semibold">Descripción</h2>
-              <p className="mt-2 whitespace-pre-line leading-relaxed text-brand-ink/90 text-pretty">{product.description}</p>
+            <section aria-labelledby="descripcion">
+              <SectionHeading id="descripcion" title="Descripción" />
+              <p className="whitespace-pre-line leading-relaxed text-brand-ink/90 text-pretty">{product.description}</p>
             </section>
           )}
 
-          <section aria-labelledby="caracteristicas" className="mt-8">
-            <h2 id="caracteristicas" className="text-lg font-semibold">Características</h2>
-            <dl className="mt-2 divide-y divide-brand-line rounded-xl border border-brand-line bg-surface text-sm">
-              {features.map(([term, value]) => (
-                <div key={term} className="grid grid-cols-[7rem_1fr] gap-3 px-4 py-2.5 sm:grid-cols-[8rem_1fr]">
-                  <dt className="text-brand-muted">{term}</dt>
-                  <dd className="min-w-0 break-words font-medium">{value}</dd>
-                </div>
-              ))}
-            </dl>
-          </section>
+          {tiles.length > 0 && (
+            <section aria-labelledby="caracteristicas">
+              <SectionHeading id="caracteristicas" title="Características" />
+              <FeatureTiles features={tiles} />
+            </section>
+          )}
 
           <Link
             href={categoryHref(back.slug)}
-            className="mt-6 inline-flex min-h-11 items-center gap-1.5 text-sm font-medium underline-offset-4 hover:underline"
+            className="inline-flex min-h-11 items-center gap-1.5 text-sm font-medium underline-offset-4 hover:underline"
           >
             <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
               <path d="M19 12H5M11 6l-6 6 6 6" />

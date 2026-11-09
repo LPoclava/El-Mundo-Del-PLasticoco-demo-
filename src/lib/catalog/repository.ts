@@ -324,3 +324,55 @@ async function fetchRelated(id: string, categorySlug: string): Promise<CatalogPr
     hasPriceRange: r.has_price_range,
   }));
 }
+
+export type DiscoveryGroup = { category: Category; products: CatalogProduct[] };
+
+/** Productos por rubro para la sección de descubrimiento de la portada (hasta 8 por categoría principal destacada). */
+export const DISCOVERY_PER_CATEGORY = 8;
+
+/**
+ * Un vistazo real a cada rubro: las categorías principales destacadas con sus productos publicados. Sin productos no hay
+ * grupo (una categoría vacía no aparece); sin ninguno, la sección no se muestra. No inventa nada: es el mismo catálogo.
+ */
+export async function getDiscovery(): Promise<DiscoveryGroup[]> {
+  if (!isSupabaseConfigured) return [];
+  try {
+    return await fetchDiscovery();
+  } catch (e) {
+    // La sección es un extra: si falla, la portada se muestra igual.
+    console.error(`No se pudo leer la sección de descubrimiento: ${e instanceof Error ? e.message : "error"}`);
+    return [];
+  }
+}
+
+async function fetchDiscovery(): Promise<DiscoveryGroup[]> {
+  "use cache";
+  cacheLife(CATALOG_CACHE);
+
+  const categories = await fetchCategories();
+  const featured = categories
+    .filter((c) => c.featuredPosition != null && !c.parentSlug)
+    .sort((a, b) => (a.featuredPosition ?? 0) - (b.featuredPosition ?? 0))
+    .slice(0, 4);
+
+  const groups = await Promise.all(
+    featured.map(async (category) => {
+      const request = (column: string) =>
+        getSupabase().from("public_catalog").select(CATALOG_COLUMNS).eq(column, category.slug).order("name_sort").limit(DISCOVERY_PER_CATEGORY);
+      let result = await request("main_category_slug");
+      if (result.error && isMissingColumn(result.error)) result = await request("category_slug");
+      if (result.error) throw new Error(result.error.message);
+      const products: CatalogProduct[] = ((result.data ?? []) as CatalogRow[]).map((r) => ({
+        id: r.id,
+        name: displayName(r.name),
+        brand: r.brand,
+        categorySlug: r.category_slug,
+        imageUrl: productImageUrl(r.image_path),
+        price: r.price,
+        hasPriceRange: r.has_price_range,
+      }));
+      return { category, products };
+    }),
+  );
+  return groups.filter((g) => g.products.length > 0);
+}

@@ -725,3 +725,74 @@ html[data-intro="leaving"] .intro {
   width: var(--intro-wordmark);
   height: auto;
 }
+
+/* ---- Fase 4: lenguaje del boleto en tarjetas, ficha y carrito ---- */
+
+/* Línea de corte de un boleto: guiones y muescas en los bordes. --perf-bg es el color del fondo que se ve a través de la muesca. */
+.perforation {
+  position: relative;
+  height: 0;
+  border-top: 2px dashed var(--color-brand-line);
+}
+.perforation::before,
+.perforation::after {
+  content: "";
+  position: absolute;
+  top: -0.5rem;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 9999px;
+  background: var(--perf-bg, var(--color-brand-cream));
+}
+.perforation::before { left: -0.5rem; }
+.perforation::after { right: -0.5rem; }
+
+/* Tarjeta de producto: la foto se acerca un poco al apuntarla y la tarjeta se levanta. */
+.product-card {
+  --perf-bg: var(--color-brand-cream);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .product-card .card-photo { transition: transform 0.4s var(--ease-flight); }
+  .product-card:hover .card-photo { transform: scale(1.04); }
+}
+
+/* Opciones de una variante: la elegida se marca con un aro y un check que entra. */
+.variant-chip[data-checked="true"] .variant-check {
+  animation: chip-check 0.22s var(--ease-flight) both;
+}
+@keyframes chip-check {
+  from { opacity: 0; transform: scale(0.5); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Botón «Agregar»: al confirmarse, un pulso breve. */
+@keyframes added-pop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.04); }
+  100% { transform: scale(1); }
+}
+.added-pop { animation: added-pop 0.34s var(--ease-flight); }
+
+/* Carrito: cada producto entra desde la derecha y el número de unidades se renueva con cada cambio. */
+@keyframes cart-line-in {
+  from { opacity: 0; transform: translateX(14px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes qty-pop {
+  from { transform: scale(1.35); }
+  to { transform: scale(1); }
+}
+.cart-line-in { animation: cart-line-in 0.28s var(--ease-flight) both; }
+.qty-pop { animation: qty-pop 0.22s var(--ease-flight); }
+
+/* Descubrimiento: carril de tarjetas con imán suave al desplazarse. */
+.rail {
+  scroll-snap-type: x proximity;
+  scrollbar-width: thin;
+}
+.rail > * { scroll-snap-align: start; }
+
+@media (prefers-reduced-motion: reduce) {
+  .added-pop, .cart-line-in, .qty-pop, .variant-chip[data-checked="true"] .variant-check { animation: none; }
+  .rail { scroll-behavior: auto; }
+}
