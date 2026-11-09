@@ -41,8 +41,10 @@ Cada archivo dice su fecha. Si contradicen a los documentos de arriba, valen los
 | [historico/informe-intervencion-final.md](historico/informe-intervencion-final.md) | Informe de la intervención de calidad, 4 de noviembre de 2026 |
 | [historico/auditoria-fase-0-2.md](historico/auditoria-fase-0-2.md) | Auditoría de rutas, sesiones, `@supabase/ssr` y de la migración `admin_list_users`, 8 de noviembre de 2026 |
 | [historico/demo-escaner-celular.md](historico/demo-escaner-celular.md) | Cómo probar la cámara del escáner en un celular (etapa de demostración; sigue sirviendo para HTTPS y permisos) |
+| [informe-apertura-fase-0-6.md](informe-apertura-fase-0-6.md) | Diagnóstico de apertura de la fase 0.6, 8 de noviembre de 2026 (con notas de actualización) |
+| [informe-bloque-1-conciliacion.md](informe-bloque-1-conciliacion.md) | Bloque 1 de la fase 0.6: conciliación con producción, bitácora de operaciones manuales y estado de C1 y C2, 8 de noviembre de 2026 |
 
-`capturas/` guarda las imágenes que citan los informes.
+`capturas/` guarda las imágenes que citan los informes (esa carpeta no está en Git).
 
 ## Reglas para mantener esto vivo
 

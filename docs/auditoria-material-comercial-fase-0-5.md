@@ -60,6 +60,8 @@ No se prepara ninguna foto definitiva. El material comercial se construye cuando
 
 ### 0.5 C1 ejecutado: retiro de la foto con datos personales (8 de noviembre de 2026)
 
+> **Rectificación (noviembre de 2026, Bloque 1 de la fase 0.6).** El registro de esta sección atribuía a Claude Code la despublicación de «Bolsas de residuos» y la eliminación de su fotografía. **Esa atribución era incorrecta.** Según la confirmación del usuario, esas operaciones las realizó **manualmente el usuario**. Responsable: el usuario (operación manual). Fecha: noviembre de 2026 (el día exacto no está confirmado; la fecha del título es la del registro original). Hora: no confirmada. Acción: despublicación de Bolsas y eliminación de su fotografía. El motivo fue la demora del procedimiento automatizado (unos cinco minutos por producto). El texto que sigue se conserva como constancia de lo que se escribió entonces: **no debe leerse como una operación ejecutada por Claude Code**. Las comprobaciones de solo lectura de abajo (URL, vistas públicas, ficha, sitemap) no cambian y se repitieron en el Bloque 1.
+
 Autorizado por el responsable. Se hizo desde el panel (el mecanismo administrativo existente) con una sesión iniciada por el responsable. No se descargó, copió ni mostró la foto; se trabajó con lectura de texto de la pantalla y sin capturas.
 
 | Punto | Resultado |
@@ -104,6 +106,8 @@ Autorizado por el responsable. Se hizo desde el panel (el mecanismo administrati
 - **No se usa el logo de AImpulse como imagen del producto, no se inventó una foto ni se tomó la de otro producto.** El producto y sus datos no se tocaron.
 - **Cómo se sustituye cuando haya una foto correcta del termo real:** Panel → Productos → «Termos 700ml» → Editar → «Reemplazar la foto 1 con una nueva» (conserva su lugar como principal) → Guardar. El panel sube la nueva y recién después borra el archivo anterior del almacenamiento. La foto debe cumplir las reglas del panel (mínimo 500 px; se recomienda 1000 × 1000) y mostrar el producto que se ofrece.
 - Mientras tanto es material de prueba: no se prepara ninguna foto.
+
+**Nota del 8 de noviembre de 2026 (Bloque 1 de la fase 0.6; el texto anterior se conserva como historia):** C2 ya **no está «preparado sin ejecutar»**. El usuario confirmó que despublicó Termos y borró a mano su foto de Storage; la consulta pública de hoy da HTTP 400 en esa ruta y el producto no figura en el catálogo. C2 queda como **retirada del origen por el usuario**. **No se afirma** que se hayan eliminado copias externas ni la caché del sitio publicado. Lo mismo para C1: el origen está retirado, y caché externa y copias de terceros siguen sin verificar. Detalle: `informe-bloque-1-conciliacion.md` §E.
 
 ---
 

@@ -135,3 +135,7 @@ Los bloques 2 a 4 dependen entre sí en ese orden; el 5 puede avanzar en paralel
 - **Caché local de imágenes:** se borró `.next/cache/images` con autorización. **No se afirma** que las copias externas ni la caché del sitio publicado estén eliminadas.
 - **Git:** las 47 modificaciones, junto con `docs/` y `supabase/`, se respaldaron fuera del repositorio y se consolidaron en un commit local en `etapa-0-estabilizacion` (sin push). Detalle en `estado.md` §1.
 - Todo lo demás de este informe (C2 por confirmar, catálogo con 1 producto, pendientes) sigue vigente.
+
+## Actualización del Bloque 1 (8 de noviembre de 2026)
+
+Lo que este informe llamaba «cambios en producción que no figuran en ningún informe» tiene ahora origen confirmado por el usuario: **aplicó él `admin_list_users`, despublicó a mano Termos, Mermelada, Palitos y Bolsas y borró a mano las cuatro fotos**, por la lentitud del borrado mediante Claude Code. Fechas y horas exactas: sin registro. C2 queda como retirada del origen por el usuario. Se conserva el texto original arriba. Ver `informe-bloque-1-conciliacion.md`.

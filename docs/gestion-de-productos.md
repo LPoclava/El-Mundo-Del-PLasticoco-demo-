@@ -53,6 +53,8 @@ Se reutiliza el procesamiento de banners (`prepareImage`, tipo `product`): valid
 - **No se verificó contra Supabase real**: ni la persistencia, ni PostgREST, ni Storage, ni las políticas de Storage en producción. Las pruebas de base usan PostgreSQL local (PGlite) con los roles de Supabase simulados; la interfaz se probó contra una API simulada.
 - **El cambio de foto principal no es atómico** (dos instrucciones). Sería atómico con una función SQL; no se agregó para no tocar el esquema. Si se prefiere, es una migración pequeña (`set_primary_image(product_id, image_id)`).
 - **Sin borrado de productos**: solo archivar. Las fotos de un producto borrado a mano desde SQL quedarían en Storage.
+- **Cómo se saca un producto del público hoy** (aclaración del 8 de noviembre de 2026): «Despublicar» (con confirmación) y, para quitar su foto, «Quitar la foto» + Guardar; el panel borra primero la fila y después el archivo, solo si nadie más lo usa. **Borrar el archivo a mano en Storage salta esa verificación** y podría dejar una fila de foto que apunte a un archivo inexistente.
+- **Incidencia de rendimiento (sin medir):** el usuario reportó que quitar un producto mediante Claude Code tardaba unos cinco minutos. No se cambió código ni se atribuye una causa; hipótesis y plan de medición en `informe-bloque-1-conciliacion.md` §F.
 - **Dos personas editando el mismo producto a la vez**: gana el último guardado; no hay control de versiones.
 - **Stock y ventas** no forman parte de esta etapa; ver [pos-ventas.md](pos-ventas.md).
 - Las variantes totalmente vacías (sin tamaño, color ni precio) se ignoran al guardar; una variante existente que se deja vacía se elimina.

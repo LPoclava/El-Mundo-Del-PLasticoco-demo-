@@ -21,8 +21,8 @@ Repositorio remoto: `https://github.com/LPoclava/El-Mundo-Del-PLasticoco-Catalog
 | 0.2 Panel real | Hecha en código y pruebas: ingreso único con Supabase Auth, CRM, Configuración y demostración retirados. **Sin validar con cuentas reales de cada rol** |
 | 0.3 Infraestructura | Cabeceras, CSP, SEO y CI implementados y probados en local. **La CI nunca corrió en GitHub; Vercel sin verificar; escáner con cámara sin probar bajo la CSP** |
 | 0.4 Validación operativa | Circuito de venta auditado y probado; H1 corregido en código. **No cerrada:** falta proyecto de Supabase de prueba, prueba física, impresión real y corte de red real |
-| 0.5 Material comercial | Auditoría hecha. **C1 resuelto en la fuente** (cachés externas sin verificar). **C2: el archivo del logo ya no es accesible** (producto despublicado, foto inexistente), pero lo hizo alguien fuera de esta intervención; **pendiente de confirmación del responsable** |
-| 0.6 Validación integral | **En curso.** Bloque 0 (respaldo, revisión y commit local) hecho en este corte; quedan los bloques siguientes |
+| 0.5 Material comercial | Auditoría hecha. **C1 resuelto en la fuente** (cachés externas sin verificar). **C2: el logo fue retirado del origen por el usuario** (producto despublicado, foto inexistente; verificado de nuevo el 8 de noviembre, HTTP 400); copias externas sin verificar |
+| 0.6 Validación integral | **En curso.** Bloque 0 (respaldo, revisión y commit local) hecho; **Bloque 1 (conciliación con producción) hecho de forma parcial**, ver `informe-bloque-1-conciliacion.md`; quedan los bloques siguientes |
 
 ## 2. Migraciones de Supabase
 
@@ -73,6 +73,19 @@ Fuera de `migrations/` a propósito:
 | CRM | **Retirado** (no tenía tablas ni funciones reales; el código de demostración se borró) | — |
 | Configuración | **Retirada** (igual) | — |
 
+## 2 bis. Bitácora de operaciones manuales (cambios hechos fuera del código)
+
+Registradas en el Bloque 1 de la fase 0.6 (8 de noviembre de 2026). **Las fechas y horas exactas no constan y no se inventan**; «noviembre de 2026» es la referencia segura. Detalle, evidencia y discrepancias: [informe-bloque-1-conciliacion.md](informe-bloque-1-conciliacion.md) §A y §D.
+
+| # | Operación | Autor | Cuándo |
+| --- | --- | --- | --- |
+| 1 | Aplicar la migración `20261108000001_admin_list_users` | Usuario (confirmado de palabra) | Noviembre de 2026; sin hora exacta |
+| 2 | Despublicar Termos, Mermelada, Palitos y Bolsas | Usuario (confirmado de palabra) | Noviembre de 2026; ya hecho al abrir la fase 0.6 |
+| 3 | Eliminar de Storage las cuatro fotos de esos productos | Usuario (confirmado de palabra) | Igual |
+| 4 | Cerrar el registro público de Auth | **Sin autor conocido** (observado el 8 de noviembre) | Antes del 8 de noviembre de 2026, noche |
+
+**Motivo operativo (dicho por el usuario):** el flujo de eliminación ejecutado mediante Claude Code tardaba unos cinco minutos por producto. Es una incidencia de rendimiento **sin medir**; ver el informe §F. **Rectificación de C1 (noviembre de 2026):** un registro anterior atribuía a Claude Code la baja de Bolsas (despublicar y quitar su foto). Era incorrecto: la hizo **manualmente el usuario** (fecha noviembre de 2026; hora no confirmada), igual que las de Termos, Mermelada y Palitos. Ver `auditoria-material-comercial-fase-0-5.md` §0.5.
+
 ## 3 bis. Infraestructura (Etapa 0, fase 0.3: rama local, sin subir ni desplegar)
 
 Detalle, verificaciones y pasos manuales: [despliegue.md](despliegue.md).
@@ -109,8 +122,8 @@ Detalle: [auditoria-material-comercial-fase-0-5.md](auditoria-material-comercial
 
 | Pieza | Estado |
 | --- | --- |
-| Foto de «Bolsas de residuos» | **C1 RESUELTO EN LA FUENTE (8 de noviembre):** el producto se despublicó y se quitó su única foto (el archivo ya no existe en el almacenamiento; la URL anterior responde 400). El producto, su variante y su precio se conservan. **La caché local de imágenes de esta computadora (`.next/cache/images`, 78 archivos) se borró** con autorización del responsable. **NO se afirma que las copias externas estén eliminadas:** WhatsApp, buscadores, la caché de imágenes del sitio publicado en Vercel y cualquier copia guardada por terceros no se pueden verificar ni borrar desde acá. Detalle: `auditoria-material-comercial-fase-0-5.md` §0.5 |
-| Foto de «Termos 700ml» (C2) | Era el logo de AImpulse (incongruencia de material de prueba). **Al abrir la fase 0.6 (8 de noviembre) el archivo ya no existía en el almacenamiento y el producto estaba despublicado**: no se muestra públicamente. **No consta quién lo hizo ni cuándo**; C2 se da por resuelto en cuanto a exposición pública solo cuando el responsable lo confirme. No se prepara foto; el procedimiento de reemplazo sigue documentado (§0.6). No debe llegar al catálogo definitivo |
+| Foto de «Bolsas de residuos» | **C1 RESUELTO EN LA FUENTE (verificado el 8 de noviembre; la operación la hizo manualmente el usuario en noviembre de 2026, hora no confirmada; rectificación en §2 bis):** el producto se despublicó y se quitó su única foto (el archivo ya no existe en el almacenamiento; la URL anterior responde 400). El producto, su variante y su precio se conservan. **La caché local de imágenes de esta computadora (`.next/cache/images`, 78 archivos) se borró** con autorización del responsable. **NO se afirma que las copias externas estén eliminadas:** WhatsApp, buscadores, la caché de imágenes del sitio publicado en Vercel y cualquier copia guardada por terceros no se pueden verificar ni borrar desde acá. Detalle: `auditoria-material-comercial-fase-0-5.md` §0.5 |
+| Foto de «Termos 700ml» (C2) | Era el logo de AImpulse (incongruencia de material de prueba). **Al abrir la fase 0.6 (8 de noviembre) el archivo ya no existía en el almacenamiento y el producto estaba despublicado**: no se muestra públicamente. **Actualización del 8 de noviembre (Bloque 1): el usuario confirma que despublicó los productos y borró las fotos a mano**; la fecha y hora exactas no constan. C2 queda como **retirada del origen por el usuario**; no se afirma que se hayan eliminado copias externas ni la caché del sitio publicado. No se prepara foto; el procedimiento de reemplazo sigue documentado (§0.6). No debe llegar al catálogo definitivo |
 | Fotos y datos de los productos restantes | Material de prueba (no es el catálogo definitivo): no se corrige. Se evaluarán con material real (productos reales, nombres y marcas confirmados, fotos de cada producto y precios autorizados) |
 | Banners | **0 vigentes** hoy (había 2 hace horas); confirmar si fue intencional. Sin arte para celular |
 | Marca | Coherente con la guía (colores exactos) |
@@ -122,7 +135,7 @@ Detalle: [auditoria-material-comercial-fase-0-5.md](auditoria-material-comercial
 - La persistencia de productos y fotos contra Supabase real, y las políticas de Storage en producción.
 - Un **celular físico**, Safari, un lector de códigos físico y un lector de pantalla real.
 - Tiempos en Vercel (se midió con servidor local).
-- El estado del **registro público de Auth** en Supabase: la última evidencia decía abierto. Conviene desactivarlo (Authentication → Sign In / Providers).
+- ~~El estado del **registro público de Auth** en Supabase: la última evidencia decía abierto.~~ **Actualización del 8 de noviembre de 2026 (Bloque 1):** observado en solo lectura, el registro público está **cerrado** (solo proveedor de correo, sin autoconfirmar). **No consta quién lo cerró ni cuándo.** Falta confirmarlo en el panel de Supabase.
 - La subida del arte móvil de un banner con sesión real.
 - El **ingreso real del panel** con una cuenta de cada rol (empleado, gerente, CEO): menú, redirecciones, cierre de sesión y la pantalla de Usuarios contra el Supabase real, que depende de la migración `20261108000001` (aplicada, pero nunca probada con una cuenta CEO real). Protocolo preparado: `protocolo-validacion-cuentas.md` (lo ejecuta el responsable).
 - El **escáner con cámara bajo la CSP nueva**, en un celular real y con una vista previa desplegada.
