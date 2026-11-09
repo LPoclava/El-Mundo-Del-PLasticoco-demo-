@@ -36,7 +36,6 @@ async function build() {
     await db.exec(`insert into public.products (id, name, category_id, barcode) values ('${PROD[k]}', 'prueba ${k}', '${CAT1}', '7799${Math.floor(Math.random() * 1e9)}');
                    insert into public.product_variants (id, product_id, price, stock) values ('${VAR[k]}', '${PROD[k]}', ${price[k]}, 0);`);
   }
-  const sales = [];
   const sell = (q, k, qty, method) => q("select public.confirm_sale($1::uuid,$2,$3::jsonb) as r", [crypto.randomUUID(), method, JSON.stringify([{ variant_id: VAR[k], quantity: qty }])]);
   await asCeo(db, async (q) => {
     await q("select public.receive_stock($1,200)", [VAR.med]);

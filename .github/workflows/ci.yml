@@ -35,8 +35,9 @@ jobs:
       - name: Instalar dependencias (reproducible)
         run: npm ci
 
-      - name: TypeScript
-        run: npx tsc --noEmit
+      # LayoutProps y PageProps son tipos globales que Next GENERA (next typegen): en un clon limpio no existen hasta generarlos.
+      - name: TypeScript (genera los tipos de rutas y revisa)
+        run: npm run typecheck
 
       - name: ESLint
         run: npm run lint

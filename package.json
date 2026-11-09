@@ -6,6 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "typegen": "next typegen",
+    "typecheck": "next typegen && tsc --noEmit",
     "lint": "eslint",
     "test": "node --test scripts/*.test.mjs"
   },

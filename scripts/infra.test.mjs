@@ -177,14 +177,20 @@ describe("integración continua", () => {
   });
 
   it("instala de forma reproducible y corre tipos, lint, pruebas y build, en ese orden", () => {
-    const steps = ["npm ci", "npx tsc --noEmit", "npm run lint", "npm test", "npm run build"].map((s) => ci.indexOf(`run: ${s}`));
+    const steps = ["npm ci", "npm run typecheck", "npm run lint", "npm test", "npm run build"].map((s) => ci.indexOf(`run: ${s}`));
     assert.ok(steps.every((i) => i > 0), `faltan pasos: ${steps}`);
     assert.deepEqual([...steps].sort((a, b) => a - b), steps, "el orden de los pasos cambió");
   });
 
   it("los comandos existen en package.json", () => {
     const scripts = JSON.parse(read("package.json")).scripts;
-    for (const name of ["lint", "test", "build"]) assert.ok(scripts[name], `falta el script ${name}`);
+    for (const name of ["lint", "test", "build", "typecheck"]) assert.ok(scripts[name], `falta el script ${name}`);
+  });
+
+  it("revisa los tipos DESPUÉS de generar los de rutas: LayoutProps y PageProps no existen en un clon limpio hasta correr next typegen", () => {
+    const scripts = JSON.parse(read("package.json")).scripts;
+    assert.match(scripts.typecheck, /^next typegen && tsc --noEmit$/);
+    assert.doesNotMatch(code(ci), /run: npx tsc/, "el workflow no puede correr tsc suelto antes de generar los tipos");
   });
 
   it("usa la versión de Node del repositorio y no despliega ni usa secretos", () => {
