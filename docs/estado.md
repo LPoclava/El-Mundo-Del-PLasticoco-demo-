@@ -271,3 +271,15 @@ Pruebas: `supabase/tests/etapa1-fase1.test.mjs` (11). Se ajustó una prueba de `
 - **Código:** cálculos en `src/lib/pos/analytics.ts` y `src/lib/products/search.ts`; pantallas en `sections/dashboard-parts.tsx` y `expanding-search.tsx`. Consultas por las funciones `sales_by_payment_method` y `sales_monthly_by_payment_method` de la fase 1 (ya aplicadas).
 - **Pruebas:** `scripts/pos-analytics.test.mjs`, `scripts/panel-fase5.test.mjs` y, en base de datos, `supabase/tests/etapa1-fase5.test.mjs` (el resumen, el análisis por medio y el contador mensual coinciden entre sí y se reproducen a mano).
 - **No verificado en pantalla:** el panel exige tu sesión (Supabase Auth), así que el dashboard y el buscador no se vieron renderizados; sí pasan tipos, lint, pruebas y build. Falta mirarlos en 320, 768 y 1366 px, con teclado y con datos reales (hoy hay 0 ventas).
+
+## 12. Etapa 1, fase 6 (estructura fiscal del servidor)
+
+Detalle completo en [comprobantes.md](comprobantes.md). Resumen:
+
+- **No emite nada.** No hay ninguna llamada a ARCA; el adaptador es un stub («no implementado»). `production_enabled` sigue en `false` y, además, producción exige una segunda llave del servidor (`FISCAL_PRODUCTION_ALLOWED=1`, vacía).
+- **Rutas del servidor** `/api/fiscal/{status,documents,request,process}`: solo desarrolladores (`developer_access`), verificados por el servidor (`is_developer()` con la sesión de la persona) y otra vez por la base (`require_developer()` + RLS). El CEO del comercio no tiene acceso.
+- **Trazabilidad e idempotencia:** estados `pendiente → en_proceso → emitido | rechazado | error`, eventos de solo agregado, una venta un comprobante, sin doble llamada al proveedor.
+- **Separación:** la venta no depende del circuito fiscal (una prueba lo verifica).
+- **Secretos:** solo variables de servidor; certificados y claves ignorados por Git; sin `service_role`.
+- **Pruebas:** `scripts/fiscal-server.test.mjs` (permisos, validación, secretos, garantías de código) y `supabase/tests/fiscal-service.test.mjs` (servicio contra la base real en PGlite).
+- **Sin migración nueva.** Bloqueado por credenciales y datos fiscales de ARCA (ver lista en comprobantes.md).
