@@ -1,6 +1,6 @@
 # Autorización por roles y auditoría
 
-Estado: **aplicado en la base de producción** (las ocho migraciones de roles y auditoría y el cierre que elimina `is_staff()` y renombra `staff` a `staff_legacy`; el cierre sigue guardado en `supabase/pending/` como registro). Reemplaza el modelo de `public.staff`
+Estado: **aplicado en la base de producción**: las ocho migraciones de roles y auditoría **y el cierre `close_drop_staff`**. **Verificado el 8 de noviembre de 2026 (diagnóstico con el conector de Supabase, solo lectura): `public.staff`, `public.staff_legacy` y `public.is_staff()` no existen.** Quién aplicó el cierre y cuándo: **desconocidos** (sin registro; ver [estado.md](estado.md) §1 y §2). Versiones anteriores de este documento daban el cierre por pendiente; esas frases se conservan más abajo, marcadas, por trazabilidad. Reemplaza el modelo de `public.staff`
 (todos con los mismos permisos) por tres roles jerárquicos: `empleado < gerente < ceo`.
 
 ## 1. Modelo de datos
@@ -50,7 +50,7 @@ ese campo.
 | 8 | `20261029000008_barcode_scan_functions` | `scan_lookup`, `scan_set_price`, `scan_link_barcode`, `scan_create_product`. |
 
 Fuera de la carpeta, a propósito: `supabase/pending/20261029000099_close_drop_staff.sql` (borra
-`is_staff()` y `staff_legacy`; **no aplicar ahora**) y `supabase/rollback/20261029_rollback_roles.sql`.
+`is_staff()` y `staff_legacy`; ~~**no aplicar ahora**~~ **ya aplicado en producción, comprobado el 8 de noviembre de 2026; operador y fecha desconocidos; no volver a aplicarlo**) y `supabase/rollback/20261029_rollback_roles.sql` (**ya no puede ejecutarse**: se niega sin `staff_legacy`).
 
 Las migraciones históricas (`20261028…`) no se tocaron.
 
@@ -96,13 +96,13 @@ Límites:
 | `staff_all` en 4 tablas (migración 3 histórica) | Reemplazadas en la migración 5 |
 | Políticas de Storage `personal ...` (migración 5 histórica) | Reemplazadas en la migración 6 |
 | `reassign_category_products()` | Reescrita en la migración 6 (misma firma) |
-| `public.staff` | Renombrada a `staff_legacy` en la migración 6 |
-| `public.is_staff()` | Sin dependientes; ejecución revocada; borrado en el cierre (pending) |
+| `public.staff` | Renombrada a `staff_legacy` en la migración 6 y **eliminada** después por el cierre: **no existe** (comprobado el 8 de noviembre de 2026) |
+| `public.is_staff()` | Sin dependientes; ejecución revocada; **eliminada** por el cierre: **no existe** (comprobado el 8 de noviembre de 2026). 0 políticas dependen de ella |
 | Código de la app (`src/`) | Sin referencias a `is_staff()` ni a `staff_legacy` (comprobado el 4 de noviembre de 2026). El panel lee el rol de `profiles` |
 
 ## 7. Orden de aplicación (histórico: las migraciones 1 a 8 ya están aplicadas)
 
-Solo el paso 6 sigue pendiente (cierre de `pending/`, ver [estado.md](estado.md)). El resto se conserva como guía para rearmar la base en otro proyecto.
+~~Solo el paso 6 sigue pendiente (cierre de `pending/`)~~ **Corrección del 8 de noviembre de 2026: el paso 6 también está aplicado en producción** (operador y fecha desconocidos). Esta sección se conserva como guía para rearmar la base en otro proyecto; para replicar producción, un proyecto nuevo debe terminar **sin** `staff`, `staff_legacy` ni `is_staff()`.
 
 1. Copia de seguridad o punto de restauración. Anotar quién está en `staff`.
 2. Comprobar con solo lectura el estado real (ver sección 8) y que coincida con las migraciones 1 a 5.
@@ -110,7 +110,7 @@ Solo el paso 6 sigue pendiente (cierre de `pending/`, ver [estado.md](estado.md)
    siga entrando al catálogo.
 4. Desactivar el registro público de Auth.
 5. Correr las verificaciones de la sección 8 contra producción.
-6. Esperar un período de uso y recién entonces, con aprobación, aplicar el cierre de `pending/`.
+6. Esperar un período de uso y recién entonces, con aprobación, aplicar el cierre de `pending/`. *(En producción ya se aplicó; ver la nota de arriba.)*
 
 Si las políticas de `storage.objects` no se pueden modificar desde una migración (mismo riesgo que
 tuvo la migración 5 histórica), la migración 6 fallará por completo y no cambiará nada; en ese caso
@@ -134,6 +134,15 @@ select version from supabase_migrations.schema_migrations order by version;
 También: confirmar el estado del registro público en Auth y probar con un usuario de cada rol desde
 la aplicación real, no solo desde las pruebas.
 
+**Resultado de estas verificaciones el 8 de noviembre de 2026** (conector de Supabase, solo lectura; detalle en [informe-bloque-2-diagnostico-conector.md](informe-bloque-2-diagnostico-conector.md)):
+- La consulta de migraciones registradas **no funciona**: `supabase_migrations.schema_migrations` no existe y `list_migrations` no devolvió registros. No hay historial de versiones; los objetos de las 19 migraciones sí están presentes.
+- Ninguna política depende de `is_staff` (0 filas). `staff`, `staff_legacy` e `is_staff()` no existen.
+- Perfiles: **una sola cuenta, CEO activo**. No hay gerente ni empleado: las pruebas con esos roles siguen **pendientes**.
+- RLS activa en las 11 tablas; 22 políticas, todas para `authenticated`; sin políticas de escritura sobre `profiles`, `sales`, `sale_items`, `stock_movements` ni `audit_log`.
+- Sin funciones `security definer` sin `search_path` fijo; las funciones críticas no las ejecuta `anon`. Siete funciones de disparador o utilidad sí son ejecutables por `anon` (riesgo bajo).
+- Storage: bucket público y 8 políticas de gerente; sin las «personal …».
+- El registro público de Auth figura **cerrado** (observado por consulta pública).
+
 ## 9. Reversión
 
 `supabase/rollback/20261029_rollback_roles.sql` (probado contra PostgreSQL en las pruebas):
@@ -143,7 +152,7 @@ la aplicación real, no solo desde las pruebas.
 - **No borra** productos, categorías, variantes, imágenes ni usuarios de Auth.
 - Por defecto **conserva** `profiles`, `audit_log` y `archived_at`; el borrado total está comentado al
   final del script y destruye la auditoría acumulada.
-- Se niega a ejecutarse si `staff_legacy` no existe o está vacía.
+- Se niega a ejecutarse si `staff_legacy` no existe o está vacía. **Hoy `staff_legacy` no existe en producción (8 de noviembre de 2026): el script no se puede usar** y la única reversión es una copia de seguridad.
 - Límites: los gerentes y empleados pierden acceso al volver al modelo viejo (solo conoce `staff`);
   los productos creados desde el escáner quedan sin publicar y se conservan; si ya se aplicó el cierre
   de `pending/`, solo sirve restaurar la copia de seguridad.

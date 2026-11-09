@@ -40,7 +40,7 @@ Estado: **modelo aprobado; todas las migraciones de `supabase/migrations` están
 - **products**: `name`, `category_id` (obligatoria), `description`, `brand`, `sku`, `barcode`, `publish_enabled`, `created_at`, `updated_at`.
 - **product_variants**: `product_id`, `size`, `color`, `price`, `position`.
 - **product_images**: `product_id`, `path` (ruta en Storage, no URL completa), `is_primary`, `position`.
-- **staff** (modelo original, reemplazado): `user_id` de Supabase Auth; todos con los mismos permisos. Hoy existe como `staff_legacy`; los permisos salen de `profiles` ([autorizacion-roles.md](autorizacion-roles.md)).
+- **staff** (modelo original, reemplazado): `user_id` de Supabase Auth; todos con los mismos permisos. Pasó a `staff_legacy` y, según la comprobación del 8 de noviembre de 2026, **hoy ya no existe** en producción (cierre aplicado; operador y fecha desconocidos); los permisos salen de `profiles` ([autorizacion-roles.md](autorizacion-roles.md)).
 
 ## 4. Categorías dinámicas
 

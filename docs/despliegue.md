@@ -2,6 +2,12 @@
 
 Estado al 8 de noviembre de 2026 (Etapa 0, fase 0.3, rama local `etapa-0-estabilizacion`, sin subir ni desplegar). **No se verificó nada en Vercel ni en GitHub**: no hay acceso desde esta máquina (`gh` sin sesión, sin `.vercel/`, sin dirección de producción). Lo marcado «manual» lo hace quien administra esas cuentas.
 
+## 0. Estado del sitio publicado (verificado el 9 de noviembre de 2026, solo lectura)
+
+Sitio: <https://el-mundo-del-plastico.vercel.app/> (Vercel). **Sirve la versión anterior a la Etapa 0**: la portada y `/panel/login` responden 200, pero **no tiene** `robots.txt` ni `sitemap.xml` (404) y la portada **no trae** las cabeceras de seguridad de `next.config.ts` (solo el HSTS que agrega Vercel). Los cambios de la Etapa 0 (cabeceras, CSP, SEO, ingreso único del panel, recuperación del POS) llegan a producción **solo con un `push` y un despliegue**, que están **pendientes por acceso y por decisión del usuario**. Hasta entonces las secciones 2 y 3 de este documento describen lo implementado y probado **en local**, no lo publicado. La CI de GitHub tampoco corrió nunca.
+
+**Despliegue, cuando se autorice:** (1) `git push` de `main`; (2) confirmar en Vercel `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` y `NEXT_PUBLIC_SITE_URL` (dominio real con `https://`); (3) abrir `/robots.txt`, `/sitemap.xml` y revisar las cabeceras; (4) probar el catálogo, `/panel/login` y el escáner con cámara bajo la CSP; (5) revisar la ejecución de la CI en GitHub.
+
 ## 1. Variables de entorno
 
 | Variable | Dónde | Para qué | Estado |

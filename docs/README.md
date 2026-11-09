@@ -43,6 +43,14 @@ Cada archivo dice su fecha. Si contradicen a los documentos de arriba, valen los
 | [historico/demo-escaner-celular.md](historico/demo-escaner-celular.md) | Cómo probar la cámara del escáner en un celular (etapa de demostración; sigue sirviendo para HTTPS y permisos) |
 | [informe-apertura-fase-0-6.md](informe-apertura-fase-0-6.md) | Diagnóstico de apertura de la fase 0.6, 8 de noviembre de 2026 (con notas de actualización) |
 | [informe-bloque-1-conciliacion.md](informe-bloque-1-conciliacion.md) | Bloque 1 de la fase 0.6: conciliación con producción, bitácora de operaciones manuales y estado de C1 y C2, 8 de noviembre de 2026 |
+| [informe-bloque-2-entorno-prueba.md](informe-bloque-2-entorno-prueba.md) | Bloque 2 de la fase 0.6: diagnóstico y plan del entorno de Supabase de prueba, matriz de permisos y casos de validación de roles, 8 de noviembre de 2026 |
+| [protocolo-bloque-2-lectura-produccion.md](protocolo-bloque-2-lectura-produccion.md) | Bloque 2: validación de roles de solo lectura en producción (sesión CEO, gerente y empleado, consultas SQL) |
+| [informe-bloque-2-diagnostico-supabase-existente.md](informe-bloque-2-diagnostico-supabase-existente.md) | Bloque 2: diagnóstico sobre el Supabase existente, pruebas anónimas y estado de la validación |
+| [informe-bloque-2-diagnostico-conector.md](informe-bloque-2-diagnostico-conector.md) | Bloque 2: diagnóstico de producción con el conector de Supabase (solo lectura): `staff` ausente, sin registro de versiones, una sola cuenta |
+| [informe-bloque-b-validacion-funcional.md](informe-bloque-b-validacion-funcional.md) | Etapa 0, Bloque B: privilegios de tabla (Q9), políticas de Storage, permisos del CEO contra la documentación, S1 y S11 sin sesión y criterios pendientes para cerrar la etapa |
+| [registro-respaldo-limpieza.md](registro-respaldo-limpieza.md) | Registro del respaldo previo a la limpieza de producción: ruta, SHA-256, contenido y verificación, 9 de noviembre de 2026 |
+| [informe-final-etapa-0.md](informe-final-etapa-0.md) | **Informe final de la Etapa 0**: resumen, estado inicial y final, limpieza S2 (preparada, a la espera de la confirmación final), respaldo, arquitectura, seguridad, pruebas, riesgos, pendientes externos y checklist, 9 de noviembre de 2026 |
+| [plan-limpieza-produccion.md](plan-limpieza-produccion.md) | Preparación (sin ejecutar) de la limpieza de datos de prueba en producción: inventario, respaldo, SQL, recuperación y criterios, 9 de noviembre de 2026 |
 
 `capturas/` guarda las imágenes que citan los informes (esa carpeta no está en Git).
 

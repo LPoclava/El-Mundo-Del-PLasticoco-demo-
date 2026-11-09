@@ -24,10 +24,22 @@ Archivos de `supabase/migrations/`, pegados y ejecutados en el SQL Editor del pr
 | 17 | `20261102000001` | Vistas de la ficha de producto |
 | 18 | `20261103000001` | Arte móvil de banners |
 | 19 | `20261108000001` | `admin_list_users` (listado de usuarios para el CEO) |
+| **20 (último)** | `supabase/pending/20261029000099_close_drop_staff.sql` | **Cierre `close_drop_staff`:** borra `is_staff()` y `staff_legacy`. **Replica el estado de producción** (verificado el 8 de noviembre de 2026). Se aplica **solo al final**, ver abajo |
+
+**Dependencias reales del cierre (paso 20).** Debe ir **después de las 19 migraciones**, no antes:
+
+1. La migración de orden 8 (`20261029000003_assign_initial_ceo`) **necesita** la tabla `staff` con al menos una fila; la de orden 11 (`20261029000006_storage_and_reassign_roles`) renombra `staff` a `staff_legacy` y revoca `is_staff()`. El cierre borra justamente `staff_legacy` e `is_staff()`, así que si se aplicara antes de la 8 o de la 11 **fallaría** (no encontraría `staff_legacy`) o **rompería** la secuencia.
+2. La de orden 10 (`20261029000005_catalog_role_policies`) elimina las políticas `staff_all` y la de orden 11 reemplaza las políticas de Storage y `reassign_category_products`: esas son las que dejan **a `is_staff()` sin dependientes**. El cierre ejecuta `drop function public.is_staff()` **sin** `cascade`: si alguna política o función todavía dependiera de ella, **falla** y no cambia nada (es la protección buscada).
+3. El script exige además **al menos un CEO activo** en `profiles` (lo da la migración de orden 8, `…29000003`). Antes del cierre, comprobar que el CEO de prueba puede ingresar.
+4. Al borrar `staff_legacy` desaparece la fila de `staff` insertada para la migración 8. Es lo esperado: el CEO sigue existiendo como perfil.
+5. Es **irreversible** salvo con copia de seguridad (igual que en producción). Por eso se hace **al final** y **después de verificar** la secuencia (sección 3): ya no sirve el script de reversión de roles.
+6. Verificación posterior: `select to_regclass('public.staff'), to_regclass('public.staff_legacy'), to_regprocedure('public.is_staff()');` debe devolver **tres vacíos**, igual que producción.
 
 **Atención a un paso intermedio.** La migración `20261029000003_assign_initial_ceo` **aborta si la tabla `staff` está vacía** (convierte lo que haya en `staff` en CEO). En un proyecto nuevo hay que, **antes de ella**: crear el usuario CEO en Authentication → Users y ejecutar `insert into public.staff (user_id) values ('<uuid del usuario CEO>');`. Después se aplican las demás.
 
-**No aplicar** en el proyecto de prueba: `supabase/pending/20261029000099_close_drop_staff.sql` ni `supabase/correcciones/20261103_catalogo_datos.sql` (esa lleva identificadores de producción).
+> **Actualización del 8 de noviembre de 2026:** en producción el cierre `close_drop_staff` **ya está aplicado** (no existen `staff`, `staff_legacy` ni `is_staff()`; operador y fecha desconocidos). Por eso el paso 20 de la tabla lo incluye al final. Además, producción tiene **una sola cuenta (CEO)** y **no tiene historial de versiones de migraciones**; las cuentas de gerente y empleado de prueba se crean en el proyecto aparte.
+
+**No aplicar** en el proyecto de prueba: `supabase/correcciones/20261103_catalogo_datos.sql` (lleva identificadores de producción). *(Histórico: la versión anterior de este documento, del 4 de noviembre, también prohibía aplicar `supabase/pending/20261029000099_close_drop_staff.sql`; esa prohibición quedó **superada** por el paso 20 de la tabla.)*
 
 Si una migración falla al crear políticas sobre `storage.objects`, el aviso de cada archivo explica cómo crearlas desde el panel de Storage.
 
@@ -51,6 +63,9 @@ select code, enabled from public.payment_methods order by position;  -- efectivo
 select policyname from pg_policies where schemaname = 'storage' and tablename = 'objects';  -- políticas de product-images, banners/ y categories/
 select id, public from storage.buckets where id = 'product-images';                         -- bucket público
 select has_function_privilege('anon', 'public.confirm_sale(uuid,text,jsonb)', 'execute');   -- esperado: false
+
+-- Tras el cierre (paso 20): igual que producción
+select to_regclass('public.staff'), to_regclass('public.staff_legacy'), to_regprocedure('public.is_staff()');  -- esperado: tres vacíos
 ```
 
 ## 4. Usuarios de prueba

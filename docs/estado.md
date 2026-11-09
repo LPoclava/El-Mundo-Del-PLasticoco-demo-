@@ -6,8 +6,9 @@
 
 | Rama | Estado |
 | --- | --- |
-| `main` | En `de4b9c2`, igual que `origin/main`. **No se tocó** durante la Etapa 0. |
-| `etapa-0-estabilizacion` | Rama actual, solo en local. Parte de `de4b9c2`. Toda la Etapa 0 (fases 0.1 a 0.5) se consolidó en un único commit local, `chore: consolidate stage 0 stabilization`. **Sin subir a GitHub, sin merge, sin despliegue.** |
+| `main` | **Estado actual (8 de noviembre de 2026): en `4c4bbd6`, local, 2 commits por delante de `origin/main`** (que sigue en `de4b9c2`). Se llegó con un merge local de avance directo desde `etapa-0-estabilizacion`. **Sin push ni despliegue.** *(Histórico: hasta el Bloque 0 `main` estaba en `de4b9c2`, igual que `origin/main`, y no se había tocado.)* |
+| `etapa-0-estabilizacion` | Solo en local, en el mismo commit que `main` (`4c4bbd6`). Contiene `bdcdd6d` (`chore: consolidate stage 0 stabilization`, toda la Etapa 0, fases 0.1 a 0.5) y `4c4bbd6` (`docs: reconcile stage 0 block 1 with production`). *(Histórico: el Bloque 0 la dejaba como rama actual, «sin merge».)* El árbol de trabajo está hoy en `main`. |
+| Cambios sin commit | Documentación del Bloque 2 y de la conciliación (informes, protocolo, correcciones de este documento y de otros), y `supabase/queries/bloque-2-solo-lectura.sql`. **Ningún cambio de código ni migraciones.** |
 | Respaldo previo al commit | `C:\Users\lauty\Respaldos-AImpulse\mundo-del-plastico_etapa-0_respaldo_2026-11-08.tar.gz` (fuera del repositorio y de OneDrive), con su `.sha256` y su manifiesto. |
 | Sin versionar a propósito | `Logos de categorias/` y `Logo/` (recursos de marca pesados, respaldados), `.impeccable/` (salidas de una herramienta de diseño), `docs/capturas/` (capturas que podrían mostrar material de prueba o datos personales; la documentación que las cita queda con esos enlaces rotos hasta decidir). |
 
@@ -22,11 +23,15 @@ Repositorio remoto: `https://github.com/LPoclava/El-Mundo-Del-PLasticoco-Catalog
 | 0.3 Infraestructura | Cabeceras, CSP, SEO y CI implementados y probados en local. **La CI nunca corrió en GitHub; Vercel sin verificar; escáner con cámara sin probar bajo la CSP** |
 | 0.4 Validación operativa | Circuito de venta auditado y probado; H1 corregido en código. **No cerrada:** falta proyecto de Supabase de prueba, prueba física, impresión real y corte de red real |
 | 0.5 Material comercial | Auditoría hecha. **C1 resuelto en la fuente** (cachés externas sin verificar). **C2: el logo fue retirado del origen por el usuario** (producto despublicado, foto inexistente; verificado de nuevo el 8 de noviembre, HTTP 400); copias externas sin verificar |
-| 0.6 Validación integral | **En curso.** Bloque 0 (respaldo, revisión y commit local) hecho; **Bloque 1 (conciliación con producción) hecho de forma parcial**, ver `informe-bloque-1-conciliacion.md`; quedan los bloques siguientes |
+| 0.6 Validación integral | **En curso.** Bloque 0 (respaldo, revisión y commit local) hecho; **Bloque 1 (conciliación con producción) hecho de forma parcial**, ver `informe-bloque-1-conciliacion.md`; **Bloque 2 (roles y RLS) parcial y NO aprobado**: pruebas anónimas y diagnóstico de la base hechos (§2 ter); **sesión del CEO (S1 a S11) informada como correcta por el usuario el 9 de noviembre de 2026**, sin cifras en varios pasos; faltan las pruebas de gerente y empleado (no existen las cuentas) y las de escritura; quedan los bloques siguientes |
 
 ## 2. Migraciones de Supabase
 
 **Confirmado por el usuario el 4 de noviembre de 2026: todas las migraciones de `supabase/migrations/` están aplicadas en la base de producción.** La confirmación es de palabra; no hay un registro técnico en este repositorio. **El 8 de noviembre de 2026 se comprobó en solo lectura, con la clave pública, que las tres últimas se ven en producción:** `public_promo_banners` devuelve `image_mobile_path` (20261103), `public_product_images` y `public_product_variants` responden 200 (20261102) y `low_stock_variants` existe y rechaza sin sesión (20261101). Para comprobarlo en cualquier momento: `select version from supabase_migrations.schema_migrations order by version;` en el SQL Editor.
+
+**Actualización del 8 de noviembre de 2026 (diagnóstico del Bloque 2 con el conector de Supabase, solo lectura):** la consulta anterior **no funciona en este proyecto**. `list_migrations` devolvió **cero registros** y `supabase_migrations.schema_migrations` **no existe** (error `42P01`); solo existen las tablas internas de Supabase (`auth.schema_migrations`, `realtime.schema_migrations`, `storage.migrations`). Las migraciones se aplicaron pegándolas en el SQL Editor y **no hay historial de versiones verificable**. Lo que sí se comprobó es que **los objetos de las 19 migraciones están presentes** (tablas, vistas, funciones, columnas, triggers y políticas; detalle en [informe-bloque-2-diagnostico-conector.md](informe-bloque-2-diagnostico-conector.md) §4). Eso confirma la **existencia** de lo que crea cada migración, no su versión ni el orden en que se aplicó.
+
+**Cierre `close_drop_staff`: YA ESTÁ APLICADO en producción (hallazgo del 8 de noviembre de 2026).** `public.staff`, `public.staff_legacy` y `public.is_staff()` **no existen**. Esta línea corrige afirmaciones anteriores de este documento y de `autorizacion-roles.md` que lo daban por pendiente. **Quién lo aplicó y cuándo: desconocidos** (sin registro). Consecuencia: el script `supabase/rollback/20261029_rollback_roles.sql` **ya no puede ejecutarse** (se niega sin `staff_legacy`); la única reversión posible es una copia de seguridad.
 
 | Migración | Contenido | Documento |
 | --- | --- | --- |
@@ -51,15 +56,47 @@ Fuera de `migrations/` a propósito:
 
 | Archivo | Estado |
 | --- | --- |
-| `supabase/pending/20261029000099_close_drop_staff.sql` | **No aplicar todavía.** Borra `is_staff()` y `staff_legacy`; es irreversible salvo con copia de seguridad. Requiere aprobación explícita. |
+| `supabase/pending/20261029000099_close_drop_staff.sql` | ~~No aplicar todavía~~ (texto anterior al 8 de noviembre). **YA APLICADO en producción** (comprobado el 8 de noviembre de 2026: `staff`, `staff_legacy` e `is_staff()` no existen). Operador y fecha: **desconocidos**. El archivo se conserva en `pending/` como registro. No volver a aplicarlo (fallaría: `staff_legacy` ya no existe). |
 | `supabase/correcciones/20261103_catalogo_datos.sql` | Correcciones de **datos** (no es esquema). **Aplicadas** (comprobado en solo lectura el 8 de noviembre de 2026 en las vistas públicas: banners con `/?q=termos` y `/#catalogo`, Juego de Cuchillos en `cocina`, Bolsas de residuos en `bano`, «Palitos» con mayúscula). Contenía: banner Stanley a `/?q=termos`, banner general a `/#catalogo`, Juego de Cuchillos a Cocina, Bolsas de residuos a Limpieza, nombre «Palitos». También se puede hacer desde el panel. |
 | `supabase/rollback/` | Reversión del catálogo y de los roles. No son migraciones. |
 | `supabase/queries/categorias-sin-clasificar.sql` | Solo lectura: productos fuera de las cuatro categorías principales. |
 | `supabase/tests/` | Pruebas de la base sobre PGlite y `concurrency.mjs` sobre un PostgreSQL temporal. |
 
+## 2 ter. Estado verificado de la base de producción (diagnóstico con el conector, 8 de noviembre de 2026, solo lectura)
+
+Detalle y consultas: [informe-bloque-2-diagnostico-conector.md](informe-bloque-2-diagnostico-conector.md). No se modificó ningún dato.
+
+| Elemento | Resultado observado |
+| --- | --- |
+| Proyecto | `nogufedcmkjphiqyyriz`, «El Mundo del PLastico», PostgreSQL 17, región `us-east-2`; es **producción** |
+| `public.staff`, `public.staff_legacy`, `public.is_staff()` | **No existen** (cierre aplicado; operador y fecha desconocidos) |
+| Historial de migraciones | `list_migrations` sin registros; `supabase_migrations.schema_migrations` no existe. Objetos de las 19 migraciones presentes; **sin historial de versiones verificable** |
+| Cuentas | **Una sola cuenta de Auth: CEO activo con perfil.** Sin cuentas sin perfil. **No hay cuentas de gerente ni de empleado** |
+| RLS | Activa en las 11 tablas de `public` (`audit_log`, `categories`, `payment_methods`, `product_images`, `product_variants`, `products`, `profiles`, `promo_banners`, `sale_items`, `sales`, `stock_movements`) |
+| Políticas | 22 políticas en `public`, todas para `authenticated`. Ninguna depende de `is_staff`. **No hay políticas de escritura** sobre `profiles`, `sales`, `sale_items`, `stock_movements` ni `audit_log` (se escriben solo con funciones) |
+| Funciones | Todas con `search_path` fijo; **0** `security definer` sin él. Las 13 críticas (`admin_*`, `scan_*`, `pos_find`, `confirm_sale`, `adjust_stock`, `receive_stock`, `low_stock_variants`, `sales_summary`, `current_app_role`, `has_role_at_least`, `can_manage_stock`) no las ejecuta `anon`. `sale_receipt` y las internas no las ejecuta ni `authenticated` |
+| Funciones ejecutables por `anon` | 7: seis de disparador (`audit_log_immutable`, `enforce_category_depth`, `enforce_max_images`, `ledger_no_change`, `promo_banners_stamp`, `set_updated_at`) y `f_unaccent`. Riesgo bajo: no son invocables como RPC ni exponen datos |
+| Triggers | Habilitados: protección de perfiles, auditoría en 5 tablas, libro inmutable (`sales`, `sale_items`, `stock_movements`, `audit_log`), límites de imágenes y de profundidad de categorías |
+| Storage | Bucket `product-images` público; 8 políticas (4 «gerente … fotos» y 4 «gerente … imagenes del sitio»); sin las «personal …» |
+
+**Pendientes que siguen abiertos:** las pruebas autenticadas de **gerente y empleado** (no existen las cuentas; crearlas no está autorizado) y los casos de escritura, que necesitan un entorno aislado. **La sesión del CEO fue ejecutada por el usuario** (S1 a S11, informada el 9 de noviembre de 2026; detalle en `informe-bloque-b-validacion-funcional.md` §8). **Dato nuevo:** la única cuenta con acceso es la **cuenta de AImpulse de prueba y desarrollo**; producción no tiene hoy ninguna cuenta operativa real. Las 5 ventas históricas (30 de octubre a 5 de noviembre de 2026) las hizo esa única cuenta. **Confirmado por el usuario el 9 de noviembre de 2026: las 5 ventas son de prueba.** Quedan en el historial de solo agregado (no se pueden anular) junto con 10 movimientos de stock; ver `informe-bloque-b-validacion-funcional.md` §9.
+
+## 2 quater. Limpieza de datos de prueba (alcance S2): preparada, **pendiente de la confirmación final** (9 de noviembre de 2026)
+
+El usuario confirmó que **todos los datos de producción son de prueba** y autorizó el alcance **S2**: eliminar los 10 productos con sus variantes, las 5 ventas, sus 5 detalles y los 10 movimientos de stock, y respaldar y eliminar los 2 archivos de Storage. Se conservan categorías (4), medios de pago (5), la cuenta CEO, la estructura, las políticas y **todo el `audit_log`**. Detalle: [plan-limpieza-produccion.md](plan-limpieza-produccion.md), [registro-respaldo-limpieza.md](registro-respaldo-limpieza.md) e [informe-final-etapa-0.md](informe-final-etapa-0.md) (el informe final de la etapa).
+
+| Paso | Estado |
+| --- | --- |
+| Respaldo | **Hecho y verificado:** `C:\Users\lauty\Respaldos-AImpulse\mundo-del-plastico_limpieza_respaldo_2026-11-09.tar.gz`, SHA-256 `f8fedd8b…3880`. Es una **copia lógica** por el conector (el entorno no tiene `pg_dump` ni la contraseña de la base); restaurada en una base temporal da **11/11 tablas y 13/13 categorías de estructura idénticas** a producción |
+| Simulacro | **Aprobado** sobre la copia restaurada (**13 de 13** comprobaciones, con la versión final del script): libro y catálogo en 0, categorías, medios de pago y perfil idénticos, `audit_log` íntegro (111 filas originales idénticas más 22 nuevas), 8 triggers habilitados, estructura idéntica, recuperación desde el respaldo externo probada |
+| Versión final del script | Por instrucción del 9 de noviembre: **no crea esquemas ni tablas de respaldo en producción** y **no reinicia las secuencias** (la próxima venta será la n.º 6 y el próximo movimiento el id 11). La recuperación sale del respaldo externo (`supabase/limpieza/generar_restauracion.mjs`) |
+| Ejecución en producción | **NO ejecutada.** Requiere la última confirmación del usuario |
+| Storage | **Bloqueo:** `storage.objects` tiene `protect_objects_delete`; los 2 archivos se borran solo con la API o el panel de Supabase con una sesión con permisos. Respaldados |
+| Excepción a «solo agregado» | **Autorizada por el usuario** para este único borrado, dentro de la transacción estrictamente necesaria; los 3 triggers `*_no_change` quedan habilitados antes del `commit` |
+
 ## 3. Panel (`/panel`)
 
-**Etapa 0, fase 0.2 (rama local `etapa-0-estabilizacion`, sin subir a GitHub ni desplegar): el panel tiene un único ingreso real con Supabase Auth y ya no existe ningún modo demostración.** El rol sale de `public.profiles` y define el menú; la base lo exige con RLS y funciones. El código está probado con pruebas automáticas y local; **no se probó contra el Supabase real con una cuenta de cada rol** (pendiente, ver §4).
+**Etapa 0, fase 0.2 (rama local `etapa-0-estabilizacion`, sin subir a GitHub ni desplegar): el panel tiene un único ingreso real con Supabase Auth y ya no existe ningún modo demostración.** El rol sale de `public.profiles` y define el menú; la base lo exige con RLS y funciones. El código está probado con pruebas automáticas y local; **no se probó contra el Supabase real con una cuenta de cada rol** (pendiente, ver §4). *(Hoy esa rama está integrada en `main` local, sin subir; ver §1.)*
 
 | Sección | Estado | Fuente |
 | --- | --- | --- |
@@ -83,6 +120,7 @@ Registradas en el Bloque 1 de la fase 0.6 (8 de noviembre de 2026). **Las fechas
 | 2 | Despublicar Termos, Mermelada, Palitos y Bolsas | Usuario (confirmado de palabra) | Noviembre de 2026; ya hecho al abrir la fase 0.6 |
 | 3 | Eliminar de Storage las cuatro fotos de esos productos | Usuario (confirmado de palabra) | Igual |
 | 4 | Cerrar el registro público de Auth | **Sin autor conocido** (observado el 8 de noviembre) | Antes del 8 de noviembre de 2026, noche |
+| 5 | Aplicar el cierre `close_drop_staff` (eliminar `staff_legacy` e `is_staff()`) | **Desconocido** (no se atribuye a nadie) | **Desconocida** (observado el 8 de noviembre de 2026; sin registro) |
 
 **Motivo operativo (dicho por el usuario):** el flujo de eliminación ejecutado mediante Claude Code tardaba unos cinco minutos por producto. Es una incidencia de rendimiento **sin medir**; ver el informe §F. **Rectificación de C1 (noviembre de 2026):** un registro anterior atribuía a Claude Code la baja de Bolsas (despublicar y quitar su foto). Era incorrecto: la hizo **manualmente el usuario** (fecha noviembre de 2026; hora no confirmada), igual que las de Termos, Mermelada y Palitos. Ver `auditoria-material-comercial-fase-0-5.md` §0.5.
 
@@ -131,7 +169,7 @@ Detalle: [auditoria-material-comercial-fase-0-5.md](auditoria-material-comercial
 
 ## 4. Qué no se verificó nunca
 
-- Una **venta real** de punta a punta contra el Supabase de producción.
+- Una **venta real** de punta a punta contra el Supabase de producción. *(Aclaración del 9 de noviembre de 2026: en producción hay 5 ventas, pero son todas de prueba, confirmado por el usuario; ninguna es una venta real.)*
 - La persistencia de productos y fotos contra Supabase real, y las políticas de Storage en producción.
 - Un **celular físico**, Safari, un lector de códigos físico y un lector de pantalla real.
 - Tiempos en Vercel (se midió con servidor local).
@@ -159,7 +197,7 @@ Detalle: [auditoria-material-comercial-fase-0-5.md](auditoria-material-comercial
 
 **Técnicos**
 
-1. Aplicar `close_drop_staff` tras un período de uso, con aprobación.
+1. ~~Aplicar `close_drop_staff` tras un período de uso, con aprobación.~~ **Ya está aplicado** (hallazgo del 8 de noviembre de 2026; operador y fecha desconocidos). Pendiente: averiguar quién y cuándo lo aplicó y anotarlo en la bitácora.
 2. Definir la retención de `audit_log`, que crece sin límite.
 3. Opcional: `set_primary_image(product_id, image_id)` para que el cambio de foto principal sea atómico.
 4. No implementado: precios promocionales y combos (hay un diseño mínimo sugerido en `promociones-y-banners.md`).
