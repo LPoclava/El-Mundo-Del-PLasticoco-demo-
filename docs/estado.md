@@ -235,3 +235,15 @@ Pruebas: `supabase/tests/etapa1-fase1.test.mjs` (11). Se ajustó una prueba de `
 - **Teléfono del comercio:** no se imprime (el único dato cargado es el de WhatsApp, y no se confirmó que sea el que se quiere en el comprobante).
 - **`tsconfig.json`:** `allowImportingTsExtensions` es necesario solo porque `scan-actions.ts` importa `./sellable.ts` en tiempo de ejecución para poder probarse con `node --test`; sin la opción, `tsc` da TS5097. No afecta nada más (`noEmit` ya estaba activo y `next build` pasa).
 - **Sin verificar en pantalla:** el modo venta, el comprobante y su impresión requieren una sesión del panel (ver informe de la fase).
+
+## 9. Etapa 1, fase 3 (carrito público)
+
+- **Qué es:** un armador de pedidos para consultar por WhatsApp. **No es una venta**: no registra nada en la base, no toca el stock, no emite comprobantes ni reserva productos. Termina solo en «Consultar pedido por WhatsApp», que abre el chat con el mensaje ya escrito; el cliente decide si lo envía.
+- **Dónde:** botón con contador en la navegación; «Agregar» en cada tarjeta; «Agregar al pedido» y «Ver pedido» en la ficha y en la ventana flotante del producto; panel lateral con cantidades, quitar, subtotales, total estimado, vaciar con confirmación y estado vacío.
+- **Variantes:** en la ficha hay que elegir una opción antes de agregar. En la tarjeta se consultan las variantes públicas al tocar: con una sola (o ninguna cargada) se agrega directo; con varias se abre la ficha para elegir.
+- **Persistencia:** `localStorage` (clave `mp-cart`, versionada y validada al leer; lo dañado se descarta) y se comparte entre pestañas. Si el navegador bloquea el almacenamiento, el carrito sigue funcionando en memoria durante la visita.
+- **Límites:** 99 unidades por línea y 50 líneas; si el mensaje supera 3.500 caracteres se avisa y no se abre WhatsApp.
+- **Precios:** son los publicados al agregar; el mensaje pide al comercio confirmar disponibilidad, precio final y entrega o retiro.
+- **Accesibilidad:** panel modal con foco atrapado y Escape; botones de 44 px o más; avisos anunciados (`role="status"`); sin animaciones con «reducir movimiento».
+- **Código:** `src/lib/cart/public-cart.ts` (lógica pura), `src/components/cart/*`. Pruebas: `scripts/public-cart.test.mjs`.
+- **Verificación en navegador:** se comprobó con un carrito de prueba en `localStorage` (panel, cantidades, persistencia y enlace de WhatsApp); el flujo desde tarjetas y fichas no se pudo ver porque el catálogo de producción está vacío (se verá cuando haya productos publicados).

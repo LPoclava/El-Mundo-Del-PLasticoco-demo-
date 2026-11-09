@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { AddToCartButton } from "@/components/cart/add-to-cart-button";
 import { ContactIcon } from "@/components/contact/contact-icon";
 import type { CatalogProduct } from "@/types/product";
 import { highlightParts } from "@/lib/catalog/highlight";
@@ -70,19 +71,22 @@ export function ProductCard({ product, eager = false, highlight }: Props) {
           {formatPrice(product.price)}
         </p>
 
+        <div className="mt-auto space-y-1.5">
+        <AddToCartButton product={product} path={path} />
         {inquiry && (
           <a
             href={inquiry}
             target="_blank"
             rel="noopener noreferrer"
             aria-label={`Consultar por WhatsApp sobre ${product.name}`}
-            className="relative z-10 mt-auto flex min-h-11 items-center justify-center gap-1.5 rounded-xl border border-brand-green/50 text-sm font-semibold text-brand-green-ink hover:bg-brand-green/10 active:bg-brand-green/20 motion-safe:transition-colors"
+            className="relative z-10 flex min-h-11 items-center justify-center gap-1.5 rounded-xl border border-brand-green/50 text-sm font-semibold text-brand-green-ink hover:bg-brand-green/10 active:bg-brand-green/20 motion-safe:transition-colors"
           >
             <ContactIcon id="whatsapp" className="size-5 shrink-0" />
             <span className="min-[43.75rem]:hidden">Consultar</span>
             <span className="hidden min-[43.75rem]:inline">Consultar por WhatsApp</span>
           </a>
         )}
+        </div>
       </div>
     </article>
   );

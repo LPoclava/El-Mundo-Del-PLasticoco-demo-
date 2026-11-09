@@ -37,7 +37,7 @@ export async function ProductQuickView({ params }: { params: Promise<{ slug: str
         {product.description && <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-brand-ink/90 text-pretty">{product.description}</p>}
 
         <div className="mt-4 border-t border-brand-line pt-4">
-          <ProductPurchase name={product.name} path={productPath(product)} variants={product.variants} price={product.price} hasPriceRange={product.hasPriceRange} />
+          <ProductPurchase productId={product.id} imageUrl={product.images[0]?.url ?? null} name={product.name} path={productPath(product)} variants={product.variants} price={product.price} hasPriceRange={product.hasPriceRange} />
         </div>
 
         {features.length > 0 && (

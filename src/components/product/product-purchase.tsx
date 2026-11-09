@@ -6,8 +6,13 @@ import { formatPrice } from "@/lib/catalog/url";
 import { needsSelection, variantLabel } from "@/lib/catalog/product";
 import { productInquiryHref } from "@/lib/contact";
 import { ContactIcon } from "@/components/contact/contact-icon";
+import { addedMessage } from "@/components/cart/add-to-cart-button";
+import { useCart } from "@/components/cart/cart-provider";
 
 type Props = {
+  /** Para el carrito: identifica el producto y muestra su foto. */
+  productId: string;
+  imageUrl: string | null;
   name: string;
   path: string;
   variants: ProductVariant[];
@@ -23,7 +28,8 @@ const noop = () => () => undefined;
  * consultar, para que el mensaje diga exactamente qué producto y qué precio. Consultar solo ABRE el chat:
  * no es una venta ni se registra nada.
  */
-export function ProductPurchase({ name, path, variants, price, hasPriceRange }: Props) {
+export function ProductPurchase({ productId, imageUrl, name, path, variants, price, hasPriceRange }: Props) {
+  const { add, notify, openCart } = useCart();
   const mustChoose = needsSelection(variants);
   const [selectedId, setSelectedId] = useState<string | null>(mustChoose ? null : (variants[0]?.id ?? null));
   const [warn, setWarn] = useState(false);
@@ -41,6 +47,15 @@ export function ProductPurchase({ name, path, variants, price, hasPriceRange }: 
     mustChoose && !selected
       ? null
       : productInquiryHref({ name, price: formatPrice(shownPrice), fromPrice, variant: label, url: origin ? `${origin}${path}` : null });
+  function addToCart() {
+    if (mustChoose && !selected) {
+      setWarn(true);
+      groupRef.current?.focus();
+      return;
+    }
+    const status = add({ productId, variantId: selected?.id ?? null, name, variantLabel: label, unitPrice: shownPrice, imageUrl, path });
+    notify(addedMessage(status, name, label));
+  }
   const whatsappAvailable = productInquiryHref({ name, price: "" }) !== null;
 
   return (
@@ -99,6 +114,20 @@ export function ProductPurchase({ name, path, variants, price, hasPriceRange }: 
           <span className="font-medium">{label}</span>
         </p>
       )}
+
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <button
+          type="button"
+          onClick={addToCart}
+          className="inline-flex min-h-13 w-full items-center justify-center gap-2 rounded-xl bg-brand-orange px-5 py-3 text-base font-semibold text-brand-charcoal shadow-sm hover:bg-brand-orange/85 active:scale-[0.99] motion-safe:transition sm:w-auto"
+        >
+          <svg viewBox="0 0 24 24" className="size-5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" aria-hidden><path d="M12 5v14M5 12h14" /></svg>
+          Agregar al pedido
+        </button>
+        <button type="button" onClick={openCart} className="inline-flex min-h-13 w-full items-center justify-center rounded-xl border-2 border-brand-line px-5 py-3 text-base font-semibold hover:border-brand-ink/40 sm:w-auto">
+          Ver pedido
+        </button>
+      </div>
 
       {whatsappAvailable && (
         <div>

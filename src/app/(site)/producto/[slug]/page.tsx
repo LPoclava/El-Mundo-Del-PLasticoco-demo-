@@ -90,6 +90,8 @@ export default async function ProductPage({ params }: PageProps<"/producto/[slug
 
           <div className="mt-4 border-t border-brand-line pt-5">
             <ProductPurchase
+              productId={product.id}
+              imageUrl={product.images[0]?.url ?? null}
               name={product.name}
               path={productPath(product)}
               variants={product.variants}

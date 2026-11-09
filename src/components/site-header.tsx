@@ -5,6 +5,7 @@ import { CONTACT } from "@/config/contact";
 import { getCategories, getPromoBanners } from "@/lib/catalog/repository";
 import { catalogHref } from "@/lib/catalog/url";
 import { getContactChannels, getMapsHref } from "@/lib/contact";
+import { CartButton } from "./cart/cart-button";
 import { HeaderSearch } from "./catalog/header-search";
 import { SearchForm } from "./catalog/search-form";
 import { LocationGlobe } from "./location-globe";
@@ -93,6 +94,7 @@ export function SiteHeader() {
               <HeaderSearch />
             </Suspense>
           </SiteNavSearch>
+          <CartButton />
           <ThemeToggle />
         </div>
       </div>
