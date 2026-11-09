@@ -8,7 +8,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describeSaleError } from "../src/lib/pos/errors.ts";
 import { isBarcode, sellable, toCartLine, variantLabel } from "../src/lib/pos/sellable.ts";
-import { RECEIPT_NOTICE, BUSINESS_NAME, receiptHeader, receiptText } from "../src/lib/pos/receipt.ts";
+import { RECEIPT_NOTICE, BUSINESS_NAME, receiptHeader, receiptText, saleToReceipt, receiptDocumentTitle } from "../src/lib/pos/receipt.ts";
 import {
   addToCart, applyProblems, attemptSignature, cartIssues, cartTotal, describeProblem, parseQuantity,
 } from "../src/lib/pos/cart.ts";
@@ -233,13 +233,49 @@ describe("comprobante interno", () => {
     assert.doesNotMatch(text, /stock|quedan|barras|[0-9a-f]{8}-[0-9a-f]{4}/i);
   });
 
-  it("la pantalla muestra la leyenda dentro del comprobante que se imprime y no imprime el stock restante", () => {
-    const drawer = readFileSync(join(import.meta.dirname, "..", "src", "components", "panel", "pos", "pos-cart-drawer.tsx"), "utf8");
-    const comprobante = drawer.slice(drawer.indexOf('id="comprobante"'), drawer.indexOf("print:hidden", drawer.indexOf('id="comprobante"')) );
-    assert.ok(comprobante.includes("{RECEIPT_NOTICE}"), "la leyenda debe estar dentro de #comprobante");
-    assert.ok(comprobante.includes("receiptHeader("), "la identificación del negocio debe estar dentro de #comprobante");
-    assert.match(drawer, /print:hidden">\s*\{receipt\.stockUpdated/, "el stock restante no debe imprimirse");
-    const css = readFileSync(join(import.meta.dirname, "..", "src", "app", "globals.css"), "utf8");
+  const read = (...p) => readFileSync(join(import.meta.dirname, "..", ...p), "utf8");
+
+  it("la pantalla muestra la leyenda, el logo y los datos del comercio dentro del comprobante que se imprime", () => {
+    const view = read("src", "components", "panel", "pos", "receipt-view.tsx");
+    const body = view.slice(view.indexOf('id="comprobante"'), view.indexOf("export function printReceipt"));
+    assert.ok(body.includes("{RECEIPT_NOTICE}"), "la leyenda debe estar dentro de #comprobante");
+    assert.ok(view.includes("receiptHeader(BUSINESS)") && body.includes("{header}"), "la identificación del negocio debe estar dentro de #comprobante");
+    assert.ok(body.includes("/brand/logo-horizontal.png"), "el logo debe estar dentro de #comprobante");
+    for (const col of ["Producto", "Cant.", "Precio", "Subtotal"]) assert.ok(body.includes(col), "columna " + col);
+    assert.ok(body.includes("receipt.paymentLabel") && body.includes("receipt.total") && body.includes("receipt.createdAt") && body.includes("receipt.number"));
+    assert.doesNotMatch(body, /stockAfter|barcode|stockUpdated/, "datos internos fuera del comprobante");
+    const css = read("src", "app", "globals.css");
     assert.match(css, /@media print[\s\S]*#comprobante[\s\S]*visibility: visible/, "solo se imprime el comprobante");
+    assert.match(css, /@media print[\s\S]*dialog\[open\]/, "la ventana de vista previa no tapa la impresión");
+  });
+
+  it("el cierre de venta usa el mismo comprobante y no imprime el stock restante", () => {
+    const drawer = read("src", "components", "panel", "pos", "pos-cart-drawer.tsx");
+    assert.ok(drawer.includes("<ReceiptView receipt={receipt} />"));
+    assert.match(drawer, /print:hidden">\s*\{receipt\.stockUpdated/, "el stock restante no debe imprimirse");
+  });
+
+  it("el detalle de cada venta permite reabrir el comprobante (vista previa, impresión y PDF)", () => {
+    const sales = read("src", "components", "panel", "pos", "pos-recent-sales.tsx");
+    assert.ok(sales.includes("Ver comprobante") && sales.includes("saleToReceipt(") && sales.includes("<ReceiptDialog"));
+    const view = read("src", "components", "panel", "pos", "receipt-view.tsx");
+    assert.ok(view.includes("window.print()") && view.includes("Guardar como PDF") && view.includes("receiptDocumentTitle"));
+  });
+
+  it("una venta ya registrada se convierte en comprobante sin recalcular nada", () => {
+    const sale = {
+      number: 7, createdAt: "2026-11-08T15:30:00.000Z", userName: "Empleada Uno", total: 4500,
+      lines: [{ productName: "Remera lisa", variantLabel: "M · Azul", quantity: 1, unitPrice: 4500, subtotal: 4500 }],
+    };
+    const r = saleToReceipt(sale, "QR");
+    assert.equal(r.paymentLabel, "QR");
+    assert.equal(r.total, 4500);
+    assert.deepEqual(r.items, [{ productName: "Remera lisa", variantLabel: "M · Azul", quantity: 1, unitPrice: 4500, subtotal: 4500 }]);
+    assert.equal(receiptText(r).split(String.fromCharCode(10)).at(-1), RECEIPT_NOTICE);
+  });
+
+  it("el nombre de archivo sugerido al guardar como PDF lleva el número con ceros", () => {
+    assert.equal(receiptDocumentTitle({ number: 42 }), "Comprobante interno 000042");
+    assert.equal(receiptDocumentTitle({ number: "7" }), "Comprobante interno 000007");
   });
 });

@@ -23,6 +23,32 @@ export function receiptHeader(business?: ReceiptBusiness): string[] {
   return [business?.name || BUSINESS_NAME, business?.address, business?.locality].filter((l): l is string => Boolean(l));
 }
 
+/** Datos mínimos de una venta ya registrada (la lista de ventas) para reabrir su comprobante. */
+export type SaleLike = {
+  number: number | string;
+  createdAt: string;
+  userName: string;
+  total: number;
+  lines: { productName: string; variantLabel: string | null; quantity: number; unitPrice: number; subtotal: number }[];
+};
+
+/** Arma el comprobante de una venta ya registrada a partir de lo que guardó la base (no recalcula nada). */
+export function saleToReceipt(sale: SaleLike, paymentLabel: string): ReceiptLike {
+  return {
+    number: sale.number,
+    createdAt: sale.createdAt,
+    userName: sale.userName,
+    paymentLabel,
+    total: sale.total,
+    items: sale.lines.map((l) => ({ productName: l.productName, variantLabel: l.variantLabel, quantity: l.quantity, unitPrice: l.unitPrice, subtotal: l.subtotal })),
+  };
+}
+
+/** Título del documento al imprimir: es el nombre sugerido del archivo cuando se elige «Guardar como PDF». */
+export function receiptDocumentTitle(r: Pick<ReceiptLike, "number">): string {
+  return `Comprobante interno ${String(r.number).padStart(6, "0")}`;
+}
+
 const date = new Intl.DateTimeFormat("es-AR", { dateStyle: "short", timeStyle: "short" });
 const money = (n: number) => new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(n);
 

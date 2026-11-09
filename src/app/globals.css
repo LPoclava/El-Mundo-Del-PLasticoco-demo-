@@ -199,7 +199,11 @@ body {
 @media print {
   body * { visibility: hidden; }
   #comprobante, #comprobante * { visibility: visible; }
-  #comprobante { position: absolute; inset: 0 auto auto 0; width: 100%; padding: 16px; background: #fff; }
+  #comprobante { position: absolute; inset: 0 auto auto 0; width: 100%; padding: 16px; background: #fff; border: 0; }
+  /* Si el comprobante está dentro de una ventana (reabierto desde una venta), la ventana deja de ser flotante al imprimir. */
+  dialog[open] { position: static; max-height: none; width: auto; overflow: visible; border: 0; box-shadow: none; background: #fff; }
+  dialog[open]::backdrop { display: none; }
+  #comprobante img { print-color-adjust: exact; }
 }
 
 /* Panel lateral (src/components/panel/drawer.tsx): entra desde la derecha; el fondo se oscurece de a poco. */

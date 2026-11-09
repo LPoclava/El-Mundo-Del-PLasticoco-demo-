@@ -4,17 +4,11 @@ import { useState } from "react";
 import { formatPrice } from "@/lib/catalog/url";
 import { cartIssues, cartTotal, cartUnits, lineSubtotal, type Cart } from "@/lib/pos/cart";
 import type { PaymentMethod, Receipt } from "@/lib/pos/api";
-import { CONTACT } from "@/config/contact";
-import { RECEIPT_NOTICE, receiptHeader, receiptText } from "@/lib/pos/receipt";
+import { ReceiptActions, ReceiptView } from "./receipt-view";
 import { Icon } from "../icons";
 import { Drawer } from "../drawer";
 import { Button, Dialog } from "../ui";
 import { QuantityStepper, Thumb } from "./pos-parts";
-
-const dateTime = new Intl.DateTimeFormat("es-AR", { dateStyle: "short", timeStyle: "short" });
-
-/** Identificación del negocio en el comprobante (se edita en src/config/contact.ts). */
-const BUSINESS = { address: CONTACT.address, locality: CONTACT.locality };
 
 export type CartActions = {
   setQuantity: (variantId: string, n: number) => void;
@@ -245,24 +239,6 @@ function PendingNotice({ pending, busy }: { pending: PendingView; busy: boolean 
 
 /** Éxito: se muestra solo cuando el servidor devolvió el comprobante (la venta ya está guardada). */
 function SaleDone({ receipt, onNew }: { receipt: Receipt; onNew: () => void }) {
-  const [shared, setShared] = useState<string | null>(null);
-
-  async function share() {
-    const text = receiptText(receipt, BUSINESS);
-    try {
-      if (typeof navigator.share === "function") {
-        await navigator.share({ title: `Comprobante #${receipt.number}`, text });
-        return;
-      }
-      await navigator.clipboard.writeText(text);
-      setShared("Comprobante copiado: pegalo donde quieras compartirlo.");
-    } catch (e) {
-      // Cerrar el menú de compartir no es un error.
-      if (e instanceof DOMException && e.name === "AbortError") return;
-      setShared("No se pudo compartir desde este navegador. Probá con Imprimir.");
-    }
-  }
-
   return (
     <div className="space-y-4">
       <div role="status" className="flex flex-col items-center gap-2 pt-2 text-center print:hidden">
@@ -276,40 +252,13 @@ function SaleDone({ receipt, onNew }: { receipt: Receipt; onNew: () => void }) {
         <p className="text-2xl font-semibold tabular-nums">{formatPrice(receipt.total)}</p>
       </div>
 
-      <div id="comprobante" className="space-y-3 rounded-xl border border-brand-line p-3">
-        <div className="text-sm">
-          {receiptHeader(BUSINESS).map((line, idx) => (
-            <p key={line} className={idx === 0 ? "font-semibold" : "text-xs text-brand-muted"}>{line}</p>
-          ))}
-        </div>
-        <p className="text-sm font-semibold">Comprobante #{receipt.number}</p>
-        <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-sm">
-          <dt className="text-brand-muted">Fecha</dt><dd className="tabular-nums">{dateTime.format(new Date(receipt.createdAt))}</dd>
-          <dt className="text-brand-muted">Vendió</dt><dd>{receipt.userName}</dd>
-          <dt className="text-brand-muted">Medio de pago</dt><dd>{receipt.paymentLabel}</dd>
-        </dl>
-        <ul className="divide-y divide-brand-line border-y border-brand-line text-sm">
-          {receipt.items.map((i, idx) => (
-            <li key={idx} className="flex justify-between gap-3 py-1.5">
-              <span className="min-w-0">{i.quantity} × {i.productName}{i.variantLabel ? ` (${i.variantLabel})` : ""}</span>
-              <span className="shrink-0 tabular-nums">{formatPrice(i.subtotal)}</span>
-            </li>
-          ))}
-        </ul>
-        <p className="flex justify-between text-lg font-semibold tabular-nums"><span>Total cobrado</span><span>{formatPrice(receipt.total)}</span></p>
-        <p className="text-xs text-brand-muted">{RECEIPT_NOTICE}</p>
-        {/* El stock restante es un dato interno: se ve en pantalla para quien vende, pero no se imprime en la copia del cliente. */}
-        <p className="text-xs text-brand-muted print:hidden">
-          {receipt.stockUpdated ? "Stock descontado: " : ""}
-          {receipt.items.filter((i) => i.stockAfter !== null).map((i) => `${i.productName}: quedan ${i.stockAfter}`).join(" · ")}
-        </p>
-      </div>
-
-      <div className="grid grid-cols-2 gap-2 print:hidden">
-        <Button onClick={() => window.print()}>Imprimir</Button>
-        <Button icon="link" onClick={() => void share()}>Compartir</Button>
-      </div>
-      {shared && <p className="text-sm text-brand-muted print:hidden" aria-live="polite">{shared}</p>}
+      <ReceiptView receipt={receipt} />
+      {/* El stock restante es un dato interno: se ve en pantalla para quien vende, pero no se imprime. */}
+      <p className="text-xs text-brand-muted print:hidden">
+        {receipt.stockUpdated ? "Stock descontado: " : ""}
+        {receipt.items.filter((i) => i.stockAfter !== null).map((i) => `${i.productName}: quedan ${i.stockAfter}`).join(" · ")}
+      </p>
+      <ReceiptActions receipt={receipt} />
       <Button variant="primary" className="h-12 w-full print:hidden" onClick={onNew}>Nueva venta</Button>
     </div>
   );

@@ -144,21 +144,21 @@ export async function findSaleByKey(db: SupabaseClient, userId: string, key: str
 
 export type SaleListItem = {
   id: string; number: number; createdAt: string; userName: string; paymentMethod: string; total: number;
-  lines: { productName: string; variantLabel: string | null; quantity: number; subtotal: number }[];
+  lines: { productName: string; variantLabel: string | null; quantity: number; unitPrice: number; subtotal: number }[];
 };
 
 export type SalesFilter = { from: string | null; to: string | null; method: string };
 
 type SaleRow = {
   id: string; number: number; created_at: string; user_name: string; payment_method: string; total: number;
-  sale_items: { product_name: string; variant_label: string | null; quantity: number; subtotal: number }[];
+  sale_items: { product_name: string; variant_label: string | null; quantity: number; unit_price: number; subtotal: number }[];
 };
 
 /** Ventas recientes. La RLS decide qué ve cada rol: el empleado las suyas, el gerente y el CEO todas. */
 export async function listSales(db: SupabaseClient, filter: SalesFilter): Promise<SaleListItem[]> {
   let query = db
     .from("sales")
-    .select("id,number,created_at,user_name,payment_method,total,sale_items(product_name,variant_label,quantity,subtotal)")
+    .select("id,number,created_at,user_name,payment_method,total,sale_items(product_name,variant_label,quantity,unit_price,subtotal)")
     .order("created_at", { ascending: false })
     .limit(20);
   if (filter.from) query = query.gte("created_at", filter.from);
@@ -168,7 +168,7 @@ export async function listSales(db: SupabaseClient, filter: SalesFilter): Promis
   if (error) throw new Error("No se pudieron cargar las ventas recientes.");
   return ((data ?? []) as SaleRow[]).map((s) => ({
     id: s.id, number: s.number, createdAt: s.created_at, userName: s.user_name, paymentMethod: s.payment_method, total: Number(s.total),
-    lines: s.sale_items.map((i) => ({ productName: i.product_name, variantLabel: i.variant_label, quantity: i.quantity, subtotal: Number(i.subtotal) })),
+    lines: s.sale_items.map((i) => ({ productName: i.product_name, variantLabel: i.variant_label, quantity: i.quantity, unitPrice: Number(i.unit_price), subtotal: Number(i.subtotal) })),
   }));
 }
 

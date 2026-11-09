@@ -4,7 +4,9 @@ import { useEffect, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { formatPrice } from "@/lib/catalog/url";
 import { listSales, type PaymentMethod, type SaleListItem } from "@/lib/pos/api";
-import { Badge, CARD_CLASS, INPUT_CLASS } from "../ui";
+import { saleToReceipt, type ReceiptLike } from "@/lib/pos/receipt";
+import { Badge, Button, CARD_CLASS, INPUT_CLASS } from "../ui";
+import { ReceiptDialog } from "./receipt-view";
 
 const dateTime = new Intl.DateTimeFormat("es-AR", { dateStyle: "short", timeStyle: "short" });
 
@@ -27,6 +29,7 @@ export function RecentSales({ db, methods, version, showAll }: { db: SupabaseCli
   const [method, setMethod] = useState("");
   const [sales, setSales] = useState<SaleListItem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [opened, setOpened] = useState<ReceiptLike | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -98,11 +101,18 @@ export function RecentSales({ db, methods, version, showAll }: { db: SupabaseCli
                     </li>
                   ))}
                 </ul>
+                <Button
+                  icon="receipt" className="mt-2" aria-label={`Ver el comprobante de la venta número ${s.number}`}
+                  onClick={() => setOpened(saleToReceipt(s, label(s.paymentMethod)))}
+                >
+                  Ver comprobante
+                </Button>
               </details>
             </li>
           ))}
         </ul>
       )}
+      <ReceiptDialog receipt={opened} onClose={() => setOpened(null)} />
     </section>
   );
 }
