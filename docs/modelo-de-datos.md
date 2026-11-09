@@ -72,6 +72,13 @@ Los demás productos siguen en la base y siguen siendo administrables, pero no s
 - **Duplicados:** `sku` y `barcode` son únicos (cuando existen). Los nombres de categoría son únicos sin distinguir mayúsculas.
 - **Datos inválidos:** nombre no vacío, precio mayor que 0, `sku` y `barcode` sin espacios y no vacíos, formato de código de barras (provisional), una sola foto principal por producto, máximo 5 fotos.
 
+## 6 bis. Etapa 1: pagos, acceso de desarrollo y circuito fiscal (migraciones `20261109000001` a `000003`, aplicadas)
+
+- `payment_methods`: se suma **QR** (registro manual; no hay integración de cobros). Compatible con las ventas anteriores.
+- `sales_by_payment_method(desde, hasta)` y `sales_monthly_by_payment_method(meses)`: lectura con los permisos de quien consulta (el empleado ve sus ventas; gerente y CEO, todas); el mes se cuenta en hora de Río Turbio.
+- `developer_access` (sin políticas: no se toca por la API), `is_developer()` y `require_developer()`: el CEO del comercio **no** es de desarrollo.
+- `fiscal_settings` (`production_enabled = false`), `fiscal_documents` (una por venta) y `fiscal_events` (solo agregado); funciones `fiscal_request_issue`, `fiscal_transition` y `fiscal_log_event`, que exigen desarrollo. Sin disparadores sobre `sales`. Detalle en [comprobantes.md](comprobantes.md).
+
 ## 7. Migraciones
 
 Las migraciones del modelo original están en `supabase/migrations` (aplicadas):

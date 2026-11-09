@@ -63,6 +63,10 @@ Una fila por decisión: qué se decidió, por qué y dónde está el detalle. La
 | 2 nov 2026 | Las fotos de producto en modo oscuro llevan fondo claro neutro y ningún filtro. | No alterar colores ni perder productos oscuros | `historico/informe-rediseno-integral.md` |
 | Nov 2026 | El carrusel de banners avanza cada 10 s (`AUTOPLAY_MS` en `src/lib/banners/rules.ts`); antes eran 5 s. Se detiene con cursor, foco, dedo, pestaña oculta y pausa; con movimiento reducido no avanza solo. | Más tiempo de lectura | commit `d728b55` |
 | 4 nov 2026 | Si no hay dominio configurado, se omiten el enlace canónico y la imagen de vista previa; nunca se publica `localhost`. | Evitar enlaces rotos al compartir | `src/lib/site-url.ts` |
+| 9 nov 2026 | El carrito público es un armador de pedidos que termina en WhatsApp: no es una venta, no registra, no toca stock ni reserva. | Brief de la Etapa 1 | `docs/informe-final-etapa-1.md` |
+| 9 nov 2026 | El circuito fiscal es separado de la venta y solo del grupo de desarrollo (`developer_access`); producción necesita dos llaves (base y servidor), ambas apagadas; sin emisión hasta tener credenciales de ARCA. | Brief de la Etapa 1 | `docs/comprobantes.md` |
+| 9 nov 2026 | Lenguaje visual del boleto (línea de corte, muescas, `MP / 00X`) también en tarjetas de producto, ficha, carrito y descubrimiento. | Coherencia con las categorías | `docs/estado.md` §10 |
+| 9 nov 2026 | El dashboard no muestra porcentajes ni comparaciones sin datos suficientes; cada indicador tiene su definición (`src/lib/pos/analytics.ts`). | Brief de la Etapa 1 | `docs/estado.md` §11 |
 | 4 nov 2026 | Las pruebas `scripts/*.test.mjs` sí se versionan (sin credenciales ni datos de clientes). | Poder correrlas desde un clon | `.gitignore` |
 
 ## Proceso

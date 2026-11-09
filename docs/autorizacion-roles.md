@@ -54,6 +54,10 @@ Fuera de la carpeta, a propósito: `supabase/pending/20261029000099_close_drop_s
 
 Las migraciones históricas (`20261028…`) no se tocaron.
 
+### Acceso de desarrollo (Etapa 1)
+
+Aparte de los roles del comercio, existe `developer_access`: el grupo de desarrollo de AImpulse Tech. **No se deriva del rol** (un CEO del comercio no es de desarrollo). Se da de alta y de baja solo a mano en el SQL Editor. Hoy solo gobierna el circuito fiscal (ver [comprobantes.md](comprobantes.md)).
+
 ## 4. Seguridad: cómo se aplica
 
 - **En la base, no en la interfaz.** Todo lo anterior son políticas RLS, permisos de tabla y funciones.

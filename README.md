@@ -2,8 +2,8 @@
 
 Catálogo público y panel interno de un comercio de Río Turbio, Santa Cruz. Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS 4 · Supabase.
 
-- **Catálogo público** (`/`): categorías, buscador, ficha de producto y consulta por WhatsApp. Lee solo vistas públicas de Supabase. Sin carrito ni pagos en línea.
-- **Panel interno** (`/panel`): inicio de sesión con Supabase Auth, productos, categorías, banners, stock, punto de venta con escáner y administración de usuarios (solo CEO), con roles `empleado`, `gerente` y `ceo`.
+- **Catálogo público** (`/`): categorías, buscador, ficha de producto y consulta por WhatsApp. Lee solo vistas públicas de Supabase. Incluye un carrito que arma el pedido y lo consulta por WhatsApp (no es una venta ni hay pagos en línea).
+- **Panel interno** (`/panel`): inicio de sesión con Supabase Auth, productos, categorías, banners, stock, punto de venta con escáner, modo venta y comprobante interno, dashboard de ventas y medios de pago, y administración de usuarios (solo CEO), con roles `empleado`, `gerente` y `ceo`.
 
 ## Ejecutar
 
@@ -27,6 +27,10 @@ Copiar `.env.local.example` como `.env.local` y completar:
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Clave **pública** (anon / publishable). Nunca la `service_role` |
 | `NEXT_PUBLIC_SITE_URL` | Dirección pública del sitio, para el enlace canónico y la vista previa al compartir. Sin ella no se publica `localhost` |
 
+Circuito fiscal (ARCA, **sin emisión**): variables de servidor `FISCAL_*` (ver `.env.local.example`); no completarlas hasta tener credenciales (`docs/comprobantes.md`).
+
+Para ver el catálogo sin tocar producción: `node supabase/dev/mock-public-api.mjs` y, en otra terminal, `NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321 NEXT_PUBLIC_SUPABASE_ANON_KEY=mock npm run dev` (14 productos ficticios, solo lectura).
+
 Solo para desarrollo, `ALLOWED_DEV_ORIGINS` (en `.env.local`) lista las direcciones desde las que se abre el servidor local, por ejemplo el celular en la misma red. Los detalles de despliegue, cabeceras de seguridad, SEO y CI están en `docs/despliegue.md`.
 
 Sin las variables de Supabase el catálogo queda vacío. Los datos de contacto (WhatsApp, teléfono, Instagram, Facebook) se completan en `src/config/contact.ts`; un canal sin dato no se muestra.
@@ -35,7 +39,8 @@ Sin las variables de Supabase el catálogo queda vacío. Los datos de contacto (
 
 - `src/app/(site)/` — catálogo público: portada, ficha `producto/[slug]` y ventana flotante de producto (`@modal`).
 - `src/app/panel/` — panel interno: `login` y las secciones bajo `(shell)/`.
-- `src/components/catalog/`, `product/`, `contact/` — piezas del sitio público.
+- `src/components/catalog/`, `product/`, `contact/`, `cart/` — piezas del sitio público y el carrito.
+- `src/app/api/fiscal/` y `src/lib/fiscal/` — circuito fiscal del servidor (solo desarrolladores, sin emisión).
 - `src/components/panel/` — panel: secciones, punto de venta (`pos/`), escáner y componentes comunes.
 - `src/lib/catalog/` — `repository.ts` es el único acceso a datos del público, con caché.
 - `src/lib/products/`, `categories/`, `banners/`, `pos/`, `barcode/`, `users/` — lógica del panel y de las reglas de negocio.

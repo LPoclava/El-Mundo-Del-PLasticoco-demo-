@@ -1,6 +1,6 @@
 # Documentación: El Mundo del Plástico
 
-Esta carpeta **no está en Git** (decisión del commit `c6fd133`, ver `decisiones.md`). Vive solo en la carpeta del proyecto. Si se mueve el proyecto o se cambia de computadora, copiar también `docs/`, `supabase/` y `Logo/`.
+Esta carpeta **está en Git desde la consolidación de la Etapa 0** (quedan fuera `capturas/` y `Logo/`). Si se cambia de computadora, copiar también esas dos.
 
 ## Por dónde empezar
 
@@ -21,6 +21,8 @@ Esta carpeta **no está en Git** (decisión del commit `c6fd133`, ver `decisione
 | Auditoría del circuito de venta: componentes, tablas, atomicidad, permisos y comprobantes | [auditoria-pos-fase-0-4.md](auditoria-pos-fase-0-4.md) |
 | Ventas con resultado incierto: cómo se recuperan sin duplicar (corrección de H1) | [recuperacion-de-ventas-pendientes.md](recuperacion-de-ventas-pendientes.md) |
 | Auditoría del material comercial: fotos, banners, datos de productos y marca (fase 0.5) | [auditoria-material-comercial-fase-0-5.md](auditoria-material-comercial-fase-0-5.md) |
+| Comprobante interno y circuito fiscal (ARCA): acceso, endpoints, estados, producción y qué falta para habilitarla | [comprobantes.md](comprobantes.md) |
+| Informe final de la Etapa 1: qué quedó terminado, parcial, pendiente y bloqueado | [informe-final-etapa-1.md](informe-final-etapa-1.md) |
 | Despliegue, variables de entorno, cabeceras de seguridad (CSP), SEO técnico y CI; pasos manuales en Vercel y GitHub | [despliegue.md](despliegue.md) |
 
 ## Validación

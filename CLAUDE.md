@@ -14,7 +14,7 @@ Suma a las reglas de `AImpulse/CLAUDE.md` (tabla de resumen al crear ramas o mig
 
 ## Qué es
 
-Catálogo público de un comercio de Río Turbio, Santa Cruz (plásticos, cocina, limpieza, librería, regalería) y un panel interno en `/panel` con gestión de productos, banners, categorías, stock y punto de venta con escáner. Las consultas de los clientes salen por WhatsApp; no hay carrito ni pagos en línea.
+Catálogo público de un comercio de Río Turbio, Santa Cruz (plásticos, cocina, limpieza, librería, regalería) y un panel interno en `/panel` con gestión de productos, banners, categorías, stock y punto de venta con escáner. Las consultas y los pedidos de los clientes salen por WhatsApp: el **carrito público es un armador de pedidos, no una venta** (no registra nada, no toca stock, no hay pagos en línea). Hay un circuito fiscal (ARCA) **preparado y sin emisión**, solo para el grupo de desarrollo (`docs/comprobantes.md`).
 
 Next.js 16 (App Router, `cacheComponents`) · React 19 · TypeScript · Tailwind 4 · Supabase.
 
@@ -25,6 +25,8 @@ npm run dev                                   # http://localhost:3000
 npm run lint
 npm run build
 npm test                                      # scripts/*.test.mjs, sin base de datos
+node supabase/dev/mock-public-api.mjs         # datos ficticios locales (puerto 54321) para ver el catálogo sin tocar producción;
+                                              # luego: NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321 NEXT_PUBLIC_SUPABASE_ANON_KEY=mock npm run dev
 cd supabase/tests && npm install && npm test  # base de datos sobre PGlite (en memoria)
 ```
 
@@ -44,11 +46,14 @@ Esta versión cambió APIs. Antes de escribir código de rutas, caché o compone
 - **Historial de ventas, movimientos de stock y auditoría son de solo agregado.** Una anulación sería un registro nuevo, nunca una edición.
 - **Cabeceras de seguridad y CSP** en `next.config.ts` (detalle en `docs/despliegue.md`). Al sumar un servicio externo (analítica, mapas, fuentes, widgets) hay que agregar su origen a la directiva que corresponda; si no, el navegador lo bloquea. La cámara del escáner depende de `Permissions-Policy: camera=(self)`: no cerrarla.
 - La IP para abrir el servidor local desde el celular va en `.env.local` (`ALLOWED_DEV_ORIGINS`), nunca en el código. La CI está en `.github/workflows/ci.yml`.
+- **Circuito fiscal (ARCA):** separado de la venta (la venta nunca lo dispara) y **solo para el grupo de desarrollo** (`developer_access`; el CEO del comercio NO es de desarrollo). Se exige en el servidor (`/api/fiscal/*`) y en la base (`require_developer()` + RLS). `production_enabled` sigue en `false` y el servidor tiene su propia llave; no hay llamadas a ARCA. Credenciales solo como variables de servidor (`FISCAL_*`), nunca en el repositorio ni con `NEXT_PUBLIC_`. Detalle y lista para habilitar producción: `docs/comprobantes.md`.
+- **Comprobante interno** (`receipt-view.tsx`): siempre con la leyenda «no es una factura ni un comprobante fiscal»; sin stock ni códigos.
+- **Catálogo público:** no se muestra stock, disponibilidad, materiales ni promociones que no existan en los datos; las promociones solo salen de banners vigentes.
 - Precios en pesos enteros, sin centavos. Un producto no se vende hasta tener stock cargado.
 
 ## Panel
 
-Un único ingreso real: `/panel/login` usa Supabase Auth (correo y contraseña). El rol sale de `public.profiles` (nunca del token ni de `user_metadata`) y define el menú (`src/lib/panel/roles.ts`); la base lo vuelve a exigir con RLS y funciones. No hay modo demostración. Secciones: Inicio, Escáner y ventas, Stock, Productos, Categorías, Banners y Usuarios (solo CEO). CRM y Configuración se retiraron porque no tenían tablas ni funciones reales. Usuarios necesita la migración `20261108000001_admin_list_users`; el estado de aplicación está en `docs/estado.md`.
+Un único ingreso real: `/panel/login` usa Supabase Auth (correo y contraseña). El rol sale de `public.profiles` (nunca del token ni de `user_metadata`) y define el menú (`src/lib/panel/roles.ts`); la base lo vuelve a exigir con RLS y funciones. No hay modo demostración. Secciones: Inicio (dashboard con período, medios de pago y movimientos), Escáner y ventas (modo venta, comprobante), Stock, Productos (buscador y stock), Categorías, Banners y Usuarios (solo CEO). CRM y Configuración se retiraron porque no tenían tablas ni funciones reales. Usuarios necesita la migración `20261108000001_admin_list_users`; el estado de aplicación está en `docs/estado.md`.
 
 ## Marca y diseño
 
