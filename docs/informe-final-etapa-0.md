@@ -7,10 +7,10 @@ Fecha: 9 de noviembre de 2026. Sitio publicado: <https://el-mundo-del-plastico.v
 ## 1. Resumen ejecutivo
 
 - El sistema (catálogo público, panel con roles, punto de venta con stock atómico, auditoría) está implementado, probado y documentado. Todas las pruebas automáticas pasan igual que la línea base: **258/258**, **253/253** y **10/10**, además de TypeScript, ESLint, build y 0 vulnerabilidades en las dependencias de producción.
-- **La limpieza S2 de los datos de prueba está preparada y validada, pero NO ejecutada en producción.** Falta la **confirmación explícita final** que tu propia instrucción exige. El respaldo está verificado (SHA-256, restauración con las 11 tablas y las 13 categorías de estructura idénticas) y el script real pasó **13 de 13** comprobaciones sobre una copia restaurada, idéntica a producción.
-- **Dos bloqueos concretos, no técnicos:** (1) la confirmación para el borrado irreversible; (2) los dos archivos de Storage solo se pueden borrar con la API o el panel de Supabase con una sesión con permisos (hay un trigger que lo impide por SQL).
+- **La limpieza S2 se EJECUTÓ en producción el 9 de noviembre de 2026 (05:21:50 UTC, hora registrada en el `audit_log`) y se verificó por consulta:** 0 productos, variantes, fotos, ventas, detalles y movimientos; 4 categorías, 5 medios de pago y 1 CEO con contenido idéntico; las 111 filas originales del `audit_log` idénticas más 22 nuevas; 8 triggers de protección habilitados; RLS en 11 tablas; estructura idéntica (funciones, políticas, triggers, índices y Storage con la misma huella). Se hizo tras tu confirmación explícita, con el respaldo verificado y un simulacro previo de 13/13 sobre una copia restaurada.
+- **Un solo pendiente de datos:** los **dos archivos de Storage siguen en el bucket** (foto de Juego de Cuchillos, 9.152 bytes, y el huérfano de `categories/`, 79.308 bytes). Solo se pueden borrar con la API o el panel de Supabase con una sesión; el navegador integrado quedó en la pantalla de ingreso y **necesita que inicies sesión** (Claude no escribe credenciales).
 - **El sitio publicado sigue con la versión anterior a la Etapa 0** (sin cabeceras de seguridad, sin `robots.txt` ni `sitemap.xml`): los cambios de la Etapa 0 solo llegan a producción con un `push` y un despliegue, que no están autorizados.
-- **Conclusión: la Etapa 0 NO está cerrada.** Ver §14 para la condición concreta.
+- **Conclusión: la Etapa 0 NO está cerrada todavía**, por una condición concreta: borrar los dos archivos de Storage (necesita tu sesión en el panel de Supabase) y verificar el panel y el Dashboard con tu sesión. Ver §14.
 
 ## 2. Estado inicial y estado final
 
@@ -25,21 +25,43 @@ Fecha: 9 de noviembre de 2026. Sitio publicado: <https://el-mundo-del-plastico.v
 | CI | No existía | `.github/workflows/ci.yml` (tsc, lint, test, build); **nunca corrió en GitHub** |
 | Documentación | Dispersa, parte fuera de Git | `docs/` y `supabase/` versionados; estado, decisiones y protocolos al día |
 | Git | Trabajo sin commit | `main` en `4c4bbd6` (2 por delante de `origin/main`) más los cambios de esta tanda (ver §11) |
-| Datos de producción | Material de prueba mezclado | **Siguen siendo de prueba** (10 productos, 5 ventas, 10 movimientos); limpieza preparada |
+| Datos de producción | Material de prueba (10 productos, 5 ventas, 10 movimientos) | **Limpios** (0 productos, ventas y movimientos), con categorías, medios de pago, CEO y `audit_log` conservados. Quedan 2 archivos de prueba en Storage |
 
 ## 3. Limpieza realizada y evidencia
 
-**Estado: preparada y validada; NO ejecutada en producción. Pendiente por decisión (confirmación final).** No se hizo ninguna escritura en producción en ningún momento de este trabajo (solo lecturas con `SELECT`).
+**Estado: EJECUTADA en producción el 9 de noviembre de 2026 a las 05:21:50 UTC** (marca de tiempo de la fila de constancia del `audit_log`), una sola transacción con `commit`, tras la confirmación explícita del usuario. Antes de ejecutar se repitieron las huellas de las 11 tablas (idénticas al respaldo) y el script verificó el inventario con sus guardas. Hasta ese momento solo se habían hecho lecturas con `SELECT`.
 
 | Prueba | Resultado |
 | --- | --- |
-| Producción coincide con el inventario | **Aprobado** (huellas de las 11 tablas idénticas a las del respaldo, repetidas el 9 de noviembre) |
-| IDs y dependencias | **Aprobado**: 5 de 5 ventas, 10 de 10 productos, 0 ventas fuera de la lista, 0 productos vendidos fuera de la lista, suma de totales 85.750, 0 variantes con stock inconsistente |
-| Script real sobre la copia restaurada, en simulacro (`rollback`) | **Aprobado**: sin cambios, validaciones previas y posteriores correctas |
-| Script real aplicado (`commit`) sobre la copia | **Aprobado** (ver tabla de abajo) |
+| Producción coincide con el inventario antes de ejecutar | **Aprobado** (huellas idénticas; guardas del script) |
+| IDs y dependencias | **Aprobado**: 5 de 5 ventas, 10 de 10 productos, 0 fuera de la lista, suma de totales 85.750, 0 variantes con stock inconsistente |
+| Simulacro del script real sobre la copia restaurada (rollback y commit) | **Aprobado** (13/13) |
 | Aborta ante diferencias (venta extra, lista incompleta, esperado incorrecto) | **Aprobado** (réplica sintética) |
-| Ejecución en producción | **Pendiente por decisión** |
-| Borrado de los 2 archivos de Storage | **Pendiente por acceso** (sesión con permisos) y por decisión |
+| **Ejecución en producción** | **Aprobado**: la transacción terminó sin error; sus validaciones previas y posteriores pasaron |
+| Verificación independiente posterior en producción (consultas de solo lectura) | **Aprobado** (tabla siguiente) |
+| Borrado de los 2 archivos de Storage | **Pendiente por acceso** (sesión del usuario en el panel de Supabase) |
+
+**Resultado verificado en PRODUCCIÓN** (consultas de solo lectura posteriores a la ejecución):
+
+| Elemento | Esperado | Resultado en producción |
+| --- | --- | --- |
+| Productos / variantes / fotos | 0 | **0 / 0 / 0** |
+| Ventas / detalles / movimientos | 0 | **0 / 0 / 0** |
+| Categorías | 4 | **4**, misma huella que antes (`68c1f342…`) |
+| Medios de pago | 5 | **5**, misma huella (`9f8c76ac…`) |
+| Cuenta CEO | 1 activa | **1**, misma huella (`6cdb87bf…`) |
+| `audit_log` | Íntegro | **133 filas**: las **111 originales idénticas** (huella `3291702a…`, sin cambios) y **22 nuevas** (10 bajas de productos, 10 de variantes, 1 de foto y 1 constancia con el SHA-256 del respaldo) |
+| Triggers de protección | 8 habilitados | **8 habilitados** y 0 deshabilitados |
+| RLS | 11 tablas | **11** |
+| Estructura (funciones, políticas, triggers, índices, Storage) | Sin cambios | Mismas huellas que antes: funciones `c5cf0ea3…`, políticas `284ad17e…`, triggers `171b0f9c…`, índices `41bed7c0…`, políticas de Storage `818702f3…` |
+| Secuencias | No reiniciar | **Sin reiniciar**: ventas en 5 y movimientos en 10 (lo siguiente continúa en 6 y 11) |
+| Esquemas o tablas de respaldo en la base | Ninguno | **Ninguno** |
+| Stock | Consistente | Consistente (no quedan variantes ni movimientos) |
+| Catálogo público (clave pública) | Responde | **Aprobado**: las 5 vistas públicas responden 200 con 0 filas |
+| Tablas protegidas con la clave pública | Rechazo | **Aprobado**: 11 de 11 responden 401 |
+| Autenticación | Funciona | **Aprobado parcialmente**: el registro sigue cerrado y `/auth/v1/user` sin sesión da 401; el ingreso con la cuenta CEO lo verifica el usuario |
+| Panel administrativo y Dashboard con cero ventas | Funciona / 0 ventas | **No verificado**: requieren la sesión del usuario |
+| Archivos de prueba en Storage | 0 | **2** (pendiente por acceso) |
 
 Resultado del script sobre la **copia restaurada** (idéntica a producción):
 
@@ -58,9 +80,9 @@ Resultado del script sobre la **copia restaurada** (idéntica a producción):
 | Secuencias | **No reiniciar** | **No se reinician**: la próxima venta será la n.º 6 y el próximo movimiento el id 11 |
 | Esquemas o tablas permanentes de respaldo en producción | No crear | **Ninguno** (el script no crea ninguno; los conteos usan una tabla temporal que desaparece sola) |
 | `TRUNCATE` | No usar | No se usa; sigue fallando con `42501` |
-| Recuperación | — | Desde el respaldo externo, 9 tablas vuelven con la **misma huella** que producción |
+| Recuperación | — | Desde el respaldo externo, 9 tablas vuelven con la **misma huella** que producción (probado en la copia; **no hizo falta usarla**) |
 
-**Qué NO se puede verificar hasta ejecutar en producción** (y por eso no se declara aprobado): catálogo público tras la limpieza, acceso al panel, Dashboard con cero ventas, Storage sin los archivos. Se verificarán a continuación de la ejecución.
+**Aún no verificado, y por eso no se declara aprobado:** el acceso al panel y el Dashboard con cero ventas (necesitan tu sesión) y que Storage quede sin los archivos.
 
 ## 4. Respaldo y limitaciones
 
@@ -284,10 +306,10 @@ Migraciones: las aplica el usuario a mano en el SQL Editor, de a una y en orden 
 | 3 | Respaldo verificado con SHA-256 y restauración con huellas idénticas | **Aprobado** (con la limitación de §4) |
 | 4 | Script S2 probado sobre una copia restaurada | **Aprobado** (13/13) |
 | 5 | Producción coincide con el inventario antes de ejecutar | **Aprobado** |
-| 6 | Ejecución de la limpieza en producción | **Pendiente por decisión** |
-| 7 | 0 productos, variantes, ventas, detalles, movimientos e imágenes; 4 categorías; 5 medios de pago; 1 CEO; `audit_log` íntegro; 8 triggers; RLS en 11 tablas | **Aprobado en la copia; no verificado en producción** hasta ejecutar |
-| 8 | Archivos de Storage eliminados | **Pendiente por acceso** |
-| 9 | Catálogo público, autenticación, panel y Dashboard con cero ventas tras la limpieza | **No verificado** (solo posible tras ejecutar) |
+| 6 | Ejecución de la limpieza en producción | **Aprobado** (9 nov, 05:21:50 UTC, tras la confirmación del usuario) |
+| 7 | 0 productos, variantes, ventas, detalles, movimientos e imágenes; 4 categorías; 5 medios de pago; 1 CEO; `audit_log` íntegro; 8 triggers; RLS en 11 tablas | **Aprobado en producción** (verificado por consulta después de ejecutar) |
+| 8 | Archivos de Storage eliminados | **Pendiente por acceso**: siguen los 2 archivos; falta tu sesión en el panel de Supabase |
+| 9 | Catálogo público, autenticación, panel y Dashboard con cero ventas tras la limpieza | **Aprobado parcialmente**: catálogo público y rechazos anónimos verificados; panel y Dashboard **no verificados** (necesitan la sesión del usuario) |
 | 10 | Documentación conciliada | **Aprobado** |
 | 11 | Sin secretos en el repositorio | **Aprobado** |
 | 12 | Gerente y empleado | **Pendiente por decisión** |
@@ -296,4 +318,9 @@ Migraciones: las aplica el usuario a mano en el SQL Editor, de a una y en orden 
 
 ## 14. Conclusión
 
-**La Etapa 0 NO está cerrada.** El trabajo técnico que depende de Claude está terminado y verificado. La **condición concreta** que impide cerrarla es la **confirmación explícita final del usuario para ejecutar la limpieza S2 en producción**, seguida de: el borrado de los dos archivos de Storage (necesita una sesión con permisos) y las verificaciones posteriores (catálogo público, panel, Dashboard sin ventas). Con eso, la parte de datos queda cerrada. Los puntos de §10 (gerente y empleado, prueba física del POS, CI y Vercel, cachés externas) dependen de acceso o de decisiones del usuario y están documentados sin bloquear el cierre técnico. **Atención:** hasta el `push` y el despliegue, el sitio publicado no incluye los cambios de la Etapa 0 (R1).
+**La Etapa 0 NO está cerrada todavía; falta una condición concreta y pequeña.** La limpieza S2 **se ejecutó en producción** y quedó verificada (0 productos, ventas y movimientos; categorías, medios de pago, CEO y las 111 filas originales del `audit_log` idénticos; 8 triggers y RLS intactos; estructura idéntica). Para cerrarla falta:
+
+1. **Borrar los dos archivos de Storage** (foto de Juego de Cuchillos y el huérfano de `categories/`): necesita una **sesión con permisos en el panel de Supabase**. El navegador integrado quedó en la pantalla de ingreso; con tu sesión iniciada allí, Claude los borra sin tocar tus credenciales. Ambos están respaldados.
+2. **Verificar con tu sesión** el acceso al panel y que el Dashboard muestre cero ventas (Claude no tiene sesión propia y no se declara aprobado sin ejecutarlo).
+
+Los puntos de §10 (gerente y empleado, prueba física del POS, CI y Vercel, cachés externas) dependen de acceso o de decisiones tuyas y están documentados sin bloquear el cierre técnico. **Atención:** hasta el `push` y el despliegue, el sitio publicado no incluye los cambios de la Etapa 0 (R1).

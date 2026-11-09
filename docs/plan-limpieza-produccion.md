@@ -322,6 +322,6 @@ La limpieza se acepta solo si se cumplen **todos**:
 | Simulacro | **13 de 13** sobre la copia restaurada de producción, con el script real final |
 | Recuperación | Probada **desde el respaldo externo** (`generar_restauracion.mjs`): 9 tablas vuelven con la misma huella. El script de recuperación desde un esquema dentro de la base **se eliminó** |
 | Storage | **Bloqueado para Claude:** el trigger `protect_objects_delete` impide borrar con SQL; requiere la API o el panel de Supabase con una sesión con permisos |
-| Ejecución en producción | **Pendiente de la confirmación final** |
+| Ejecución en producción | **EJECUTADA el 9 de noviembre de 2026, 05:21:50 UTC**, tras la confirmación explícita del usuario; verificada por consulta (ver [informe-final-etapa-0.md](informe-final-etapa-0.md) §3) |
 
 Cómo se ejecutaría tras la confirmación: (1) repetir las huellas de producción y comprobar que no cambiaron; (2) correr el script **con `commit;` en lugar de `rollback;`** (si las guardas detectan cualquier cambio, aborta sin tocar nada); (3) verificar las huellas y los controles posteriores; (4) borrar los 2 archivos de Storage con una sesión con permisos y comprobar que el bucket queda vacío; (5) comprobar el catálogo público (anónimo) y el acceso al panel con la sesión del usuario; (6) conservar el respaldo externo según lo decida el usuario (la limpieza no deja nada que eliminar en la base).
