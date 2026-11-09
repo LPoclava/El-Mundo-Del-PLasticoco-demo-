@@ -50,6 +50,7 @@ Cada archivo dice su fecha. Si contradicen a los documentos de arriba, valen los
 | [informe-bloque-b-validacion-funcional.md](informe-bloque-b-validacion-funcional.md) | Etapa 0, Bloque B: privilegios de tabla (Q9), políticas de Storage, permisos del CEO contra la documentación, S1 y S11 sin sesión y criterios pendientes para cerrar la etapa |
 | [registro-respaldo-limpieza.md](registro-respaldo-limpieza.md) | Registro del respaldo previo a la limpieza de producción: ruta, SHA-256, contenido y verificación, 9 de noviembre de 2026 |
 | [informe-final-etapa-0.md](informe-final-etapa-0.md) | **Informe final de la Etapa 0**: resumen, estado inicial y final, limpieza S2 (preparada, a la espera de la confirmación final), respaldo, arquitectura, seguridad, pruebas, riesgos, pendientes externos y checklist, 9 de noviembre de 2026 |
+| [diagnostico-inicial-etapa-1.md](diagnostico-inicial-etapa-1.md) | Diagnóstico inicial de la fase comercial (carrito público, escáner y modo venta, QR, comprobantes, fiscal, dashboard): estado real, discrepancias, bloqueos y plan por fases, 9 de noviembre de 2026 |
 | [plan-limpieza-produccion.md](plan-limpieza-produccion.md) | Preparación (sin ejecutar) de la limpieza de datos de prueba en producción: inventario, respaldo, SQL, recuperación y criterios, 9 de noviembre de 2026 |
 
 `capturas/` guarda las imágenes que citan los informes (esa carpeta no está en Git).
