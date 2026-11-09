@@ -1,0 +1,48 @@
+# Integración continua: instala, revisa tipos, lint, pruebas y compila. No despliega nada (el despliegue lo hace Vercel).
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# Solo lectura del repositorio; una ejecución nueva cancela la anterior de la misma rama.
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      # La compilación no consulta el Supabase real: sin estas variables el catálogo queda vacío (comportamiento
+      # documentado en el README). Las variables vacías tienen prioridad sobre las del archivo .env.
+      NEXT_PUBLIC_SUPABASE_URL: ""
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ""
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Instalar dependencias (reproducible)
+        run: npm ci
+
+      - name: TypeScript
+        run: npx tsc --noEmit
+
+      - name: ESLint
+        run: npm run lint
+
+      - name: Pruebas
+        run: npm test
+
+      - name: Compilar para producción
+        run: npm run build

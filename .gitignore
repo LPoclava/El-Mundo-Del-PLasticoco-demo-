@@ -48,11 +48,14 @@ next-env.d.ts
 
 /supabase/tests/node_modules
 
-# Fuera del repositorio (se conservan en esta carpeta): migraciones, scripts sueltos, documentación y recursos de marca.
+# Documentación (/docs) y base de datos (/supabase: migraciones, pruebas, semillas, correcciones) SÍ se versionan desde la Etapa 0.
+# Lo que sigue fuera del repositorio:
+# - capturas de pantalla de la documentación (pueden mostrar material comercial de prueba o datos personales),
+# - recursos de marca pesados (/Logo) y salidas de herramientas de diseño (/.impeccable),
+# - scripts sueltos que no son pruebas automáticas.
 # Las pruebas automáticas sí se versionan (no llevan credenciales ni datos de clientes).
-/supabase/
+/docs/capturas/
 /scripts/*
 !/scripts/*.test.mjs
-/docs/
 /Logo/
 /.impeccable/

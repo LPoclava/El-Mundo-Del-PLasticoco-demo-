@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { formatPrice } from "@/lib/catalog/url";
 import { loadDraft, saveDraft } from "@/lib/pos/draft";
@@ -9,9 +9,14 @@ import {
   setQuantity, type Cart, type SaleProblem,
 } from "@/lib/pos/cart";
 import {
-  confirmSale, findProducts, isBarcode, listPaymentMethods, toCartLine, variantLabel,
+  confirmSale, findProducts, findSaleByKey, isBarcode, listPaymentMethods, toCartLine, variantLabel,
   type PaymentMethod, type PosProduct, type PosVariant, type Receipt,
 } from "@/lib/pos/api";
+import {
+  DISCARD_AFTER_MS, attemptTotal, attemptUnits, canDiscard, clearAttempt, loadAttempt, runConfirm, saveAttempt, verifyAttempt,
+  type Attempt, type ConfirmDeps, type ConfirmOutcome,
+} from "@/lib/pos/attempt";
+import { useSession } from "../auth-provider";
 import { BarcodeScanner } from "../barcode-scanner";
 import { takeFlash } from "../flash";
 import { Icon } from "../icons";
@@ -29,7 +34,8 @@ import { ResultPanel, resultTitle, type ScanResult } from "./pos-result-panel";
  * (permisos, precios, stock, total, idempotencia): esta pantalla es solo la interfaz.
  */
 export function PosSection() {
-  return <PosGate>{({ db, role }) => <Scanner db={db} role={role} />}</PosGate>;
+  const { userId } = useSession();
+  return <PosGate>{({ db, role }) => <Scanner db={db} role={role} userId={userId} />}</PosGate>;
 }
 
 function useToasts() {
@@ -45,15 +51,24 @@ function useToasts() {
 
 type Matches = { term: string; products: PosProduct[] } | null;
 
-function Scanner({ db, role }: { db: SupabaseClient; role: "empleado" | "gerente" | "ceo" }) {
+/** Qué se sabe de la venta pendiente: consultando, sin saber qué pasó, confirmado que no está registrada, o sin poder consultar. */
+type PendingCheck = "checking" | "unknown" | "not-registered" | "lookup-failed";
+
+function Scanner({ db, role, userId }: { db: SupabaseClient; role: "empleado" | "gerente" | "ceo"; userId: string }) {
   const canManage = role !== "empleado";
   // El borrador se recupera de sessionStorage (recarga de la pestaña). Este componente solo se dibuja en el
   // navegador, después de verificar la sesión, así que leerlo en el estado inicial es seguro.
   const [cart, setCart] = useState<Cart>(() => loadDraft());
   const cartRef = useRef<Cart>(cart);
   const restored = useRef(cart.length > 0);
+
+  // Intento de venta con resultado incierto (H1): sobrevive a una recarga y bloquea armar otra venta hasta resolverse.
+  const [pending, setPending] = useState<Attempt | null>(() => loadAttempt(userId));
+  const pendingRef = useRef<Attempt | null>(pending);
+  const [pendingCheck, setPendingCheck] = useState<PendingCheck | null>(pending ? "checking" : null);
+  const [storageOk, setStorageOk] = useState(true);
   const [methods, setMethods] = useState<PaymentMethod[] | null>(null);
-  const [method, setMethod] = useState<string | null>(null);
+  const [method, setMethod] = useState<string | null>(() => pending?.method ?? null);
   const [result, setResult] = useState<ScanResult | null>(null);
   const resultOpen = useRef(false);
   const lookupBusy = useRef(false);
@@ -63,13 +78,12 @@ function Scanner({ db, role }: { db: SupabaseClient; role: "empleado" | "gerente
   const [term, setTerm] = useState("");
   const [matches, setMatches] = useState<Matches>(null);
   const [busy, setBusy] = useState(false);
-  const [failure, setFailure] = useState<{ message: string; details: string[] } | null>(null);
+  const [failure, setFailure] = useState<{ message: string; details: string[]; kind?: string } | null>(null);
   const [receipt, setReceipt] = useState<Receipt | null>(null);
   const [salesVersion, setSalesVersion] = useState(0);
   // Cada alta incrementa «bump»: reinicia la animación del contador del carrito.
   const [bump, setBump] = useState(0);
   const sendingRef = useRef(false);
-  const attemptRef = useRef<{ sig: string; key: string } | null>(null);
   const manualRef = useRef<HTMLInputElement>(null);
   const { toasts, push } = useToasts();
   const [cartOpen, setCartOpen] = useState(false);
@@ -100,8 +114,9 @@ function Scanner({ db, role }: { db: SupabaseClient; role: "empleado" | "gerente
     }
   }, [push]);
 
-  // Cerrar o recargar la pestaña con una venta armada pide confirmación (el borrador igual se conserva al recargar).
-  const hasItems = cart.length > 0;
+  // Cerrar o recargar la pestaña con una venta armada (o con una sin confirmar) pide confirmación; el borrador y el
+  // intento igual se conservan al recargar.
+  const hasItems = cart.length > 0 || pending !== null || busy;
   useEffect(() => {
     if (!hasItems) return;
     const warn = (e: BeforeUnloadEvent) => {
@@ -112,6 +127,68 @@ function Scanner({ db, role }: { db: SupabaseClient; role: "empleado" | "gerente
     return () => window.removeEventListener("beforeunload", warn);
   }, [hasItems]);
 
+  const updateCart = (next: Cart) => {
+    cartRef.current = next;
+    setCart(next);
+    saveDraft(next);
+  };
+
+  const attemptDeps = useMemo<ConfirmDeps>(
+    () => ({
+      uuid: () => crypto.randomUUID(),
+      now: () => Date.now(),
+      find: (key) => findSaleByKey(db, userId, key),
+      send: (key, paymentMethod, lines) => confirmSale(db, key, paymentMethod, lines),
+      save: (a) => saveAttempt(a),
+      clear: () => clearAttempt(),
+    }),
+    [db, userId],
+  );
+
+  const setPendingAttempt = (next: Attempt | null, check: PendingCheck | null) => {
+    pendingRef.current = next;
+    setPending(next);
+    setPendingCheck(check);
+  };
+
+  /** La venta existe (la envió esta pantalla o ya estaba registrada): se muestra su comprobante y se cierra el intento. */
+  const onRegistered = (r: Receipt) => {
+    updateCart([]);
+    setMethod(null);
+    setFailure(null);
+    setStorageOk(true);
+    setPendingAttempt(null, null);
+    setReceipt(r);
+    setSalesVersion((v) => v + 1);
+    setCartOpen(true);
+  };
+  // La última versión de onRegistered para el efecto de más abajo (que no debe volver a correr en cada dibujo).
+  const onRegisteredRef = useRef(onRegistered);
+  useEffect(() => {
+    onRegisteredRef.current = onRegistered;
+  });
+
+  // Al entrar con un intento pendiente (recarga con una venta sin confirmar) se consulta de inmediato si esa clave ya
+  // tiene una venta registrada, antes de permitir nada más.
+  useEffect(() => {
+    const p = pendingRef.current;
+    if (!p) return;
+    let cancelled = false;
+    void verifyAttempt(p, attemptDeps).then((v) => {
+      if (cancelled) return;
+      if (v.kind === "registered") {
+        onRegisteredRef.current(v.receipt);
+        push("La venta ya estaba registrada: no se duplicó.");
+        return;
+      }
+      setPendingCheck(v.kind === "not-registered" ? "not-registered" : "lookup-failed");
+      setCartOpen(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [attemptDeps, push]);
+
   useEffect(() => {
     let cancelled = false;
     listPaymentMethods(db)
@@ -121,12 +198,6 @@ function Scanner({ db, role }: { db: SupabaseClient; role: "empleado" | "gerente
       cancelled = true;
     };
   }, [db]);
-
-  const updateCart = (next: Cart) => {
-    cartRef.current = next;
-    setCart(next);
-    saveDraft(next);
-  };
 
   function showResult(next: ScanResult | null) {
     resultOpen.current = next !== null;
@@ -181,6 +252,11 @@ function Scanner({ db, role }: { db: SupabaseClient; role: "empleado" | "gerente
   }
 
   function add(product: PosProduct, variant: PosVariant, quantity: number) {
+    // No se arma otra venta mientras haya una en curso o sin confirmar: el carrito de ese intento no se puede mezclar.
+    if (sendingRef.current || pendingRef.current) {
+      push("Hay una venta sin confirmar: resolvela antes de agregar productos.", "error");
+      return;
+    }
     const already = cartRef.current.find((l) => l.variantId === variant.id);
     const r = addToCart(cartRef.current, toCartLine(product, variant), quantity);
     updateCart(r.cart);
@@ -198,42 +274,114 @@ function Scanner({ db, role }: { db: SupabaseClient; role: "empleado" | "gerente
   const total = cartTotal(cart);
   const units = cartUnits(cart);
 
+  /** Muestra lo que pasó con un intento de confirmar (o de reintentar). El carrito solo se vacía si la venta existe. */
+  function handleOutcome(outcome: ConfirmOutcome) {
+    switch (outcome.kind) {
+      case "registered":
+        // Recién ahora, con la venta confirmada por la base (o reconocida como ya registrada), se limpia el carrito.
+        onRegistered(outcome.receipt);
+        if (!outcome.persisted) setStorageOk(true);
+        if (outcome.via !== "sent") push("Esta venta ya estaba registrada: no se duplicó.");
+        return;
+      case "failed": {
+        // La base rechazó o no autorizó: no se registró nada. Se corrige el carrito sin vaciarlo.
+        const f = outcome.failure;
+        if (f.kind === "rejected") updateCart(applyProblems(cartRef.current, f.problems as SaleProblem[]));
+        setPendingAttempt(null, null);
+        setFailure({ message: f.message, details: f.problems.map(describeProblem), kind: f.kind });
+        return;
+      }
+      case "unknown":
+        // No se sabe si se registró: queda pendiente y no se puede armar otra venta hasta resolverlo.
+        setStorageOk(outcome.persisted);
+        setPendingAttempt(outcome.attempt, "unknown");
+        setFailure({ message: outcome.failure.message, details: [], kind: "unknown" });
+        return;
+      case "lookup-failed":
+        setStorageOk(outcome.persisted);
+        setPendingAttempt(outcome.attempt, "lookup-failed");
+        return;
+      case "mismatch":
+        setPendingAttempt(null, null);
+        setFailure({
+          message: `Esa operación ya correspondía a otra venta (comprobante #${outcome.receipt.number}). Esta no se registró: revisá «Ventas recientes» antes de volver a intentar.`,
+          details: [],
+          kind: "rejected",
+        });
+        return;
+      case "blocked":
+        push("Hay una venta sin confirmar: resolvela antes de armar otra.", "error");
+        return;
+    }
+  }
+
   async function confirm() {
     // Doble clic o toque repetido: mientras haya un envío en curso no se manda otro.
-    if (sendingRef.current || method === null || cartRef.current.length === 0) return;
+    if (sendingRef.current) return;
+    const p = pendingRef.current;
+    if (!p && (method === null || cartRef.current.length === 0)) return;
     sendingRef.current = true;
     setBusy(true);
     setFailure(null);
-    // Una clave por intento: se reutiliza si es el mismo carrito (reintento tras un corte de red) y
-    // cambia en cuanto se edita algo.
-    const sig = attemptSignature(cartRef.current, method);
-    if (attemptRef.current?.sig !== sig) attemptRef.current = { sig, key: crypto.randomUUID() };
-    const outcome = await confirmSale(db, attemptRef.current.key, method, cartRef.current);
+    // Una clave por intento, GUARDADA antes de enviar. Con un intento pendiente se reintenta con ESA clave y ESE
+    // contenido (no con lo que haya ahora en pantalla), y antes de reenviar se consulta si ya tiene una venta.
+    const sig = p ? p.sig : attemptSignature(cartRef.current, method);
+    const lines = p ? p.lines : cartRef.current.map((l) => ({ variantId: l.variantId, quantity: l.quantity, unitPrice: l.unitPrice }));
+    const outcome = await runConfirm({ userId, pending: p, sig, method: p ? p.method : (method as string), lines, deps: attemptDeps });
     sendingRef.current = false;
     setBusy(false);
-
-    if ("receipt" in outcome) {
-      // Recién ahora, con la confirmación real del servidor, se limpia el carrito.
-      updateCart([]);
-      setMethod(null);
-      attemptRef.current = null;
-      setReceipt(outcome.receipt);
-      setSalesVersion((v) => v + 1);
-      return;
-    }
-    const f = outcome.failure;
-    if (f.kind === "rejected") {
-      updateCart(applyProblems(cartRef.current, f.problems as SaleProblem[]));
-      attemptRef.current = null;
-    }
-    setFailure({ message: f.message, details: f.problems.map(describeProblem) });
+    handleOutcome(outcome);
   }
 
+  /** Solo consulta si la venta pendiente ya está registrada (no reenvía nada). */
+  async function verify() {
+    const p = pendingRef.current;
+    if (!p || sendingRef.current) return;
+    setPendingCheck("checking");
+    const v = await verifyAttempt(p, attemptDeps);
+    if (v.kind === "registered") {
+      onRegistered(v.receipt);
+      push("La venta ya estaba registrada: no se duplicó.");
+    } else {
+      setPendingCheck(v.kind === "not-registered" ? "not-registered" : "lookup-failed");
+    }
+  }
+
+  /** Descarta el intento pendiente. Solo se permite con la consulta confirmando que no hay venta y pasado el margen de seguridad. */
+  function discard() {
+    const p = pendingRef.current;
+    if (!p) return;
+    const now = attemptDeps.now();
+    if (!canDiscard(p, pendingCheck === "not-registered" ? false : null, now)) {
+      const wait = Math.ceil((DISCARD_AFTER_MS - (now - p.lastSentAt)) / 1000);
+      push(
+        pendingCheck === "not-registered" && wait > 0
+          ? `Esperá ${wait} segundos más: la venta todavía podría estar procesándose en el servidor.`
+          : "Primero verificá si la venta quedó registrada.",
+        "error",
+      );
+      return;
+    }
+    clearAttempt();
+    setStorageOk(true);
+    setPendingAttempt(null, null);
+    setFailure(null);
+    push("Se descartó el intento. El carrito quedó como estaba.");
+  }
+
+  // Con una venta sin confirmar no se puede cambiar el carrito ni el medio de pago: la clave pertenece a ese contenido.
+  const frozen = pending !== null;
+  const blocked = () => push("Hay una venta sin confirmar: resolvela antes de cambiar el carrito.", "error");
   const cartActions = {
-    setQuantity: (id: string, n: number) => updateCart(setQuantity(cartRef.current, id, n)),
-    step: (id: string, d: 1 | -1) => updateCart(changeQuantity(cartRef.current, id, d)),
-    remove: (id: string) => updateCart(removeLine(cartRef.current, id)),
-    clear: () => { updateCart([]); setMethod(null); attemptRef.current = null; setFailure(null); },
+    setQuantity: (id: string, n: number) => (pendingRef.current ? blocked() : updateCart(setQuantity(cartRef.current, id, n))),
+    step: (id: string, d: 1 | -1) => (pendingRef.current ? blocked() : updateCart(changeQuantity(cartRef.current, id, d))),
+    remove: (id: string) => (pendingRef.current ? blocked() : updateCart(removeLine(cartRef.current, id))),
+    clear: () => {
+      if (pendingRef.current) return blocked();
+      updateCart([]);
+      setMethod(null);
+      setFailure(null);
+    },
   };
 
   return (
@@ -340,8 +488,22 @@ function Scanner({ db, role }: { db: SupabaseClient; role: "empleado" | "gerente
         actions={cartActions}
         methods={methods}
         method={method}
-        onMethod={setMethod}
+        onMethod={(code) => { if (!pendingRef.current) setMethod(code); }}
         busy={busy}
+        frozen={frozen}
+        pending={
+          pending
+            ? {
+                units: attemptUnits(pending),
+                total: attemptTotal(pending),
+                check: pendingCheck ?? "unknown",
+                storageOk,
+                onVerify: () => void verify(),
+                onRetry: () => void confirm(),
+                onDiscard: discard,
+              }
+            : null
+        }
         failure={failure}
         receipt={receipt}
         onConfirm={() => void confirm()}

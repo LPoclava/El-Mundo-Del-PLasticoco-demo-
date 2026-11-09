@@ -1,14 +1,16 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { atLeast, type Role } from "@/lib/panel-demo/roles";
-import { useDemo } from "./demo-provider";
+import { atLeast, type Role } from "@/lib/panel/roles";
+import { useSession } from "./auth-provider";
 import { NotAvailable } from "./panel-shell";
 
-/** Muestra la sección solo si el perfil de demostración la incluye. No es seguridad real. */
+/**
+ * Muestra la sección solo si el rol del perfil real alcanza. No es seguridad: la base rechaza igualmente cualquier
+ * operación de quien no tiene el rol (RLS y funciones con has_role_at_least).
+ */
 export function RoleGuard({ min, children }: { min: Role; children: ReactNode }) {
-  const { role } = useDemo();
-  if (!role) return null;
-  if (!atLeast(role, min)) return <NotAvailable role={role} />;
+  const { profile } = useSession();
+  if (!atLeast(profile.role, min)) return <NotAvailable role={profile.role} />;
   return <>{children}</>;
 }

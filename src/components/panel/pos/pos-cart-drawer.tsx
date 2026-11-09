@@ -4,7 +4,8 @@ import { useState } from "react";
 import { formatPrice } from "@/lib/catalog/url";
 import { cartIssues, cartTotal, cartUnits, lineSubtotal, type Cart } from "@/lib/pos/cart";
 import type { PaymentMethod, Receipt } from "@/lib/pos/api";
-import { receiptText } from "@/lib/pos/receipt";
+import { CONTACT } from "@/config/contact";
+import { RECEIPT_NOTICE, receiptHeader, receiptText } from "@/lib/pos/receipt";
 import { Icon } from "../icons";
 import { Drawer } from "../drawer";
 import { Button, Dialog } from "../ui";
@@ -12,11 +13,26 @@ import { QuantityStepper, Thumb } from "./pos-parts";
 
 const dateTime = new Intl.DateTimeFormat("es-AR", { dateStyle: "short", timeStyle: "short" });
 
+/** Identificación del negocio en el comprobante (se edita en src/config/contact.ts). */
+const BUSINESS = { address: CONTACT.address, locality: CONTACT.locality };
+
 export type CartActions = {
   setQuantity: (variantId: string, n: number) => void;
   step: (variantId: string, d: 1 | -1) => void;
   remove: (variantId: string) => void;
   clear: () => void;
+};
+
+/** Una venta con resultado incierto (H1): qué se sabe de ella y qué se puede hacer. */
+export type PendingView = {
+  units: number;
+  total: number;
+  check: "checking" | "unknown" | "not-registered" | "lookup-failed";
+  /** false si el navegador no pudo guardar el intento: una recarga lo perdería. */
+  storageOk: boolean;
+  onVerify: () => void;
+  onRetry: () => void;
+  onDiscard: () => void;
 };
 
 type Props = {
@@ -30,7 +46,10 @@ type Props = {
   onMethod: (code: string) => void;
   /** true mientras el servidor procesa la venta. */
   busy: boolean;
-  failure: { message: string; details: string[] } | null;
+  /** true con una venta sin confirmar: el carrito y el medio de pago no se pueden cambiar. */
+  frozen: boolean;
+  pending: PendingView | null;
+  failure: { message: string; details: string[]; kind?: string } | null;
   /** Solo existe cuando el servidor confirmó la venta. */
   receipt: Receipt | null;
   onConfirm: () => void;
@@ -44,14 +63,16 @@ type Props = {
  *  3. error: mensaje claro, el carrito intacto y el botón pasa a «Reintentar» (la clave de idempotencia evita duplicar).
  * El carrito solo se vacía cuando el servidor confirma: eso lo decide quien usa este componente, no la animación.
  */
-export function CartDrawer({ open, onClose, cart, actions, methods, method, onMethod, busy, failure, receipt, onConfirm, onNewSale }: Props) {
+export function CartDrawer({ open, onClose, cart, actions, methods, method, onMethod, busy, frozen, pending, failure, receipt, onConfirm, onNewSale }: Props) {
   const [clearing, setClearing] = useState(false);
   const issues = cartIssues(cart);
   const total = cartTotal(cart);
   const units = cartUnits(cart);
   const canSubmit = !busy && method !== null && issues.length === 0 && cart.length > 0;
+  const notice = pending && !receipt ? <PendingNotice pending={pending} busy={busy} /> : null;
 
-  const footer = receipt ? null : cart.length === 0 ? null : (
+  // Con una venta sin confirmar no hay botón «Registrar»: se resuelve desde el aviso (verificar, reintentar o descartar).
+  const footer = receipt || pending ? null : cart.length === 0 ? null : (
     <div className="space-y-3">
       <p className="flex items-baseline justify-between" aria-live="polite">
         <span className="text-sm text-brand-muted">Total</span>
@@ -118,13 +139,17 @@ export function CartDrawer({ open, onClose, cart, actions, methods, method, onMe
         {receipt ? (
           <SaleDone receipt={receipt} onNew={onNewSale} />
         ) : cart.length === 0 ? (
-          <div className="py-10 text-center">
-            <p className="font-medium">El carrito está vacío</p>
-            <p className="mt-1 text-sm text-brand-muted">Escaneá un producto y tocá «Agregar».</p>
-            <Button className="mt-4" onClick={onClose}>Seguir escaneando</Button>
+          <div className="space-y-3">
+            {notice}
+            <div className="py-10 text-center">
+              <p className="font-medium">El carrito está vacío</p>
+              <p className="mt-1 text-sm text-brand-muted">Escaneá un producto y tocá «Agregar».</p>
+              <Button className="mt-4" onClick={onClose}>Seguir escaneando</Button>
+            </div>
           </div>
         ) : (
           <div className="space-y-3">
+            {notice}
             <ul className="divide-y divide-brand-line">
               {cart.map((line) => {
                 const issue = issues.find((i) => i.variantId === line.variantId);
@@ -141,10 +166,10 @@ export function CartDrawer({ open, onClose, cart, actions, methods, method, onMe
                     </div>
                     <div className="mt-2 flex items-center justify-between gap-2">
                       <QuantityStepper
-                        name={line.name} value={line.quantity} max={line.stock}
+                        name={line.name} value={line.quantity} max={line.stock} disabled={frozen}
                         onChange={(n) => actions.setQuantity(line.variantId, n)} onStep={(d) => actions.step(line.variantId, d)}
                       />
-                      <Button size="sm" variant="ghost" icon="trash" disabled={busy} onClick={() => actions.remove(line.variantId)} aria-label={`Quitar ${line.name}`}>Quitar</Button>
+                      <Button size="sm" variant="ghost" icon="trash" disabled={busy || frozen} onClick={() => actions.remove(line.variantId)} aria-label={`Quitar ${line.name}`}>Quitar</Button>
                     </div>
                     {issue && (
                       <p role="alert" className="mt-1.5 flex items-start gap-1.5 text-sm text-brand-danger">
@@ -156,17 +181,18 @@ export function CartDrawer({ open, onClose, cart, actions, methods, method, onMe
               })}
             </ul>
 
-            {failure && (
+            {/* «No se registró nada» solo se dice cuando es cierto (la base rechazó). Con resultado incierto lo explica el aviso de arriba. */}
+            {failure && !pending && (
               <div role="alert" className="rounded-lg border border-brand-danger/30 bg-brand-danger/5 p-3 text-sm">
                 <p className="font-medium text-brand-danger">{failure.message}</p>
                 {failure.details.length > 0 && (
                   <ul className="mt-1.5 list-disc space-y-1 pl-5">{failure.details.map((m, i) => <li key={i}>{m}</li>)}</ul>
                 )}
-                <p className="mt-1.5 text-brand-muted">Tu carrito sigue como estaba. No se registró nada.</p>
+                {failure.kind !== "unknown" && <p className="mt-1.5 text-brand-muted">Tu carrito sigue como estaba. No se registró nada.</p>}
               </div>
             )}
 
-            <Button variant="ghost" size="sm" className="border border-brand-line" disabled={busy} onClick={() => setClearing(true)}>Vaciar carrito</Button>
+            <Button variant="ghost" size="sm" className="border border-brand-line" disabled={busy || frozen} onClick={() => setClearing(true)}>Vaciar carrito</Button>
           </div>
         )}
       </Drawer>
@@ -182,12 +208,47 @@ export function CartDrawer({ open, onClose, cart, actions, methods, method, onMe
   );
 }
 
+const CHECK_TEXT: Record<PendingView["check"], string> = {
+  checking: "Consultando si la venta ya quedó registrada…",
+  unknown: "No sabemos si esta venta quedó registrada: se cortó la conexión o se recargó la página mientras se confirmaba.",
+  "not-registered": "La consulta no encontró esta venta: todavía no figura como registrada.",
+  "lookup-failed": "No pudimos consultar si la venta quedó registrada. Revisá la conexión.",
+};
+
+/**
+ * Venta con resultado incierto: no se puede armar otra hasta resolverla. Reintentar usa la MISMA operación (misma clave y
+ * mismo contenido) y primero consulta si ya existe: si existía, se muestra su comprobante y no se duplica.
+ */
+function PendingNotice({ pending, busy }: { pending: PendingView; busy: boolean }) {
+  const checking = pending.check === "checking";
+  return (
+    <div role="alert" className="space-y-3 rounded-lg border border-brand-danger/30 bg-brand-danger/5 p-3 text-sm">
+      <div>
+        <p className="font-medium text-brand-danger">Hay una venta sin confirmar</p>
+        <p className="mt-0.5 tabular-nums">{pending.units} {pending.units === 1 ? "unidad" : "unidades"} · {formatPrice(pending.total)}</p>
+        <p className="mt-1.5">{CHECK_TEXT[pending.check]}</p>
+        <p className="mt-1.5 text-brand-muted">
+          Hasta resolverla no se puede armar otra venta. Si tocás «Reintentar registro» y la venta ya existía, no se duplica.
+        </p>
+        {!pending.storageOk && (
+          <p className="mt-1.5 font-medium">Este navegador no pudo guardar la operación: no recargues ni cierres la página hasta resolverla.</p>
+        )}
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <Button variant="primary" icon="refresh" disabled={busy || checking} onClick={pending.onRetry}>Reintentar registro</Button>
+        <Button disabled={busy || checking} onClick={pending.onVerify}>Verificar si se registró</Button>
+        {pending.check === "not-registered" && <Button variant="ghost" className="border border-brand-line" disabled={busy} onClick={pending.onDiscard}>Descartar intento</Button>}
+      </div>
+    </div>
+  );
+}
+
 /** Éxito: se muestra solo cuando el servidor devolvió el comprobante (la venta ya está guardada). */
 function SaleDone({ receipt, onNew }: { receipt: Receipt; onNew: () => void }) {
   const [shared, setShared] = useState<string | null>(null);
 
   async function share() {
-    const text = receiptText(receipt);
+    const text = receiptText(receipt, BUSINESS);
     try {
       if (typeof navigator.share === "function") {
         await navigator.share({ title: `Comprobante #${receipt.number}`, text });
@@ -216,6 +277,11 @@ function SaleDone({ receipt, onNew }: { receipt: Receipt; onNew: () => void }) {
       </div>
 
       <div id="comprobante" className="space-y-3 rounded-xl border border-brand-line p-3">
+        <div className="text-sm">
+          {receiptHeader(BUSINESS).map((line, idx) => (
+            <p key={line} className={idx === 0 ? "font-semibold" : "text-xs text-brand-muted"}>{line}</p>
+          ))}
+        </div>
         <p className="text-sm font-semibold">Comprobante #{receipt.number}</p>
         <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-sm">
           <dt className="text-brand-muted">Fecha</dt><dd className="tabular-nums">{dateTime.format(new Date(receipt.createdAt))}</dd>
@@ -231,7 +297,9 @@ function SaleDone({ receipt, onNew }: { receipt: Receipt; onNew: () => void }) {
           ))}
         </ul>
         <p className="flex justify-between text-lg font-semibold tabular-nums"><span>Total cobrado</span><span>{formatPrice(receipt.total)}</span></p>
-        <p className="text-xs text-brand-muted">
+        <p className="text-xs text-brand-muted">{RECEIPT_NOTICE}</p>
+        {/* El stock restante es un dato interno: se ve en pantalla para quien vende, pero no se imprime en la copia del cliente. */}
+        <p className="text-xs text-brand-muted print:hidden">
           {receipt.stockUpdated ? "Stock descontado: " : ""}
           {receipt.items.filter((i) => i.stockAfter !== null).map((i) => `${i.productName}: quedan ${i.stockAfter}`).join(" · ")}
         </p>

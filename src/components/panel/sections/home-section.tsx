@@ -10,7 +10,7 @@ import {
   LOW_STOCK_THRESHOLD, lowStock, recentMovements, salesSummary, todayRange,
   type LowStockItem, type MovementItem, type SalesSummary,
 } from "@/lib/pos/dashboard";
-import type { IconName } from "@/lib/panel-demo/roles";
+import type { IconName } from "@/lib/panel/roles";
 import { Icon } from "../icons";
 import { Badge, CARD_CLASS, Notice, PageHeader } from "../ui";
 import { PosGate } from "../pos/pos-gate";

@@ -20,8 +20,8 @@ export function Thumb({ path, name = "" }: { path: string | null; name?: string 
 }
 
 /** Cantidad con − / + y campo editable (solo enteros de 1 al stock). */
-export function QuantityStepper({ name, value, max, onChange, onStep }: {
-  name: string; value: number; max: number; onChange: (n: number) => void; onStep: (d: 1 | -1) => void;
+export function QuantityStepper({ name, value, max, onChange, onStep, disabled = false }: {
+  name: string; value: number; max: number; onChange: (n: number) => void; onStep: (d: 1 | -1) => void; disabled?: boolean;
 }) {
   // El campo guarda lo escrito: se valida al salir y mientras tanto no deja entrar valores inválidos.
   const [draft, setDraft] = useState<string | null>(null);
@@ -30,9 +30,9 @@ export function QuantityStepper({ name, value, max, onChange, onStep }: {
   return (
     <div role="group" aria-label={`Cantidad de ${name}`}>
       <div className="flex items-center gap-1">
-        <Button size="sm" className="size-11 px-0" onClick={() => onStep(-1)} disabled={value <= 1} aria-label={`Una unidad menos de ${name}`}>−</Button>
+        <Button size="sm" className="size-11 px-0" onClick={() => onStep(-1)} disabled={disabled || value <= 1} aria-label={`Una unidad menos de ${name}`}>−</Button>
         <input
-          inputMode="numeric" value={shown} aria-label={`Cantidad de ${name}`} aria-invalid={value > max || invalidDraft}
+          inputMode="numeric" value={shown} aria-label={`Cantidad de ${name}`} aria-invalid={value > max || invalidDraft} disabled={disabled}
           onChange={(e) => {
             const raw = e.target.value;
             if (raw === "" || /^\d{0,4}$/.test(raw)) {
@@ -44,7 +44,7 @@ export function QuantityStepper({ name, value, max, onChange, onStep }: {
           onBlur={() => setDraft(null)}
           className={`${INPUT_CLASS} h-11 w-14! px-1 text-center tabular-nums`}
         />
-        <Button size="sm" className="size-11 px-0" onClick={() => onStep(1)} disabled={value >= max} aria-label={`Una unidad más de ${name}`}>+</Button>
+        <Button size="sm" className="size-11 px-0" onClick={() => onStep(1)} disabled={disabled || value >= max} aria-label={`Una unidad más de ${name}`}>+</Button>
         <span className="ml-1 hidden whitespace-nowrap text-xs text-brand-muted min-[400px]:inline">de {max}</span>
       </div>
       {invalidDraft && <p role="alert" className="mt-1 text-xs text-brand-danger">Escribí un número entero de 1 en adelante.</p>}

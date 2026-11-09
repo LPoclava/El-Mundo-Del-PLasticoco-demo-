@@ -3,7 +3,7 @@ import { HomeSection } from "@/components/panel/sections/home-section";
 
 export const metadata: Metadata = { title: "Inicio" };
 
-// El panel depende de la sesión de demostración del navegador: no hay contenido que mostrar antes de hidratar.
+// El panel depende de la sesión de Supabase del navegador: no hay contenido que mostrar antes de hidratar.
 export const instant = false;
 
 export default function PanelHomePage() {

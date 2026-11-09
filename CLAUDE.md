@@ -10,7 +10,7 @@ Suma a las reglas de `AImpulse/CLAUDE.md` (tabla de resumen al crear ramas o mig
 2. Leer `docs/decisiones.md` si la tarea toca diseño, datos, permisos o proceso.
 3. El resto de `docs/` se abre solo por tema; el índice está en `docs/README.md`.
 
-`docs/` y `supabase/` **no están en Git** (ver `.gitignore`). Existen solo en esta carpeta; no asumir que un clon del repositorio los tiene.
+`docs/` y `supabase/` **están en Git desde el commit de consolidación de la Etapa 0** (quedan fuera `docs/capturas/`, `Logo/`, `.impeccable/` y `supabase/tests/node_modules`; ver `.gitignore`). La migración o corrección que se agregue debe versionarse junto con su documentación.
 
 ## Qué es
 
@@ -42,11 +42,13 @@ Esta versión cambió APIs. Antes de escribir código de rutas, caché o compone
 - **Migraciones:** archivo nuevo en `supabase/migrations/` con la marca de tiempo siguiente. Nunca editar una ya aplicada. El repositorio no las ejecuta: las aplica el usuario a mano en Supabase.
 - **Clave `service_role`:** jamás en el frontend ni en el repositorio. `.env` está versionado a propósito y solo lleva la URL y la clave pública.
 - **Historial de ventas, movimientos de stock y auditoría son de solo agregado.** Una anulación sería un registro nuevo, nunca una edición.
+- **Cabeceras de seguridad y CSP** en `next.config.ts` (detalle en `docs/despliegue.md`). Al sumar un servicio externo (analítica, mapas, fuentes, widgets) hay que agregar su origen a la directiva que corresponda; si no, el navegador lo bloquea. La cámara del escáner depende de `Permissions-Policy: camera=(self)`: no cerrarla.
+- La IP para abrir el servidor local desde el celular va en `.env.local` (`ALLOWED_DEV_ORIGINS`), nunca en el código. La CI está en `.github/workflows/ci.yml`.
 - Precios en pesos enteros, sin centavos. Un producto no se vende hasta tener stock cargado.
 
-## Panel: real o demostración
+## Panel
 
-Real, con sesión de Supabase: Inicio, Productos, Categorías, Banners, Stock y «Escáner y ventas». En demostración, con datos en memoria: Usuarios, CRM y Configuración. El ingreso de `/panel/login` es el de demostración; las secciones reales piden además la cuenta de Supabase. Detalle y fecha en `docs/estado.md`.
+Un único ingreso real: `/panel/login` usa Supabase Auth (correo y contraseña). El rol sale de `public.profiles` (nunca del token ni de `user_metadata`) y define el menú (`src/lib/panel/roles.ts`); la base lo vuelve a exigir con RLS y funciones. No hay modo demostración. Secciones: Inicio, Escáner y ventas, Stock, Productos, Categorías, Banners y Usuarios (solo CEO). CRM y Configuración se retiraron porque no tenían tablas ni funciones reales. Usuarios necesita la migración `20261108000001_admin_list_users`; el estado de aplicación está en `docs/estado.md`.
 
 ## Marca y diseño
 

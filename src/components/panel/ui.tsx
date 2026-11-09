@@ -6,7 +6,7 @@ import {
 } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { sectionOf, type IconName } from "@/lib/panel-demo/roles";
+import { sectionOf, type IconName } from "@/lib/panel/roles";
 import { Icon } from "./icons";
 
 /** Piezas de interfaz del panel: botones, campos, insignias, diálogos y avisos. */
@@ -116,7 +116,6 @@ const BADGE_TONE = {
   warn: "bg-brand-orange/20 text-brand-ink",
   muted: "bg-brand-sand text-brand-muted",
   danger: "bg-brand-danger/10 text-brand-danger",
-  demo: "border border-brand-orange/60 bg-brand-orange/10 text-brand-ink",
 } as const;
 
 export function Badge({ tone = "muted", children }: { tone?: keyof typeof BADGE_TONE; children: ReactNode }) {
@@ -130,9 +129,9 @@ export function Badge({ tone = "muted", children }: { tone?: keyof typeof BADGE_
 // ---- Avisos ----
 
 export function Notice({ tone = "info", title, children, action }: {
-  tone?: "info" | "demo" | "warn"; title?: string; children: ReactNode; action?: ReactNode;
+  tone?: "info" | "warn"; title?: string; children: ReactNode; action?: ReactNode;
 }) {
-  const style = tone === "demo" ? "border-brand-orange/50 bg-brand-orange/10" : tone === "warn" ? "border-brand-danger/30 bg-brand-danger/5" : "border-brand-line bg-brand-sand";
+  const style = tone === "warn" ? "border-brand-danger/30 bg-brand-danger/5" : "border-brand-line bg-brand-sand";
   return (
     <div role="note" className={`flex flex-wrap items-start gap-3 rounded-lg border px-4 py-3 text-sm ${style}`}>
       <Icon name={tone === "warn" ? "alert" : "info"} className="mt-0.5 size-4" />
@@ -143,10 +142,6 @@ export function Notice({ tone = "info", title, children, action }: {
       {action}
     </div>
   );
-}
-
-export function DemoBadge({ children = "Datos de demostración" }: { children?: ReactNode }) {
-  return <Badge tone="demo">{children}</Badge>;
 }
 
 export function EmptyState({ title, children, action }: { title: string; children?: ReactNode; action?: ReactNode }) {
@@ -256,7 +251,6 @@ export function ConfirmDialog({ open, onClose, onConfirm, title, children, confi
   return (
     <Dialog open={open} onClose={onClose} title={title}>
       <div className="text-sm text-brand-muted">{children}</div>
-      <p className="mt-3 text-xs text-brand-muted">Simulación: el cambio vive solo en esta demostración.</p>
       <div className="mt-5 flex justify-end gap-2">
         <Button variant="ghost" onClick={onClose}>Cancelar</Button>
         <Button variant={danger ? "danger" : "primary"} onClick={onConfirm}>{confirmLabel}</Button>
@@ -286,7 +280,7 @@ export function Toaster({ toasts }: { toasts: Toast[] }) {
   );
 }
 
-// ---- Miniatura de producto (sin fotos reales en la demo) ----
+// ---- Miniatura de producto (marcador para cuando el producto no tiene foto) ----
 
 const TONES = ["bg-brand-orange/15 text-brand-ink", "bg-brand-green/15 text-brand-green-ink", "bg-brand-sand text-brand-muted"];
 

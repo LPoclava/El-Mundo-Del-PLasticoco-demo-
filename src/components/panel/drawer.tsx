@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { Icon } from "./icons";
-import type { IconName } from "@/lib/panel-demo/roles";
+import type { IconName } from "@/lib/panel/roles";
 
 type Props = {
   open: boolean;

@@ -3,7 +3,7 @@
 Catálogo público y panel interno de un comercio de Río Turbio, Santa Cruz. Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS 4 · Supabase.
 
 - **Catálogo público** (`/`): categorías, buscador, ficha de producto y consulta por WhatsApp. Lee solo vistas públicas de Supabase. Sin carrito ni pagos en línea.
-- **Panel interno** (`/panel`): productos, categorías, banners, stock y punto de venta con escáner, con roles `empleado`, `gerente` y `ceo`. Usuarios, CRM y Configuración siguen en demostración.
+- **Panel interno** (`/panel`): inicio de sesión con Supabase Auth, productos, categorías, banners, stock, punto de venta con escáner y administración de usuarios (solo CEO), con roles `empleado`, `gerente` y `ceo`.
 
 ## Ejecutar
 
@@ -27,6 +27,8 @@ Copiar `.env.local.example` como `.env.local` y completar:
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Clave **pública** (anon / publishable). Nunca la `service_role` |
 | `NEXT_PUBLIC_SITE_URL` | Dirección pública del sitio, para el enlace canónico y la vista previa al compartir. Sin ella no se publica `localhost` |
 
+Solo para desarrollo, `ALLOWED_DEV_ORIGINS` (en `.env.local`) lista las direcciones desde las que se abre el servidor local, por ejemplo el celular en la misma red. Los detalles de despliegue, cabeceras de seguridad, SEO y CI están en `docs/despliegue.md`.
+
 Sin las variables de Supabase el catálogo queda vacío. Los datos de contacto (WhatsApp, teléfono, Instagram, Facebook) se completan en `src/config/contact.ts`; un canal sin dato no se muestra.
 
 ## Estructura
@@ -36,9 +38,9 @@ Sin las variables de Supabase el catálogo queda vacío. Los datos de contacto (
 - `src/components/catalog/`, `product/`, `contact/` — piezas del sitio público.
 - `src/components/panel/` — panel: secciones, punto de venta (`pos/`), escáner y componentes comunes.
 - `src/lib/catalog/` — `repository.ts` es el único acceso a datos del público, con caché.
-- `src/lib/products/`, `categories/`, `banners/`, `pos/`, `barcode/` — lógica del panel y de las reglas de negocio.
+- `src/lib/products/`, `categories/`, `banners/`, `pos/`, `barcode/`, `users/` — lógica del panel y de las reglas de negocio.
+- `src/lib/panel/` — roles, secciones del menú y reglas de la sesión del panel.
 - `src/lib/supabase/` — clientes de Supabase (público y del navegador).
-- `src/lib/panel-demo/` — datos de demostración del panel.
 - `src/config/` — contacto y textos del catálogo.
 - `scripts/*.test.mjs` — pruebas versionadas.
 - `public/brand/` — logo y logos de pago.
@@ -47,7 +49,7 @@ Sin las variables de Supabase el catálogo queda vacío. Los datos de contacto (
 
 `CLAUDE.md` guarda las instrucciones para trabajar con Claude Code. La documentación está en `docs/`; empezar por `docs/README.md`, `docs/estado.md` (qué está aplicado, qué falta) y `docs/decisiones.md`.
 
-**`docs/`, `supabase/` (migraciones, pruebas de base), `Logo/` y `.impeccable/` no están en Git** por decisión anterior (ver `.gitignore`). Un clon de este repositorio no los trae.
+**`docs/` y `supabase/` (migraciones, pruebas de base) están en Git desde la consolidación de la Etapa 0.** Siguen fuera `docs/capturas/`, `Logo/` y `.impeccable/` (ver `.gitignore`): un clon no trae esos recursos de marca ni las capturas.
 
 ## Reglas importantes
 

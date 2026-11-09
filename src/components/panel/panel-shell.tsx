@@ -5,17 +5,18 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
-  GROUPS, ROLE_LABEL, ROLE_SUMMARY, demoEmail, sectionOf, sectionsFor, type GroupId, type Role,
-} from "@/lib/panel-demo/roles";
-import type { Actor } from "@/lib/panel-demo/types";
+  ROLE_LABEL, ROLE_SUMMARY, menuGroups, sectionOf, type GroupId, type Role,
+} from "@/lib/panel/roles";
 import { BrandLoader } from "@/components/brand-loader";
 import { DRAFT_KEY, hasDraft } from "@/lib/pos/draft";
-import { getBrowserSupabase, isBrowserSupabaseConfigured } from "@/lib/supabase/browser";
-import { useDemo } from "./demo-provider";
+import { useAuth } from "./auth-provider";
 import { Icon } from "./icons";
-import { Dialog, Notice } from "./ui";
+import { Button, Dialog, Notice } from "./ui";
 
-/** Estructura del panel: navegación lateral, barra superior y contenido. Solo demostración. */
+/** Estructura del panel: navegación lateral, barra superior y contenido. La sesión y el rol son los reales (Supabase). */
+
+/** Quién tiene la sesión abierta, para mostrarlo en el menú y el perfil. */
+type Actor = { name: string; email: string };
 
 /** Sección a la que pertenece una dirección; las pantallas internas (/panel/productos/nuevo) cuentan como su sección. */
 /** Pantallas en modo inmersivo (sin menú lateral). */
@@ -41,8 +42,7 @@ function Avatar({ name }: { name: string }) {
 function Navigation({ role, collapsed, onNavigate }: { role: Role; collapsed: boolean; onNavigate: () => void }) {
   const pathname = usePathname();
   const current = sectionOf(pathname);
-  const sections = sectionsFor(role);
-  const groups = GROUPS.map((g) => ({ ...g, items: sections.filter((s) => s.group === g.id) })).filter((g) => g.items.length > 0);
+  const groups = menuGroups(role);
   // El usuario puede abrir o cerrar a mano; el grupo de la página actual siempre está abierto.
   const [manual, setManual] = useState<Partial<Record<GroupId, boolean>>>({});
 
@@ -161,7 +161,6 @@ function SidebarBody({ actor, role, collapsed, onNavigate, onSignOut, onToggle }
 }
 
 function ProfileMenu({ actor, role, onSignOut }: { actor: Actor; role: Role; onSignOut: () => void }) {
-  const { resetData } = useDemo();
   const [open, setOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
@@ -203,9 +202,6 @@ function ProfileMenu({ actor, role, onSignOut }: { actor: Actor; role: Role; onS
           <button role="menuitem" type="button" className={item} onClick={() => { setOpen(false); setProfileOpen(true); }}>
             <Icon name="user" className="size-4" /> Ver mi perfil
           </button>
-          <button role="menuitem" type="button" className={item} onClick={() => { setOpen(false); resetData(); }}>
-            <Icon name="refresh" className="size-4" /> Restablecer datos de ejemplo
-          </button>
           <button role="menuitem" type="button" className={`${item} border-t border-brand-line`} onClick={() => { setOpen(false); onSignOut(); }}>
             <Icon name="logout" className="size-4" /> Cerrar sesión
           </button>
@@ -215,11 +211,11 @@ function ProfileMenu({ actor, role, onSignOut }: { actor: Actor; role: Role; onS
         <dl className="grid grid-cols-[7rem_1fr] gap-y-2 text-sm">
           <dt className="text-brand-muted">Nombre</dt><dd>{actor.name}</dd>
           <dt className="text-brand-muted">Rol</dt><dd>{ROLE_LABEL[role]}</dd>
-          <dt className="text-brand-muted">Correo</dt><dd className="break-all">{demoEmail(role)}</dd>
+          <dt className="text-brand-muted">Correo</dt><dd className="break-all">{actor.email}</dd>
           <dt className="text-brand-muted">Alcance</dt><dd>{ROLE_SUMMARY[role]}</dd>
         </dl>
         <div className="mt-4">
-          <Notice tone="info">Este perfil define qué secciones ves. Las ventas y los datos reales usan tu cuenta del negocio.</Notice>
+          <Notice tone="info">Tu rol define qué secciones ves y qué operaciones acepta la base de datos.</Notice>
         </div>
       </Dialog>
     </div>
@@ -227,16 +223,18 @@ function ProfileMenu({ actor, role, onSignOut }: { actor: Actor; role: Role; onS
 }
 
 export function PanelShell({ children }: { children: ReactNode }) {
-  const demo = useDemo();
+  const { state, signOut: endSession, retry } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const closeRef = useRef<HTMLButtonElement>(null);
 
+  // Sin una sesión válida, o con una cuenta que ya no tiene acceso (por ejemplo, desactivada), el panel no se muestra:
+  // se vuelve al inicio de sesión, que explica el motivo.
   useEffect(() => {
-    if (demo.status === "out") router.replace("/panel/login");
-  }, [demo.status, router]);
+    if (state.status === "out" || state.status === "forbidden") router.replace("/panel/login");
+  }, [state.status, router]);
 
   useEffect(() => {
     if (!mobileOpen) return;
@@ -246,10 +244,34 @@ export function PanelShell({ children }: { children: ReactNode }) {
     return () => document.removeEventListener("keydown", onKey);
   }, [mobileOpen]);
 
-  const { role, actor } = demo;
-  if (demo.status !== "in" || !role || !actor) {
-    return <BrandLoader fullscreen label={demo.status === "out" ? "Volviendo al inicio de sesión…" : "Cargando el panel…"} />;
+  if (state.status === "error" || state.status === "unconfigured") {
+    return (
+      <main id="contenido" className="flex min-h-dvh items-center justify-center bg-brand-cream px-4 py-10">
+        <div className="w-full max-w-md space-y-4">
+          {state.status === "error" && (
+            <Notice tone="warn" title="No pudimos verificar tu sesión">{state.message} Revisá la conexión e intentá de nuevo.</Notice>
+          )}
+          {state.status === "unconfigured" && (
+            <Notice tone="warn" title="Falta configurar la conexión">
+              Sin la conexión con la base de datos el panel no puede funcionar. Avisá a quien administra el sistema.
+            </Notice>
+          )}
+          <div className="flex flex-wrap gap-2">
+            {state.status === "error" && <Button icon="refresh" onClick={retry}>Reintentar</Button>}
+            {state.status === "error" && (
+              <Button onClick={() => void endSession().then(() => router.replace("/panel/login"))}>Cerrar sesión</Button>
+            )}
+          </div>
+        </div>
+      </main>
+    );
   }
+  if (state.status !== "in") {
+    return <BrandLoader fullscreen label={state.status === "out" || state.status === "forbidden" ? "Volviendo al inicio de sesión…" : "Cargando el panel…"} />;
+  }
+
+  const role = state.profile.role;
+  const actor: Actor = { name: state.profile.displayName, email: state.email };
 
   const signOut = () => {
     // Cerrar sesión con una venta armada la descartaría: se pregunta antes.
@@ -260,10 +282,7 @@ export function PanelShell({ children }: { children: ReactNode }) {
       // Sin almacenamiento no hay borrador que limpiar.
     }
     setMobileOpen(false);
-    // Una sola acción cierra el perfil del panel y, si la hay, la sesión de la cuenta del negocio.
-    if (isBrowserSupabaseConfigured) void getBrowserSupabase().auth.signOut();
-    demo.signOut();
-    router.replace("/panel/login");
+    void endSession().then(() => router.replace("/panel/login"));
   };
 
   // Modo inmersivo: las operaciones que piden concentración (escáner, ventas y stock) ocultan el menú y
@@ -334,7 +353,7 @@ export function NotAvailable({ role }: { role: Role }) {
         </span>
         <h1 className="mt-3 text-xl font-semibold">Sección fuera de tu perfil</h1>
         <p className="mt-1 text-brand-muted">
-          El perfil «{ROLE_LABEL[role]}» no incluye esta sección. Probá con otro perfil desde el inicio de sesión.
+          Tu rol «{ROLE_LABEL[role]}» no incluye esta sección. Si la necesitás, pedile el acceso a un responsable.
         </p>
 
         <div className="mt-5">

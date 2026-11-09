@@ -1,24 +1,17 @@
 ﻿import type { SupabaseClient } from "@supabase/supabase-js";
-import type { CartLine, SaleProblem } from "./cart";
+import type { CartLine } from "./cart";
+import { describeSaleError, type SaleFailure } from "./errors";
+import type { PosProduct } from "./sellable";
 import { describeStockError } from "./stock";
+
+// Las piezas puras viven en sellable.ts y errors.ts (para poder probarlas); se reexportan para no cambiar los imports.
+export { describeSaleError, type SaleFailure } from "./errors";
+export { isBarcode, sellable, toCartLine, variantLabel, type PosProduct, type PosVariant } from "./sellable";
 
 /**
  * Acceso a datos del punto de venta con la sesión real de quien vende. Toda la validación
  * definitiva (permisos, precios, stock, total) ocurre en PostgreSQL: pos_find() y confirm_sale().
  */
-
-export type PosVariant = { id: string; size: string | null; color: string | null; price: number | null; stock: number };
-
-export type PosProduct = {
-  productId: string;
-  name: string;
-  brand: string | null;
-  description: string | null;
-  barcode: string | null;
-  imagePath: string | null;
-  archived: boolean;
-  variants: PosVariant[];
-};
 
 export type PaymentMethod = { code: string; label: string };
 
@@ -42,62 +35,6 @@ export type Receipt = {
     stockAfter: number | null;
   }[];
 };
-
-export type SaleFailure = {
-  /** rejected: la base rechazó la venta (carrito intacto, hay que corregir). unknown: no se sabe si se registró. */
-  kind: "rejected" | "forbidden" | "unknown" | "invalid";
-  message: string;
-  problems: SaleProblem[];
-};
-
-type DbError = { code?: string; message?: string; details?: string | null } | null | undefined;
-
-export const variantLabel = (v: Pick<PosVariant, "size" | "color">): string | null =>
-  [v.size, v.color].filter(Boolean).join(" · ") || null;
-
-export const isBarcode = (value: string) => /^[0-9]{8,14}$/.test(value.trim());
-
-export function toCartLine(product: PosProduct, variant: PosVariant): Omit<CartLine, "quantity"> {
-  return {
-    variantId: variant.id,
-    productId: product.productId,
-    name: product.name,
-    variantLabel: variantLabel(variant),
-    barcode: product.barcode,
-    imagePath: product.imagePath,
-    unitPrice: variant.price ?? 0,
-    stock: variant.stock,
-  };
-}
-
-/** Una variante se puede vender si tiene precio válido y stock; el producto no puede estar archivado. */
-export function sellable(product: PosProduct, variant: PosVariant): boolean {
-  return !product.archived && variant.price !== null && variant.price > 0 && variant.stock > 0;
-}
-
-export function describeSaleError(error: DbError): SaleFailure {
-  const message = error?.message ?? "";
-  if (message === "SALE_REJECTED") {
-    let problems: SaleProblem[] = [];
-    try {
-      problems = (JSON.parse(error?.details ?? "{}") as { problems?: SaleProblem[] }).problems ?? [];
-    } catch {
-      problems = [];
-    }
-    return { kind: "rejected", message: "La venta no se registró. Revisá lo que se indica y volvé a confirmar.", problems };
-  }
-  if (error?.code === "42501" || /No autorizado|row-level security|permission denied/i.test(message)) {
-    return { kind: "forbidden", message: "Tu cuenta no tiene permiso para vender. Avisá a un responsable.", problems: [] };
-  }
-  if (error?.code === "22023") {
-    return { kind: "invalid", message: "Los datos de la venta no son válidos. Revisá el carrito.", problems: [] };
-  }
-  return {
-    kind: "unknown",
-    message: "No pudimos confirmar si la venta se registró (¿se cortó la conexión?). Tocá «Reintentar registro»: si ya estaba registrada no se duplica.",
-    problems: [],
-  };
-}
 
 type ReceiptRow = {
   id: string; number: number; created_at: string; user_name: string; payment_method: string; payment_label: string;
@@ -153,6 +90,56 @@ export async function confirmSale(
     // Sin respuesta (red): puede que la base sí haya registrado la venta.
     return { failure: describeSaleError(null) };
   }
+}
+
+type FoundSaleRow = {
+  id: string; number: number; created_at: string; user_name: string; payment_method: string; total: number;
+  sale_items: { product_name: string; variant_label: string | null; barcode: string | null; unit_price: number; quantity: number; subtotal: number }[];
+};
+
+/**
+ * ¿Esa clave de operación ya tiene una venta registrada de ESTA cuenta? (hallazgo H1). Se filtra por `user_id`
+ * además de la clave: la clave es única por usuario, y un gerente o el CEO ven las ventas de todos, así que sin ese
+ * filtro podrían aparecer dos filas. Lee con la sesión de quien consulta (RLS: nadie ve ventas ajenas que no le toquen).
+ * Devuelve null si no hay venta; LANZA si no se pudo consultar (distinto de «no hay»).
+ * El stock restante no se informa: el empleado no puede leer los movimientos de stock.
+ */
+export async function findSaleByKey(db: SupabaseClient, userId: string, key: string): Promise<Receipt | null> {
+  const { data, error } = await db
+    .from("sales")
+    .select("id,number,created_at,user_name,payment_method,total,sale_items(product_name,variant_label,barcode,unit_price,quantity,subtotal)")
+    .eq("user_id", userId)
+    .eq("idempotency_key", key)
+    .order("product_name", { referencedTable: "sale_items" })
+    .maybeSingle();
+  if (error) throw new Error("No se pudo consultar si la venta ya estaba registrada.");
+  if (!data) return null;
+  const sale = data as unknown as FoundSaleRow;
+
+  // El nombre del medio de pago es un dato de cortesía: si no se puede leer (por ejemplo, ya está deshabilitado), se muestra el código.
+  let label = sale.payment_method;
+  try {
+    const pm = await db.from("payment_methods").select("label").eq("code", sale.payment_method).maybeSingle();
+    if (!pm.error && pm.data && typeof (pm.data as { label?: unknown }).label === "string") label = (pm.data as { label: string }).label;
+  } catch {
+    // Se queda con el código.
+  }
+
+  return {
+    id: sale.id,
+    number: sale.number,
+    createdAt: sale.created_at,
+    userName: sale.user_name,
+    paymentMethod: sale.payment_method,
+    paymentLabel: label,
+    total: Number(sale.total),
+    replayed: true,
+    stockUpdated: true,
+    items: sale.sale_items.map((i) => ({
+      productName: i.product_name, variantLabel: i.variant_label, barcode: i.barcode, unitPrice: Number(i.unit_price),
+      quantity: i.quantity, subtotal: Number(i.subtotal), stockAfter: null,
+    })),
+  };
 }
 
 export type SaleListItem = {

@@ -1,4 +1,4 @@
-import type { IconName } from "@/lib/panel-demo/roles";
+import type { IconName } from "@/lib/panel/roles";
 
 /** Íconos de trazo único (24 px, 1,75 de grosor). Dibujados aquí para no sumar dependencias. */
 const PATHS: Record<IconName, string> = {
