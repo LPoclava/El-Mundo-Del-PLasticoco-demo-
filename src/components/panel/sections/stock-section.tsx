@@ -5,6 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { BrandLoader } from "@/components/brand-loader";
 import { formatPrice } from "@/lib/catalog/url";
 import { findProducts, isBarcode, variantLabel, type PosProduct } from "@/lib/pos/api";
+import { barcodeFromSearch } from "@/lib/pos/scan-actions";
 import { listMovements, type MovementRow2 } from "@/lib/pos/dashboard";
 import { BarcodeScanner } from "../barcode-scanner";
 import { Drawer } from "../drawer";
@@ -88,6 +89,14 @@ function Workspace({ db }: { db: SupabaseClient }) {
       busy.current = false;
     }
   }, [db, push]);
+
+  // Llegar desde el escáner («Actualizar stock»): el código viene en la URL y se identifica el producto de entrada.
+  useEffect(() => {
+    const fromScanner = barcodeFromSearch(window.location.search);
+    if (!fromScanner) return;
+    const timer = window.setTimeout(() => void lookup(fromScanner), 0);
+    return () => window.clearTimeout(timer);
+  }, [lookup]);
 
   function onManual(e: FormEvent) {
     e.preventDefault();

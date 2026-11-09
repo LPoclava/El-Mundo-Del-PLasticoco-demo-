@@ -11,7 +11,8 @@ import {
 } from "@/lib/pos/api";
 import { productImageUrl } from "@/lib/supabase/public";
 import { Icon } from "../icons";
-import { Badge, Button, Notice, SelectInput, TextInput } from "../ui";
+import { availableActions, productStatus, stockHref } from "@/lib/pos/scan-actions";
+import { Badge, Button, LinkButton, Notice, SelectInput, TextInput } from "../ui";
 
 export type ScanResult =
   | { kind: "loading"; code: string }
@@ -28,6 +29,10 @@ type Props = {
   /** Vuelve a consultar el producto (después de mover stock). */
   onRefresh: (code: string) => Promise<void>;
   onNotify: (message: string, tone?: "ok" | "error") => void;
+  /** Modo venta activo: solo se agrega al carrito; registrar producto y stock no se ofrecen. */
+  saleMode: boolean;
+  /** «Registrar venta»: entra al modo venta con este producto. */
+  onStartSale: (product: PosProduct) => void;
 };
 
 /** Título del panel superior según el resultado. */
@@ -65,10 +70,12 @@ function Thumb({ path, name }: { path: string | null; name: string }) {
 
 // ---------------------------------------------------------------- producto existente
 
-function FoundProduct({ product, canManage, onClose, onAdd }: Props & { product: PosProduct }) {
+function FoundProduct({ product, canManage, saleMode, onClose, onAdd, onStartSale }: Props & { product: PosProduct }) {
   const [showDetails, setShowDetails] = useState(false);
   const incomplete = product.variants.length === 0;
   const many = product.variants.length > 1;
+  const status = productStatus(product);
+  const actions = availableActions({ kind: "product", product }, { canManage, saleMode });
 
   return (
     <div className="space-y-3">
@@ -79,20 +86,16 @@ function FoundProduct({ product, canManage, onClose, onAdd }: Props & { product:
             {[product.brand, product.barcode ? `Código ${product.barcode}` : null].filter(Boolean).join(" · ") || "Sin código"}
           </p>
           <div className="mt-1 flex flex-wrap gap-1.5">
-            {product.archived && <Badge tone="danger">Archivado: no se vende</Badge>}
-            {incomplete && <Badge tone="warn">Producto incompleto</Badge>}
+            <Badge tone={status.tone === "ok" ? "ok" : status.tone === "danger" ? "danger" : "warn"}>{status.label}</Badge>
           </div>
           {!incomplete && <p className="mt-1 text-lg font-semibold tabular-nums">{rangeLabel(product)}</p>}
         </div>
       </div>
 
       {incomplete ? (
-        <div className="space-y-3">
-          <Notice tone="warn" title="Todavía no se puede vender">
-            Este producto no tiene variantes ni precio cargados, así que no se puede agregar a una venta.
-          </Notice>
-          <CompleteButton productId={product.productId} canManage={canManage} />
-        </div>
+        <Notice tone="warn" title="Todavía no se puede vender">
+          Este producto no tiene variantes ni precio cargados, así que no se puede agregar a una venta.
+        </Notice>
       ) : (
         <ul className="space-y-2">
           {product.variants.map((v) => {
@@ -106,13 +109,15 @@ function FoundProduct({ product, canManage, onClose, onAdd }: Props & { product:
                     {v.price !== null && v.price > 0 ? formatPrice(v.price) : "Sin precio"} · {v.stock > 0 ? `Stock ${v.stock}` : "Sin stock"}
                   </span>
                 </span>
-                <Button
-                  variant="primary" icon="plus" className="h-12 shrink-0 px-4 text-base"
-                  disabled={!ok} onClick={() => onAdd(product, v, 1)}
-                  aria-label={`Agregar al carrito: ${product.name}${label ? ` (${label})` : ""}`}
-                >
-                  Agregar
-                </Button>
+                {saleMode && (
+                  <Button
+                    variant="primary" icon="plus" className="h-12 shrink-0 px-4 text-base"
+                    disabled={!ok} onClick={() => onAdd(product, v, 1)}
+                    aria-label={`Agregar al carrito: ${product.name}${label ? ` (${label})` : ""}`}
+                  >
+                    Agregar
+                  </Button>
+                )}
               </li>
             );
           })}
@@ -120,6 +125,20 @@ function FoundProduct({ product, canManage, onClose, onAdd }: Props & { product:
       )}
 
       {showDetails && <Details product={product} />}
+
+      {(actions.length > 0 || incomplete) && !saleMode && (
+        <div className="grid gap-2 sm:grid-cols-2">
+          {actions.includes("registrar-venta") && (
+            <Button variant="primary" icon="plus" className="h-12 text-base" onClick={() => onStartSale(product)}>Registrar venta</Button>
+          )}
+          {actions.includes("actualizar-stock") && (
+            <LinkButton href={stockHref(product.barcode)} variant="green" icon="boxes" className="h-12 text-base">Actualizar stock</LinkButton>
+          )}
+          {actions.includes("completar-producto") && (
+            <div className="sm:col-span-2"><CompleteButton productId={product.productId} canManage={canManage} /></div>
+          )}
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <Button variant="ghost" icon="info" aria-expanded={showDetails} onClick={() => setShowDetails((v) => !v)}>
@@ -163,7 +182,7 @@ function CompleteButton({ productId, canManage }: { productId: string; canManage
   return (
     <Link
       href={`/panel/productos/${productId}`}
-      className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-brand-orange text-base font-medium text-brand-ink hover:bg-brand-orange/85"
+      className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-amber-300 text-base font-medium text-brand-charcoal hover:bg-amber-300/85"
     >
       <Icon name="edit" className="size-4" />Completar producto
     </Link>
@@ -172,7 +191,7 @@ function CompleteButton({ productId, canManage }: { productId: string; canManage
 
 // ---------------------------------------------------------------- código sin producto
 
-function UnknownProduct({ db, code, canManage, onClose, onNotify }: Props & { code: string }) {
+function UnknownProduct({ db, code, canManage, saleMode, onClose, onNotify }: Props & { code: string }) {
   const [mode, setMode] = useState<"aviso" | "registro" | "registrado">("aviso");
   const [createdId, setCreatedId] = useState<string | null>(null);
 
@@ -208,17 +227,19 @@ function UnknownProduct({ db, code, canManage, onClose, onNotify }: Props & { co
           <p className="mt-0.5 text-sm text-brand-muted">No hay ningún producto con el código <strong className="tabular-nums text-brand-ink">{code}</strong>. No se agregó nada al carrito.</p>
         </div>
       </div>
-      {canManage ? (
+      {saleMode ? (
+        <p className="text-sm text-brand-muted">Estás en modo venta: para registrar este producto primero salí del modo venta.</p>
+      ) : canManage ? (
         // Gerente o CEO: el formulario completo de Productos, con el código ya cargado y regreso al escáner al guardar.
         <Link
           href={`/panel/productos/nuevo?codigo=${encodeURIComponent(code)}&volver=${encodeURIComponent("/panel/precios")}`}
-          className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-brand-orange text-base font-medium text-brand-ink hover:bg-brand-orange/85"
+          className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-amber-300 text-base font-medium text-brand-charcoal hover:bg-amber-300/85"
         >
           <Icon name="plus" className="size-4" />Registrar producto
         </Link>
       ) : (
         // Empleado: no puede abrir Productos; deja un borrador mínimo para que un gerente lo complete.
-        <Button variant="primary" icon="plus" className="h-12 w-full text-base" onClick={() => setMode("registro")}>Registrar producto</Button>
+        <Button variant="yellow" icon="plus" className="h-12 w-full text-base" onClick={() => setMode("registro")}>Registrar producto</Button>
       )}
       <Button variant="ghost" className="w-full" onClick={onClose}>Cerrar y seguir escaneando</Button>
     </div>

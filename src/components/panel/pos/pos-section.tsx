@@ -20,7 +20,8 @@ import { useSession } from "../auth-provider";
 import { BarcodeScanner } from "../barcode-scanner";
 import { takeFlash } from "../flash";
 import { Icon } from "../icons";
-import { Button, CARD_CLASS, INPUT_CLASS, Toaster, type Toast } from "../ui";
+import { autoAddVariant, cancelNeedsConfirmation } from "@/lib/pos/scan-actions";
+import { Button, CARD_CLASS, ConfirmDialog, INPUT_CLASS, Toaster, type Toast } from "../ui";
 import { CartDrawer } from "./pos-cart-drawer";
 import { PosGate } from "./pos-gate";
 import { RecentSales } from "./pos-recent-sales";
@@ -87,6 +88,10 @@ function Scanner({ db, role, userId }: { db: SupabaseClient; role: "empleado" | 
   const manualRef = useRef<HTMLInputElement>(null);
   const { toasts, push } = useToasts();
   const [cartOpen, setCartOpen] = useState(false);
+  // Modo venta: solo se agrega al carrito. Arranca activo si había una venta armada o sin confirmar.
+  const [saleMode, setSaleMode] = useState(() => cart.length > 0 || pending !== null);
+  const saleModeRef = useRef(saleMode);
+  const [confirmCancel, setConfirmCancel] = useState(false);
   const resultRef = useRef<HTMLElement>(null);
 
   // El resultado aparece arriba de la página: se lleva a la vista y se anuncia sin mover el foco del lector.
@@ -95,6 +100,10 @@ function Scanner({ db, role, userId }: { db: SupabaseClient; role: "empleado" | 
     if (hasResult) resultRef.current?.scrollIntoView({ block: "start", behavior: "smooth" });
   }, [hasResult]);
 
+  const changeSaleMode = (on: boolean) => {
+    saleModeRef.current = on;
+    setSaleMode(on);
+  };
   const openSale = () => setCartOpen(true);
   // Cerrar el carrito vuelve al escáner tal cual estaba: los artículos y las cantidades se conservan. Si lo último
   // que se veía era una venta ya concretada, se la da por vista.
@@ -161,6 +170,7 @@ function Scanner({ db, role, userId }: { db: SupabaseClient; role: "empleado" | 
     setReceipt(r);
     setSalesVersion((v) => v + 1);
     setCartOpen(true);
+    changeSaleMode(false);
   };
   // La última versión de onRegistered para el efecto de más abajo (que no debe volver a correr en cada dibujo).
   const onRegisteredRef = useRef(onRegistered);
@@ -220,7 +230,14 @@ function Scanner({ db, role, userId }: { db: SupabaseClient; role: "empleado" | 
       const products = await findProducts(db, value);
       if (isBarcode(value) || source !== "manual") {
         const exact = products.find((p) => p.barcode === value) ?? (source === "refresh" ? products[0] : undefined);
-        showResult(exact ? { kind: "product", product: exact } : { kind: "unknown", code: value });
+        // En modo venta, un producto de una sola variante vendible se agrega solo: se sigue escaneando sin tocar nada.
+        const auto = exact && saleModeRef.current && source !== "refresh" ? autoAddVariant(exact) : null;
+        if (exact && auto) {
+          showResult(null);
+          addRef.current(exact, auto, 1);
+        } else {
+          showResult(exact ? { kind: "product", product: exact } : { kind: "unknown", code: value });
+        }
       } else {
         // Búsqueda por nombre desde el campo manual: lista para elegir.
         showResult(null);
@@ -271,8 +288,40 @@ function Scanner({ db, role, userId }: { db: SupabaseClient; role: "empleado" | 
     else push(`No hay más stock de «${product.name}».`, "error");
   }
 
+  const addRef = useRef(add);
+  useEffect(() => {
+    addRef.current = add;
+  });
+
   const total = cartTotal(cart);
   const units = cartUnits(cart);
+
+  /** «Registrar venta»: entra al modo venta con el producto leído (si tiene una sola variante vendible, ya queda agregado). */
+  function startSale(product: PosProduct) {
+    changeSaleMode(true);
+    const auto = autoAddVariant(product);
+    if (auto) add(product, auto, 1);
+    else push("Modo venta activado: elegí la variante para agregarla.");
+  }
+
+  /** Cancela la venta en armado: vacía el carrito y sale del modo venta (con confirmación si había algo). */
+  function cancelSale() {
+    if (pendingRef.current) {
+      push("Hay una venta sin confirmar: resolvela antes de cancelar.", "error");
+      return;
+    }
+    if (cancelNeedsConfirmation(cartRef.current.reduce((n, l) => n + l.quantity, 0))) setConfirmCancel(true);
+    else finishCancel();
+  }
+  function finishCancel() {
+    updateCart([]);
+    setMethod(null);
+    setFailure(null);
+    setConfirmCancel(false);
+    showResult(null);
+    changeSaleMode(false);
+    push("Venta cancelada. No se registró nada.");
+  }
 
   /** Muestra lo que pasó con un intento de confirmar (o de reintentar). El carrito solo se vacía si la venta existe. */
   function handleOutcome(outcome: ConfirmOutcome) {
@@ -386,6 +435,20 @@ function Scanner({ db, role, userId }: { db: SupabaseClient; role: "empleado" | 
 
   return (
     <div className="space-y-5 pb-28">
+      {saleMode && (
+        <section aria-label="Modo venta" className="sticky top-2 z-20 flex flex-wrap items-center gap-3 rounded-xl border-2 border-brand-orange bg-brand-cream p-3 shadow-sm">
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold">Modo venta</p>
+            <p className="text-sm tabular-nums text-brand-muted" aria-live="polite">
+              {units} {units === 1 ? "unidad" : "unidades"}{units > 0 ? ` · ${formatPrice(total)}` : " · escaneá productos para agregarlos"}
+            </p>
+          </div>
+          <Button variant="primary" onClick={openSale}>Ver carrito</Button>
+          <Button variant="danger" onClick={cancelSale} disabled={busy}>Cancelar venta</Button>
+          <Button variant="ghost" onClick={() => changeSaleMode(false)} disabled={frozen}>Salir del modo venta</Button>
+        </section>
+      )}
+
       {/* Resultado de la última lectura: arriba de la página, en línea (no es un modal). */}
       {result && (
         <section ref={resultRef} aria-labelledby="resultado-titulo" className={`${CARD_CLASS} scroll-mt-20 border-brand-ink/20 p-4 shadow-sm sm:p-5`}>
@@ -403,6 +466,7 @@ function Scanner({ db, role, userId }: { db: SupabaseClient; role: "empleado" | 
           <ResultPanel
             db={db} result={result} canManage={canManage} onClose={() => showResult(null)}
             onAdd={add} onNotify={push}
+            saleMode={saleMode} onStartSale={startSale}
             onRefresh={(code) => lookup(code, "refresh")}
           />
         </section>
@@ -509,6 +573,17 @@ function Scanner({ db, role, userId }: { db: SupabaseClient; role: "empleado" | 
         onConfirm={() => void confirm()}
         onNewSale={closeSale}
       />
+
+      <ConfirmDialog
+        open={confirmCancel}
+        onClose={() => setConfirmCancel(false)}
+        onConfirm={finishCancel}
+        title="¿Cancelar la venta?"
+        confirmLabel="Sí, cancelar venta"
+        danger
+      >
+        Se vacía el carrito ({units} {units === 1 ? "unidad" : "unidades"}, {formatPrice(total)}). No se registra ninguna venta ni se toca el stock.
+      </ConfirmDialog>
 
       <Toaster toasts={toasts} />
     </div>

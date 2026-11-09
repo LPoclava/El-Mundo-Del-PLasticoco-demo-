@@ -21,6 +21,9 @@ const BUTTON_VARIANT = {
   secondary: "border border-brand-line bg-white hover:border-brand-ink",
   ghost: "hover:bg-brand-sand",
   danger: "border border-brand-danger bg-white text-brand-danger hover:bg-brand-danger hover:text-white",
+  // Acciones del escáner: amarillo = registrar producto, verde = actualizar stock (naranja = vender).
+  yellow: "bg-amber-300 text-brand-charcoal hover:bg-amber-300/85",
+  green: "bg-brand-green text-white hover:bg-brand-green/90",
 } as const;
 
 // «sm» sigue siendo más compacto, pero nunca por debajo del área táctil mínima de 44 px.
