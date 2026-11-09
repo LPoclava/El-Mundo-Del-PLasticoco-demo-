@@ -43,6 +43,8 @@ export type ProductListItem = {
   publishEnabled: boolean;
   archivedAt: string | null;
   prices: (number | null)[];
+  /** Unidades de cada variante (gerente o superior las lee; la base las oculta al público). */
+  stocks: number[];
   primaryPath: string | null;
 };
 
@@ -99,12 +101,12 @@ export class SaveError extends Error {
 type ListRow = {
   id: string; name: string; brand: string | null; barcode: string | null; category_id: string;
   publish_enabled: boolean; archived_at: string | null;
-  product_variants: { price: number | null }[] | null;
+  product_variants: { price: number | null; stock: number | null }[] | null;
   product_images: { path: string; is_primary: boolean }[] | null;
 };
 
 const LIST_COLUMNS =
-  "id,name,brand,barcode,category_id,publish_enabled,archived_at,product_variants(price),product_images(path,is_primary)";
+  "id,name,brand,barcode,category_id,publish_enabled,archived_at,product_variants(price,stock),product_images(path,is_primary)";
 
 export async function listProducts(db: SupabaseClient, f: ListFilters): Promise<{ items: ProductListItem[]; total: number }> {
   const from = (Math.max(1, f.page) - 1) * ADMIN_PAGE_SIZE;
@@ -138,6 +140,7 @@ export async function listProducts(db: SupabaseClient, f: ListFilters): Promise<
     publishEnabled: r.publish_enabled,
     archivedAt: r.archived_at,
     prices: (r.product_variants ?? []).map((v) => v.price),
+    stocks: (r.product_variants ?? []).map((v) => Number(v.stock ?? 0)),
     primaryPath: r.product_images?.find((i) => i.is_primary)?.path ?? null,
   }));
   return { items, total: count ?? 0 };

@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { MethodRow, MonthlyRow } from "./analytics";
 
 /**
  * Datos reales del inicio. Las funciones de la base corren con los permisos de quien consulta: el
@@ -112,4 +113,31 @@ export async function listMovements(db: SupabaseClient, limit = 30): Promise<Mov
     variant: [m.product_variants?.size, m.product_variants?.color].filter(Boolean).join(" · ") || null,
     userName: m.user_id ? (names.get(m.user_id) ?? null) : null,
   }));
+}
+
+export type PaymentAnalysis = { operations: number; revenue: number; methods: (MethodRow & { position: number })[] };
+
+/** Ventas por medio de pago en [desde, hasta). La base aplica los permisos: el empleado ve solo las suyas. */
+export async function salesByPaymentMethod(db: SupabaseClient, from: string, to: string): Promise<PaymentAnalysis> {
+  const { data, error } = await db.rpc("sales_by_payment_method", { p_from: from, p_to: to });
+  if (error) {
+    if (error.code === "42883" || error.code === "PGRST202") throw new Error("Falta aplicar la migración de medios de pago en la base.");
+    throw new Error("No se pudo leer el análisis por medio de pago.");
+  }
+  const r = data as { operations_total: number; revenue_total: number; methods: { code: string; label: string; position: number; operations: number; revenue: number }[] };
+  return {
+    operations: Number(r.operations_total),
+    revenue: Number(r.revenue_total),
+    methods: (r.methods ?? []).map((m) => ({ code: m.code, label: m.label, position: m.position, operations: Number(m.operations), revenue: Number(m.revenue) })),
+  };
+}
+
+/** Contador mensual por medio de pago de los últimos N meses (solo meses y métodos con ventas). */
+export async function salesMonthlyByPaymentMethod(db: SupabaseClient, months = 6): Promise<MonthlyRow[]> {
+  const { data, error } = await db.rpc("sales_monthly_by_payment_method", { p_months: months });
+  if (error) {
+    if (error.code === "42883" || error.code === "PGRST202") throw new Error("Falta aplicar la migración de medios de pago en la base.");
+    throw new Error("No se pudo leer el contador mensual.");
+  }
+  return ((data ?? []) as MonthlyRow[]).map((r) => ({ month: r.month, code: r.code, operations: Number(r.operations), revenue: Number(r.revenue) }));
 }

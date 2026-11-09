@@ -10,9 +10,12 @@ import {
   type ProductListItem, type StatusFilter,
 } from "@/lib/products/admin";
 import { hiddenReasons, publishBlockers } from "@/lib/products/rules";
+import { matchCategories, searchKind, stockSummary } from "@/lib/products/search";
+import { LOW_STOCK_THRESHOLD } from "@/lib/pos/dashboard";
 import { isBrowserSupabaseConfigured } from "@/lib/supabase/browser";
 import { productImageUrl } from "@/lib/supabase/public";
 import { Icon } from "../icons";
+import { ExpandingSearch } from "../expanding-search";
 import { takeFlash } from "../flash";
 import { SupabaseGate } from "../supabase-gate";
 import { useToasts } from "../use-toasts";
@@ -21,7 +24,7 @@ import {
 } from "../ui";
 
 const STATUS_OPTIONS: [StatusFilter, string][] = [
-  ["todos", "Todos los estados"], ["publicados", "Publicados"], ["sin-publicar", "Sin publicar"], ["archivados", "Archivados"],
+  ["todos", "Todos"], ["publicados", "Publicados"], ["sin-publicar", "Sin publicar"], ["archivados", "Archivados"],
 ];
 
 /**
@@ -131,6 +134,7 @@ function Manager({ db }: { db: SupabaseClient }) {
   const total = result && "items" in result ? result.total : 0;
   const pageCount = Math.max(1, Math.ceil(total / ADMIN_PAGE_SIZE));
   const hasFilters = Boolean(q || categoryId || status !== "todos");
+  const suggestions = matchCategories(qInput, categories).filter((c) => c.id !== categoryId);
   const categoryLabel = (id: string) => categories.find((c) => c.id === id)?.label ?? "Sin categoría";
 
   async function act(product: ProductListItem, run: () => Promise<void>, ok: string) {
@@ -167,31 +171,61 @@ function Manager({ db }: { db: SupabaseClient }) {
         <LinkButton href="/panel/productos/nuevo" variant="primary" icon="plus">Crear producto</LinkButton>
       </div>
 
-      <section className={`${CARD_CLASS} p-4`} aria-label="Filtros">
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-[minmax(0,2fr)_repeat(2,minmax(0,1fr))]">
-          <div className="col-span-2 md:col-span-1">
-            <label htmlFor="prod-q" className="mb-1.5 block text-sm font-medium">Buscar</label>
-            <div className="relative">
-              <Icon name="search" className="pointer-events-none absolute left-3 top-3.5 size-4 text-brand-muted" />
-              <input id="prod-q" type="search" value={qInput} onChange={(e) => setQInput(e.target.value)} placeholder="Nombre, marca, descripción o código" className={`${INPUT_CLASS} pl-9`} />
-            </div>
+      <section className={`${CARD_CLASS} space-y-3 p-4`} aria-label="Búsqueda y filtros">
+        <div className="flex flex-wrap items-start gap-x-3 gap-y-3">
+          <div className="min-w-0 flex-1 basis-64">
+            <ExpandingSearch
+              value={qInput}
+              onChange={setQInput}
+              label="Buscar productos por nombre, marca, descripción o código de barras"
+              placeholder="Nombre, marca, descripción o código de barras"
+              status={
+                qInput.trim() === "" ? undefined
+                  : loading ? "Buscando…"
+                  : total === 0 ? `Sin resultados para «${qInput.trim()}»`
+                  : `${total === 1 ? "1 resultado" : `${total} resultados`}${searchKind(qInput) === "codigo" ? " por código de barras" : ""}`
+              }
+            >
+              {suggestions.length > 0 && (
+                <div className="flex flex-wrap items-center gap-2 text-sm">
+                  <span className="text-brand-muted">Categoría:</span>
+                  {suggestions.map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => { setCategoryId(c.id); setQInput(""); setQ(""); setPage(1); }}
+                      className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-brand-line bg-white px-3.5 font-medium hover:border-brand-ink"
+                    >
+                      <Icon name="tag" className="size-4" />{c.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </ExpandingSearch>
           </div>
-          <div>
-            <label htmlFor="prod-cat" className="mb-1.5 block text-sm font-medium">Categoría</label>
+          <div className="w-full sm:w-56">
+            <label htmlFor="prod-cat" className="sr-only">Categoría</label>
             <select id="prod-cat" value={categoryId} onChange={(e) => { setCategoryId(e.target.value); setPage(1); }} className={INPUT_CLASS}>
-              <option value="">Todas</option>
+              <option value="">Todas las categorías</option>
               {categories.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
             </select>
           </div>
-          <div>
-            <label htmlFor="prod-status" className="mb-1.5 block text-sm font-medium">Estado</label>
-            <select id="prod-status" value={status} onChange={(e) => { setStatus(e.target.value as StatusFilter); setPage(1); }} className={INPUT_CLASS}>
-              {STATUS_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-            </select>
-          </div>
+        </div>
+        <div role="group" aria-label="Estado de publicación" className="flex flex-wrap gap-2">
+          {STATUS_OPTIONS.map(([v, l]) => (
+            <button
+              key={v}
+              type="button"
+              aria-pressed={status === v}
+              onClick={() => { setStatus(v); setPage(1); }}
+              className={`inline-flex min-h-11 items-center rounded-full border px-4 text-sm font-medium motion-safe:transition-colors ${status === v ? "border-brand-ink bg-brand-ink text-white" : "border-brand-line bg-white hover:border-brand-ink"}`}
+            >
+              {l}
+            </button>
+          ))}
         </div>
         {hasFilters && (
-          <button type="button" className="mt-3 text-sm font-medium underline underline-offset-4" onClick={() => { setQInput(""); setQ(""); setCategoryId(""); setStatus("todos"); setPage(1); }}>
+          <button type="button" className="inline-flex min-h-11 items-center text-sm font-medium underline underline-offset-4" onClick={() => { setQInput(""); setQ(""); setCategoryId(""); setStatus("todos"); setPage(1); }}>
             Quitar filtros
           </button>
         )}
@@ -221,6 +255,7 @@ function Manager({ db }: { db: SupabaseClient }) {
               const blockers = publishBlockers({ hasPrimaryImage: p.primaryPath !== null, prices });
               const reasons = hiddenReasons({ publishEnabled: p.publishEnabled, archivedAt: p.archivedAt, hasPrimaryImage: p.primaryPath !== null, prices });
               const busy = busyId === p.id;
+              const stock = stockSummary(p.stocks, LOW_STOCK_THRESHOLD);
               return (
                 <li key={p.id} className={`px-4 py-4 ${p.archivedAt ? "bg-brand-cream/60" : ""}`}>
                   <div className="flex items-start gap-3">
@@ -237,6 +272,13 @@ function Manager({ db }: { db: SupabaseClient }) {
                         <StatusBadges p={p} />
                       </div>
                       <p className="text-xs text-brand-muted">{p.brand || "Sin marca"} · {categoryLabel(p.categoryId)} · {p.barcode ?? "Sin código"}</p>
+                      {stock && (
+                        <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-brand-muted">
+                          <span className="tabular-nums">Stock: <strong className="font-semibold text-brand-ink">{stock.total} u.</strong>{stock.variants > 1 ? ` en ${stock.variants} variantes` : ""}</span>
+                          {stock.level === "sin" && <Badge tone="danger">Sin stock</Badge>}
+                          {stock.level === "bajo" && <Badge tone="warn">Stock bajo ({LOW_STOCK_THRESHOLD} o menos)</Badge>}
+                        </p>
+                      )}
                       <p className="mt-0.5 text-xs text-brand-muted">
                         {reasons.length === 0 ? "Se muestra en el catálogo." : `No se muestra en el catálogo: ${reasons.join(" · ").toLowerCase()}.`}
                       </p>
