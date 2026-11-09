@@ -216,3 +216,13 @@ Detalle: [auditoria-material-comercial-fase-0-5.md](auditoria-material-comercial
 
 - Localidad: **Río Turbio, Santa Cruz** (confirmada el 2 de noviembre de 2026).
 - El volante trae un teléfono fijo (425111) que **no se muestra**; el sitio usa el número ya configurado en `src/config/contact.ts`.
+
+## 7. Etapa 1, fase 1 (migraciones, solo en local)
+
+Tres migraciones nuevas, **sin aplicar en Supabase** (las aplica el responsable a mano, en orden):
+
+- `20261109000001_payment_method_qr_and_reports.sql`: método de pago **QR** (registro manual, sin integración de cobros) y las funciones de lectura `sales_by_payment_method` y `sales_monthly_by_payment_method` (mes en hora de Río Turbio; empleado ve sus ventas, gerente y CEO todas).
+- `20261109000002_developer_access.sql`: tabla `developer_access` (sin acceso por la API; alta y baja solo desde el SQL Editor), `is_developer()` y `require_developer()`. El CEO del comercio **no** es de desarrollo.
+- `20261109000003_fiscal_structure.sql`: estructura **preparada** del circuito fiscal (ARCA): `fiscal_settings` (producción apagada por defecto), `fiscal_documents`, `fiscal_events` (solo agregado) y las funciones `fiscal_request_issue`, `fiscal_transition`, `fiscal_log_event`. Todo exige acceso de desarrollo en la base. No emite nada, no hay disparadores sobre ventas y no se guardan credenciales. «Anulado» no se implementa (no hay circuito real que lo respalde).
+
+Pruebas: `supabase/tests/etapa1-fase1.test.mjs` (11). Se ajustó una prueba de `pos-ventas` que insertaba un método `qr` propio (ahora existe de fábrica).

@@ -174,10 +174,10 @@ describe("confirmar una venta", () => {
       await q.fails("update public.payment_methods set enabled = true where code = 'otro'", [], "42501").catch(() => undefined);
       await login(q, ID.gerente);
       await q("update public.payment_methods set enabled = true where code = 'otro'");
-      await q("insert into public.payment_methods (code, label, position) values ('qr', 'Pago con QR', 6)");
+      await q("insert into public.payment_methods (code, label, position) values ('billetera', 'Billetera virtual', 7)");
       await login(q, ID.empleado);
       assert.equal((await sell(q, [{ variant_id: VAR.balde, quantity: 1 }], "otro")).payment_method, "otro");
-      assert.equal((await sell(q, [{ variant_id: VAR.balde, quantity: 1 }], "qr")).payment_label, "Pago con QR");
+      assert.equal((await sell(q, [{ variant_id: VAR.balde, quantity: 1 }], "billetera")).payment_label, "Billetera virtual");
     });
   });
 });
