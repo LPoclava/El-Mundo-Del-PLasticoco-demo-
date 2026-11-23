@@ -67,6 +67,10 @@ const SEED = [
   ["e1", "Set de reglas escolares", "Escolar", "libreria", "Regla, escuadra y transportador.", [A], [[null, null, 1800]]],
   ["e2", "Carpeta de tres solapas", null, "libreria", null, [GR], [[null, null, 2100]]],
   ["e3", "Lapicera de gel", null, "libreria", null, [V], [[null, "Negro", 900], [null, "Azul", 900]]],
+  ["f1", "Jarra con tapa 2 L", "Rigolleau", "cocina", "Jarra con tapa y pico vertedor.", [A, G], [["2 L", null, 6400]]],
+  ["f2", "Cesto de ropa con manijas", null, "limpieza", "Cesto calado con manijas laterales.", [O], [["Chico", null, 7200], ["Grande", null, 9800]]],
+  ["f3", "Alcancía con forma de cerdito", null, "regaleria", null, [Y, R], [[null, "Rosa", 3100]]],
+  ["f4", "Cuaderno tapa dura A4", "Escolar", "libreria", "Cuaderno de tapa dura, 80 hojas.", [V], [[null, "Verde", 3600], [null, "Azul", 3600]]],
 ];
 
 const products = SEED.map(([, name, brand, category_slug, description, photos, variants], index) => {
